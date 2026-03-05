@@ -16,8 +16,8 @@ const AudioPlayer: React.FC = () => {
 
                         {/* Left: Article Info */}
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                                <Headphones size={20} className="text-emerald-500" />
+                            <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded bg-news-accent/10 flex items-center justify-center border border-news-accent/20">
+                                <Headphones size={20} className="text-news-accent" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-xs md:text-sm font-bold text-white truncate">
@@ -35,7 +35,7 @@ const AudioPlayer: React.FC = () => {
                             <button
                                 onClick={isPlaying ? pauseAudio : resumeAudio}
                                 disabled={isLoading}
-                                className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-emerald-500/50"
+                                className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-news-accent hover:bg-news-accentHover disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-news-accent/50"
                                 aria-label={isPlaying ? "Pause" : "Play"}
                             >
                                 {isLoading ? (
@@ -61,7 +61,7 @@ const AudioPlayer: React.FC = () => {
                     {/* Loading indicator bar */}
                     {isLoading && (
                         <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 w-1/3 animate-pulse"></div>
+                            <div className="h-full bg-news-accent w-1/3 animate-pulse"></div>
                         </div>
                     )}
                 </div>

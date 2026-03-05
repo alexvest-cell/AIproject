@@ -1,48 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Thermometer, CloudFog, MountainSnow, Droplets, Waves, Bird, Leaf, Flame, Wind, AlertTriangle } from 'lucide-react';
+
 import Navigation from './components/Navigation';
 import Hero from './components/Hero';
-import Portfolio from './components/Portfolio'; // Acts as Home/Discover Feed
-import CategoryFeed from './components/CategoryFeed'; // New Category Page
-import PlanetaryStatus from './components/PlanetaryStatus';
-import About from './components/About';
+import Portfolio from './components/Portfolio';
+import CategoryFeed from './components/CategoryFeed';
 import AdUnit from './components/AdUnit';
 import { ADS_CONFIG } from './data/adsConfig';
-import Action from './components/Action';
 import Contact from './components/Contact';
 import ArticleView from './components/ArticleView';
-
-import EarthDashboard from './components/EarthDashboard';
-import DataExplanationView from './components/DataExplanationView';
-import ActionDetailsView from './components/ActionDetailsView';
 import AboutPage from './components/AboutPage';
-import Support from './components/Support';
 import SubscribeModal from './components/SubscribeModal';
 import AdminDashboard from './components/AdminDashboard';
 import AudioPlayer from './components/AudioPlayer';
 import { AudioProvider } from './contexts/AudioContext';
-import { Section, Article, ExplanationData } from './types';
+import ToolPage from './components/ToolPage';
+import ComparisonPage from './components/ComparisonPage';
+import HubPage from './components/HubPage';
+import { Section, Article } from './types';
 import { featuredArticle, newsArticles as staticNewsArticles } from './data/content';
 
-
-// Helper to restore icon component lost in JSON serialization
-const restoreIcon = (data: any): ExplanationData => {
-  const title = data.title || data.label; // Handle potential variations
-  let IconComponent = Thermometer; // Default
-
-  if (title === "Global Mean Temp" || title === "Permafrost Thaw") IconComponent = Thermometer;
-  else if (title.includes("CO₂") || title.includes("Carbon")) IconComponent = CloudFog;
-  else if (title.includes("Ice Sheet") || title.includes("West Antarctic")) IconComponent = MountainSnow;
-  else if (title === "Sea Level Rise") IconComponent = Droplets;
-  else if (title === "Ocean Acidity") IconComponent = Waves;
-  else if (title === "Biodiversity") IconComponent = Bird;
-  else if (title === "Forest Loss" || title.includes("Rainforest")) IconComponent = Leaf;
-  else if (title.includes("Methane")) IconComponent = Flame;
-  else if (title.includes("Atlantic Circulation") || title.includes("AMOC")) IconComponent = Wind;
-  else if (title.includes("Limit") || title.includes("Warning")) IconComponent = AlertTriangle;
-
-  return { ...data, icon: IconComponent };
-};
 
 // Helper functions for clean URLs
 const categoryToSlug = (category: string): string => {
@@ -55,37 +31,35 @@ const categoryToSlug = (category: string): string => {
 
 const slugToCategory = (slug: string): string => {
   const categoryMap: Record<string, string> = {
-    'climate-change': 'Climate Change',
-    'energy': 'Energy',
-    'pollution': 'Pollution',
-    'policy-and-economics': 'Policy & Economics',
-    'oceans': 'Oceans',
-    'biodiversity': 'Biodiversity',
-    'conservation': 'Conservation',
-    'solutions': 'Solutions',
+    'ai-tools': 'AI Tools',
+    'comparisons': 'Comparisons',
+    'reviews': 'Reviews',
+    'productivity': 'Productivity',
+    'automation': 'Automation',
+    'ai-news': 'AI News',
     'guides': 'Guides'
   };
   return categoryMap[slug] || slug;
 };
 
 function App() {
-  // Search now includes all dynamic articles
-  // Browser History Management: All view changes push state to history API,
-  // allowing the browser back/forward buttons to work correctly across the entire site
   const [activeSection, setActiveSection] = useState<Section>(Section.HERO);
-  const [view, setView] = useState<'home' | 'category' | 'article' | 'sources' | 'dashboard' | 'explanation' | 'action-guide' | 'about' | 'subscribe' | 'admin'>(() => {
-    // Initialize view from URL
+  const [view, setView] = useState<
+    'home' | 'category' | 'article' | 'sources' | 'about' | 'subscribe' | 'admin' |
+    'hub' | 'tool' | 'comparison'
+  >(() => {
     const path = window.location.pathname;
-    const hash = window.location.hash;
-
-    if (hash === '#explain') return 'explanation';
-    if (path === '/dashboard') return 'dashboard';
     if (path === '/about') return 'about';
-    if (path === '/guides') return 'action-guide';
-    if (path === '/support') return 'support';
-    // Admin, subscribe, etc could be added
+    if (path.startsWith('/tools/')) return 'tool';
+    if (path.startsWith('/compare/')) return 'comparison';
+    const hubPaths = ['/ai-tools', '/best-software', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
+    if (hubPaths.includes(path)) return 'hub';
     return 'home';
   });
+  // Hub/Tool/Comparison slug routing
+  const [activeHub, setActiveHub] = useState<string>('');
+  const [activeToolSlug, setActiveToolSlug] = useState<string>('');
+  const [activeComparisonSlug, setActiveComparisonSlug] = useState<string>();
 
   // Hydrate history state on mount to ensure back button works for initial entry
   useEffect(() => {
@@ -93,17 +67,13 @@ function App() {
       const path = window.location.pathname;
       let initialState: any = { view: 'home' };
 
-      if (path === '/dashboard') initialState = { view: 'dashboard' };
-      else if (path === '/about') initialState = { view: 'about' };
-      else if (path === '/guides') initialState = { view: 'action-guide' };
-      else if (path === '/support') initialState = { view: 'support' };
+      if (path === '/about') initialState = { view: 'about' };
 
       window.history.replaceState(initialState, '', path);
     }
   }, []);
 
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
-  const [explanationData, setExplanationData] = useState<ExplanationData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
@@ -115,18 +85,17 @@ function App() {
   // Define fetchArticles outside useEffect to be reusable
   const fetchArticles = async () => {
     try {
-      const headers: HeadersInit = {};
-      const url = '/api/articles';
-
-      // Note: We don't include unpublished articles on the public site
-      // Even for admins - they should use the Admin Dashboard to view drafts
-
-      const res = await fetch(url, { headers });
+      const res = await fetch('/api/articles');
       if (res.ok) {
         const apiArticles = await res.json();
         if (apiArticles.length > 0) {
-          // Sort by createdAt or date (descending)
-          const sorted = apiArticles.sort((a: any, b: any) => {
+          console.log('Articles loaded:', apiArticles.length);
+          const mappedArticles = apiArticles.map((a: any) => ({
+            ...a,
+            id: a.id || a._id // Map MongoDB _id to id
+          }));
+
+          const sorted = mappedArticles.sort((a: any, b: any) => {
             const getSortableDate = (item: any) => {
               if (item.date) {
                 const normalized = item.date
@@ -141,7 +110,6 @@ function App() {
             };
             return getSortableDate(b) - getSortableDate(a);
           });
-          console.log('Articles loaded:', sorted.length);
           setArticles(sorted);
         } else {
           console.log('No API articles, using static data');
@@ -150,7 +118,6 @@ function App() {
       }
     } catch (e) {
       console.error("API offline, using static data");
-      // Keep initial staticNewsArticles
     }
   };
 
@@ -180,28 +147,12 @@ function App() {
       const category = slugToCategory(slug);
       setActiveCategory(category);
       setView('category');
-    } else if (pathname === '/dashboard' || viewParam === 'dashboard') {
-      setView('dashboard');
-      if (pathname !== '/dashboard') {
-        window.history.replaceState({}, '', '/dashboard');
-      }
-    } else if (pathname === '/guides' || viewParam === 'action') {
-      setView('action-guide');
-      if (pathname !== '/guides') {
-        window.history.replaceState({}, '', '/guides');
-      }
     } else if (viewParam === 'subscribe') {
       // Open modal instead of changing view
       setIsSubscribeModalOpen(true);
       // If we are just landing here, default to home view behind the modal
       if (view === 'home' || view === 'subscribe') {
         setView('home');
-      }
-    } else if (pathname === '/methodology' || viewParam === 'methodology') {
-      // Methodology is part of the About page
-      setView('about');
-      if (pathname !== '/about') {
-        window.history.replaceState({}, '', '/about');
       }
     } else if (pathname === '/about' || viewParam === 'about' || (window.location.hash === '#about' && view !== 'home')) {
       // Also catching #about if linking directly, though usually About is a section on Home or a separate page? 
@@ -236,17 +187,25 @@ function App() {
           window.history.replaceState({ view: 'article', articleId: foundArticle.id }, '', preferredPath);
         }
       }
+    } else if (pathname === '/ai-tools' || pathname === '/best-software' || pathname === '/comparisons') {
+      const hub = pathname.replace('/', '');
+      setActiveHub(hub);
+      setView('hub');
+    } else if (pathname.startsWith('/tools/')) {
+      const slug = pathname.replace('/tools/', '');
+      setActiveToolSlug(slug);
+      setView('tool');
+    } else if (pathname.startsWith('/compare/')) {
+      const slug = pathname.replace('/compare/', '');
+      setActiveComparisonSlug(slug);
+      setView('comparison');
     }
   }, [articles]);
 
-  // Ref to store dashboard scroll position
-  const dashboardScrollRef = React.useRef(0);
-
   // Handle Browser Back Button
   useEffect(() => {
-    // Disable automatic browser scroll restoration to handle it manually
     if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
+      window.history.scrollRestoration = 'auto'; // allow the browser to natively scroll top previously scrolled position
     }
 
     const handlePopState = (event: PopStateEvent) => {
@@ -254,45 +213,32 @@ function App() {
         const viewState = event.state.view;
 
         switch (viewState) {
-          case 'article':
+          case 'article': {
             const found = articles.find(a => a.id === event.state.articleId);
             if (found) {
               setCurrentArticle(found);
               setView('article');
             }
             break;
+          }
           case 'category':
             setActiveCategory(event.state.category || 'All');
             setView('category');
             break;
-          case 'sources':
-            setView('sources');
+          case 'hub':
+            setActiveHub(event.state.hub);
+            setView('hub');
             break;
-          case 'dashboard':
-            setView('dashboard');
-            // Restore scroll position from session storage
-            setTimeout(() => {
-              const savedScroll = sessionStorage.getItem('dashboardScroll');
-              if (savedScroll) {
-                window.scrollTo(0, parseInt(savedScroll));
-              }
-            }, 100);
+          case 'tool':
+            setActiveToolSlug(event.state.slug);
+            setView('tool');
             break;
-          case 'explanation':
-            setView('explanation');
-            window.scrollTo(0, 0);
-            if (event.state.explanationData) {
-              setExplanationData(event.state.explanationData);
-            }
+          case 'comparison':
+            setActiveComparisonSlug(event.state.slug);
+            setView('comparison');
             break;
-          case 'action-guide':
-            setView('action-guide');
-            break;
-          case 'methodology':
-            setView('methodology');
-            break;
-          case 'subscribe':
-            setView('subscribe');
+          case 'about':
+            setView('about');
             break;
           case 'home':
           default:
@@ -304,32 +250,20 @@ function App() {
       } else {
         // No state (often initial entry). Check URL to determine view.
         const path = window.location.pathname;
-        const hash = window.location.hash;
 
-        if (hash === '#explain') {
-          setView('explanation');
-          // Restore data from session if possible
-          const savedData = sessionStorage.getItem('explanationData');
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            // Restore icon component based on title
-            setExplanationData(restoreIcon(parsedData));
-          }
-        } else if (path === '/dashboard') {
-          setView('dashboard');
-          // Try to restore scroll even on null state if session has it
-          setTimeout(() => {
-            const savedScroll = sessionStorage.getItem('dashboardScroll');
-            if (savedScroll) {
-              window.scrollTo(0, parseInt(savedScroll));
-            }
-          }, 100);
-        } else if (path === '/about') {
+        if (path === '/about') {
           setView('about');
-        } else if (path === '/guides') {
-          setView('action-guide');
-        } else if (path === '/support') {
-          setView('support');
+        } else if (path === '/ai-tools' || path === '/best-software' || path === '/comparisons') {
+          setActiveHub(path.replace('/', ''));
+          setView('hub');
+        } else if (path.startsWith('/tools/')) {
+          setActiveToolSlug(path.replace('/tools/', ''));
+          setView('tool');
+        } else if (path.startsWith('/compare/')) {
+          setActiveComparisonSlug(path.replace('/compare/', ''));
+          setView('comparison');
+        } else if (path === '/admin') {
+          setView('admin');
         } else {
           // Default to home
           setView('home');
@@ -367,7 +301,8 @@ function App() {
     setCurrentArticle(article);
     setView('article');
     window.scrollTo(0, 0);
-    window.history.pushState({ view: 'article', articleId: article.id }, '', `/article/${article.id}`);
+    const identifier = article.slug || article.id;
+    window.history.pushState({ view: 'article', articleId: article.id }, '', `/article/${identifier}`);
   };
 
 
@@ -375,91 +310,34 @@ function App() {
     window.history.back();
   };
 
-  const handleBackFromMethodology = () => {
-    window.history.back();
+  // Hub navigation
+  const handleHubClick = (hub: string) => {
+    setActiveHub(hub);
+    setView('hub');
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: 'hub', hub }, '', `/${hub}`);
+  };
+
+  // Tool navigation
+  const handleToolClick = (slug: string) => {
+    setActiveToolSlug(slug);
+    setView('tool');
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: 'tool', slug }, '', `/tools/${slug}`);
+  };
+
+  // Comparison navigation
+  const handleComparisonClick = (slug: string) => {
+    setActiveComparisonSlug(slug);
+    setView('comparison');
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: 'comparison', slug }, '', `/compare/${slug}`);
   };
 
   const handleShowAbout = () => {
     setView('about');
     window.scrollTo(0, 0);
     window.history.pushState({ view: 'about' }, '', '/about');
-  };
-
-  const handleShowDashboard = () => {
-    setView('dashboard');
-    window.scrollTo(0, 0);
-    window.history.pushState({ view: 'dashboard' }, '', '/dashboard');
-  };
-
-  const handleShowActionGuide = () => {
-    setView('action-guide');
-    window.scrollTo(0, 0);
-    window.history.pushState({ view: 'action-guide' }, '', '/guides');
-  };
-
-  const handleShowSupport = () => {
-    setView('support');
-    window.scrollTo(0, 0);
-    window.history.pushState({ view: 'support' }, '', '/support');
-  };
-
-  // Helper to restore icon component lost in JSON serialization
-  // Renamed to avoid conflict - should be removed later
-  const restoreIcon_OLD = (data: any): ExplanationData => {
-    const title = data.title || data.label; // Handle potential variations
-    let IconComponent = Thermometer; // Default
-
-    if (title === "Global Mean Temp" || title === "Permafrost Thaw") IconComponent = Thermometer;
-    else if (title.includes("CO₂") || title.includes("Carbon")) IconComponent = CloudFog;
-    else if (title.includes("Ice Sheet") || title.includes("West Antarctic")) IconComponent = MountainSnow;
-    else if (title === "Sea Level Rise") IconComponent = Droplets;
-    else if (title === "Ocean Acidity") IconComponent = Waves;
-    else if (title === "Biodiversity") IconComponent = Bird;
-    else if (title === "Forest Loss" || title.includes("Rainforest")) IconComponent = Leaf;
-    else if (title.includes("Methane")) IconComponent = Flame;
-    else if (title.includes("Atlantic Circulation") || title.includes("AMOC")) IconComponent = Wind;
-    else if (title.includes("Limit") || title.includes("Warning")) IconComponent = AlertTriangle;
-
-    return { ...data, icon: IconComponent };
-  };
-
-  const handleExplainData = (data: ExplanationData) => {
-    // Explicitly update the CURRENT history entry to be a valid Dashboard checkpoint
-    // This ensures that when the user clicks "Back", they return to this exact state
-    if (view === 'dashboard') {
-      window.history.replaceState({ view: 'dashboard' }, '', '/dashboard');
-    }
-
-    // Save scroll position
-    sessionStorage.setItem('dashboardScroll', window.scrollY.toString());
-
-    // Save explanation data to session so it persists across reloads/nav
-    sessionStorage.setItem('explanationData', JSON.stringify(data));
-
-    setExplanationData(data);
-    setView('explanation');
-    window.scrollTo(0, 0);
-    // Use hash for navigation - explicit pushstate with hash
-    window.location.hash = 'explain';
-  };
-
-  const handleCloseExplanation = () => {
-    // Explicitly go to dashboard view
-    setView('dashboard');
-    // Replace URL to point to dashboard, effectively "closing" the modal in history
-    window.history.replaceState({ view: 'dashboard' }, '', '/dashboard');
-
-    // Restore scroll from session storage
-    setTimeout(() => {
-      const savedScroll = sessionStorage.getItem('dashboardScroll');
-      if (savedScroll) {
-        window.scrollTo(0, parseInt(savedScroll));
-      }
-    }, 100);
-  };
-
-  const handleBackToDashboard = () => {
-    window.history.back();
   };
 
   const handleShowSubscribe = () => {
@@ -549,15 +427,14 @@ function App() {
           onSearch={handleSearch}
           searchQuery={searchQuery}
           onArticleSelect={handleArticleClick}
-          onDashboardClick={handleShowDashboard}
-          onActionGuideClick={handleShowActionGuide}
-          onSupportClick={handleShowSupport}
+          onSupportClick={() => { }}
           onSubscribeClick={handleShowSubscribe}
           onShowAbout={handleShowAbout}
+          onHubClick={handleHubClick}
           activeCategory={activeCategory}
           onCategorySelect={handleCategorySelect}
           newsArticles={articles}
-          currentView={view} // Pass the current view state
+          currentView={view}
           lastSyncTime={lastSyncTime}
         />
 
@@ -567,19 +444,22 @@ function App() {
               <Hero
                 onReadFeatured={() => handleArticleClick(heroArticle)}
                 onArticleClick={handleArticleClick}
-                // Pass the featured discover article
                 featuredArticleOverride={heroArticle}
-                // Pass the sidebar articles
                 sidebarArticlesOverride={sidebarArticles}
                 articles={articles}
+                onHubClick={handleHubClick}
               />
               {/* Pass DYNAMIC articles to Portfolio */}
               <Portfolio
                 articles={articles}
                 onArticleClick={handleArticleClick}
                 searchQuery={searchQuery}
-                excludedArticleIds={excludedIds} // Prevent duplication of Hero + Sidebar
+                excludedArticleIds={excludedIds}
+                onComparisonClick={handleComparisonClick}
+                onHubClick={handleHubClick}
+                onToolClick={handleToolClick}
               />
+
 
               <div className="w-full bg-black py-12 border-t border-white/5">
                 <div className="container mx-auto px-4">
@@ -620,34 +500,31 @@ function App() {
             <AboutPage onBack={handleBackToFeed} />
           )}
 
-          {view === 'dashboard' && (
-            <EarthDashboard
-              onBack={handleBackToFeed}
-              onExplain={handleExplainData}
-              onSearch={handleSearch}
-              onDataSync={setLastSyncTime}
-            />
-          )}
-
-          {view === 'explanation' && explanationData && (
-            <DataExplanationView
-              data={explanationData}
-              onBack={handleCloseExplanation}
-            />
-          )}
-
-          {view === 'action-guide' && (
-            <CategoryFeed
-              category="Guides"
+          {view === 'hub' && (
+            <HubPage
+              hub={activeHub as any}
               articles={articles}
               onArticleClick={handleArticleClick}
-              onBack={() => handleCategorySelect('All')}
+              onToolClick={handleToolClick}
+              onComparisonClick={handleComparisonClick}
+              onBack={handleBackToFeed}
             />
           )}
 
-          {view === 'support' && (
-            <Support
-              onBack={() => handleCategorySelect('All')}
+          {view === 'tool' && activeToolSlug && (
+            <ToolPage
+              slug={activeToolSlug}
+              onBack={() => window.history.back()}
+              onArticleClick={handleArticleClick}
+              onComparisonClick={handleComparisonClick}
+            />
+          )}
+
+          {view === 'comparison' && activeComparisonSlug && (
+            <ComparisonPage
+              slug={activeComparisonSlug}
+              onBack={() => window.history.back()}
+              onToolClick={handleToolClick}
             />
           )}
 
@@ -657,6 +534,7 @@ function App() {
           <Contact
             onShowAbout={handleShowAbout}
             onSubscribeClick={handleShowSubscribe}
+            onCategorySelect={handleCategorySelect}
           />
         </main>
 

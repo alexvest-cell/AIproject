@@ -18,7 +18,7 @@ const extendContent = (base: string[], category: string | string[], topic: strin
         "When we analyze the broader ecosystem effects, we see a complex web of interactions. When one variable shifts—be it temperature, acidity, or policy—it triggers a cascade of secondary effects. For instance, recent changes in local biodiversity have already begun to alter soil composition, which in turn affects water retention and agricultural yields.",
         "We are attempting to repair a plane while flying it. The resilience of natural systems is being tested, and while some are showing surprising adaptability, others are nearing collapse. The data points we are seeing today are the early warning signals of this stress test.",
         "Future Outlook",
-        "Looking forward, the implications of this development will ripple through the remainder of the decade. As we approach the 2030 milestones, the actions taken today will determine whether we meet our planetary boundaries or breach them irreversibly. Planetary Brief will continue to monitor this situation as new data becomes available."
+        "Looking forward, the implications of this development will ripple through the remainder of the decade. As we approach the 2030 milestones, the actions taken today will determine whether we meet our technological goals or breach ethical boundaries. The Stack Brief will continue to monitor this situation as new data becomes available."
     ];
 };
 
@@ -39,7 +39,7 @@ const generateBodyContent = (category: string | string[], topic: string, excerpt
         "Expert Consensus",
         `Leading voices in ${catName} agree that the time for incrementalism has passed. The consensus emerging from recent summits is that structural reform is necessary to address the scale of the challenge presented by ${topic}. Disagreement remains on the speed of implementation, but the direction of travel is no longer in dispute.`,
         "Future Outlook",
-        `As we look towards 2030, the trajectory of ${topic} will likely define the broader ${catName} landscape. Planetary Brief will continue to monitor the data streams and provide updates as the situation evolves. The consensus among the scientific community remains clear: the window for effective action is narrowing, but the solutions are within reach. The decisions made in the next 18 months will likely determine the outcome for the next decade.`
+        `As we look towards 2030, the trajectory of ${topic} will likely define the broader ${catName} landscape. The Stack Brief will continue to monitor the data streams and provide updates as the situation evolves. The consensus among the scientific community remains clear: the window for effective action is narrowing, but the solutions are within reach. The decisions made in the next 18 months will likely determine the outcome for the next decade.`
     ];
 };
 
@@ -48,16 +48,16 @@ const generateBodyContent = (category: string | string[], topic: string, excerpt
    ------------------------------------------------------------------------- */
 
 export const heroContent = {
-    headline: "Planetary Brief",
-    subheadline: "Your source for global environmental intelligence. Create your first article in the CMS to get started.",
-    imageUrl: "https://placehold.co/1200x800?text=Welcome+to+Planetary+Brief",
-    source: "Planetary Brief",
+    headline: "The Stack Brief",
+    subheadline: "Your source for intelligence on the technology stack defining our future.",
+    imageUrl: "https://placehold.co/1200x800?text=Welcome+to+The+Stack+Brief",
+    source: "The Stack Brief",
     date: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     url: "#"
 };
 
 export const aboutContent = {
-    mission: "Planetary Brief is a curated intelligence platform dedicated to the most critical story of our time: the health of our planet. We aggregate verified data, scientific breakthroughs, and policy shifts to empower action through information.",
+    mission: "The Stack Brief is a curated intelligence platform dedicated to the most critical story of our time: the evolution of the global technology stack. We aggregate verified data, engineering breakthroughs, and policy shifts to empower action through information.",
 };
 
 // Empty featured article - will use first article from database when available
@@ -75,7 +75,7 @@ const createArticle = (id: string, title: string, category: string | string[], t
     title,
     category,
     topic,
-    source: "Planetary Brief Intelligence",
+    source: "AI Intelligence Report",
     imageUrl,
     excerpt,
     date,

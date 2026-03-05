@@ -44,7 +44,7 @@ const SimpleChart: React.FC<SimpleChartProps> = ({ data, color, unit, title }) =
   const getColorValue = (colorClass: string) => {
       if (colorClass.includes('red')) return '#ef4444';
       if (colorClass.includes('blue')) return '#3b82f6';
-      if (colorClass.includes('green') || colorClass.includes('emerald')) return '#10b981';
+      if (colorClass.includes('green') || colorClass.includes('emerald')) return '#2BD4C3';
       if (colorClass.includes('yellow')) return '#eab308';
       if (colorClass.includes('orange')) return '#f97316';
       if (colorClass.includes('indigo')) return '#6366f1';

@@ -22,7 +22,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
 
     // SEO Optimization
     React.useEffect(() => {
-        document.title = `${category} | Planetary Brief Intelligence`;
+        document.title = `${category} | ToolCurrent Intelligence`;
 
         let metaDesc = document.querySelector('meta[name="description"]');
         if (!metaDesc) {
@@ -31,7 +31,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
             document.head.appendChild(metaDesc);
         }
         const catData = CATEGORIES.find(c => c.id === category);
-        metaDesc.setAttribute('content', catData?.description || `Latest environmental intelligence on ${category}.`);
+        metaDesc.setAttribute('content', catData?.description || `Latest tech intelligence on ${category}.`);
 
     }, [category]);
 
@@ -98,7 +98,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                             <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-4 leading-[0.9] tracking-tight drop-shadow-2xl">
                                 {category}
                             </h1>
-                            <div className="h-1 w-16 bg-news-accent mb-4 shadow-[0_0_15px_#10b981]"></div>
+                            <div className="h-1 w-16 bg-news-accent mb-4 shadow-[0_0_15px_#2BD4C3]"></div>
                             <p className="text-gray-200 text-base md:text-lg font-light leading-relaxed max-w-xl drop-shadow-lg">
                                 {description}
                             </p>
@@ -139,7 +139,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                                             playArticle(heroArticle);
                                         }}
                                         disabled={isLoading && currentArticle?.id === heroArticle.id}
-                                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 backdrop-blur border border-white/20 flex items-center justify-center hover:bg-emerald-500 hover:text-black hover:border-emerald-500 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-20"
+                                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 backdrop-blur border border-white/20 flex items-center justify-center hover:bg-news-accent hover:text-black hover:border-news-accent transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-20"
                                         title="Listen to story"
                                     >
                                         {isLoading && currentArticle?.id === heroArticle.id ? (
@@ -223,7 +223,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                                                     playArticle(article);
                                                 }}
                                                 disabled={isLoading && currentArticle?.id === article.id}
-                                                className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur border border-white/20 flex items-center justify-center hover:bg-emerald-500 hover:text-black hover:border-emerald-500 transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-20 ${index === 0 ? 'top-4 right-4 w-10 h-10' : ''}`}
+                                                className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur border border-white/20 flex items-center justify-center hover:bg-news-accent hover:text-black hover:border-news-accent transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-20 ${index === 0 ? 'top-4 right-4 w-10 h-10' : ''}`}
                                                 title="Listen to article"
                                             >
                                                 {isLoading && currentArticle?.id === article.id ? (

@@ -87,9 +87,9 @@ const stats = [
     desc: "Loss of critical tropical rainforest, equivalent to 10 football fields per minute.",
     source: "WRI / GFW",
     icon: Trees,
-    color: "text-emerald-500",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/20"
+    color: "text-news-accent",
+    bg: "bg-news-accent/10",
+    border: "border-news-accent/20"
   },
   {
     id: 8,
@@ -206,12 +206,12 @@ const PlanetaryStatus: React.FC<PlanetaryStatusProps> = ({ onDashboardClick }) =
                 </div>
                 <div className="h-3 md:h-4 bg-white/10 rounded-full overflow-hidden relative">
                     {/* Safe Zone */}
-                    <div className="absolute left-0 top-0 h-full w-[66%] bg-gradient-to-r from-emerald-500 to-yellow-500 opacity-20"></div>
+                    <div className="absolute left-0 top-0 h-full w-[66%] bg-gradient-to-r from-news-accent to-news-accentHover opacity-20"></div>
                     {/* Danger Zone */}
                     <div className="absolute right-0 top-0 h-full w-[33%] bg-red-500/20"></div>
                     
                     {/* Progress Bar */}
-                    <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-500 via-yellow-500 to-red-500 w-[98%] shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
+                    <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-news-accent via-news-accentHover to-news-accent w-[98%] shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
                     
                     {/* Markers */}
                     <div className="absolute left-[99%] top-0 h-full w-0.5 bg-white z-10 shadow-[0_0_10px_white]"></div>

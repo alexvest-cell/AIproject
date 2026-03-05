@@ -43,8 +43,8 @@ const About: React.FC<AboutProps> = ({ onShowAbout }) => {
                         {/* Status Indicator */}
                         <div className="flex items-center gap-3 md:mr-auto lg:mr-0">
                             <div className="relative">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 blur-sm animate-pulse"></div>
+                                <div className="w-2 h-2 rounded-full bg-news-accent animate-pulse"></div>
+                                <div className="absolute inset-0 w-2 h-2 rounded-full bg-news-accent blur-sm animate-pulse"></div>
                             </div>
                             <div className="flex flex-col text-left md:text-left">
                                 <span className="text-[10px] uppercase tracking-widest font-bold text-gray-500">System Status</span>

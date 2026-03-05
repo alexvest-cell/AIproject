@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Section, Article } from '../types';
-import { Menu, X, Search, Bell, ChevronRight, Activity } from 'lucide-react';
+import { Menu, X, Search, Bell, ChevronRight } from 'lucide-react';
 
 interface NavigationProps {
   activeSection: Section;
@@ -9,21 +9,20 @@ interface NavigationProps {
   onSearch: (query: string) => void;
   searchQuery: string;
   onArticleSelect: (article: Article) => void;
-  onDashboardClick: () => void;
-  onActionGuideClick: () => void;
   onSupportClick: () => void;
   onSubscribeClick: () => void;
   onShowAbout: () => void;
   activeCategory: string;
   onCategorySelect: (category: string) => void;
+  onHubClick?: (slug: string) => void; // New: navigate to hub page
   newsArticles: Article[];
   currentView: string;
   lastSyncTime?: string;
 }
 
-import { CATEGORY_IDS } from '../data/categories';
+import { CATEGORIES } from '../data/categories';
 
-const navCategories = CATEGORY_IDS;
+const navCategories = CATEGORIES;
 
 const Navigation: React.FC<NavigationProps> = ({
   activeSection,
@@ -31,13 +30,12 @@ const Navigation: React.FC<NavigationProps> = ({
   onSearch,
   searchQuery,
   onArticleSelect,
-  onDashboardClick,
-  onActionGuideClick,
   onSupportClick,
   onSubscribeClick,
   onShowAbout,
   activeCategory,
   onCategorySelect,
+  onHubClick,
   newsArticles,
   currentView,
   lastSyncTime
@@ -50,6 +48,33 @@ const Navigation: React.FC<NavigationProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const dropdownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const NAV_DROPDOWNS: Record<string, { label: string; hub: string }[]> = {
+    'ai-tools': [
+      { label: 'AI Writing Tools', hub: 'ai-tools' },
+      { label: 'AI Image Tools', hub: 'ai-tools' },
+      { label: 'AI Video Tools', hub: 'ai-tools' },
+      { label: 'Automation Tools', hub: 'ai-tools' },
+    ],
+    'best-software': [
+      { label: 'Productivity', hub: 'best-software' },
+      { label: 'CRM Software', hub: 'best-software' },
+      { label: 'Developer Tools', hub: 'best-software' },
+      { label: 'Creative Tools', hub: 'best-software' },
+    ],
+  };
+
+  const openDropdown = (slug: string) => {
+    if (dropdownTimer.current) clearTimeout(dropdownTimer.current);
+    if (NAV_DROPDOWNS[slug]) setActiveDropdown(slug);
+  };
+
+  const closeDropdown = () => {
+    dropdownTimer.current = setTimeout(() => setActiveDropdown(null), 180);
+  };
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -128,10 +153,10 @@ const Navigation: React.FC<NavigationProps> = ({
   };
 
   return (
-    <div className="fixed top-0 left-0 w-full z-50 flex flex-col font-sans overflow-visible">
+    <div className={`fixed top-0 left-0 w-full z-50 flex flex-col font-sans overflow-visible transition-colors duration-300 ${isScrolled ? 'bg-surface-base/80 backdrop-blur-md shadow-sm' : 'bg-surface-base'}`}>
 
       {/* Top Bar (Primary Nav) */}
-      <div className={`w-full transition-all duration-300 overflow-visible ${isScrolled ? 'bg-black border-b border-white/10' : 'bg-black/90 backdrop-blur-md border-b border-white/5'}`}>
+      <div className="w-full border-b border-border-divider overflow-visible">
         <div className="container mx-auto px-4 md:px-8 py-3 md:py-0 md:h-16 flex flex-col md:flex-row gap-3 md:gap-0 overflow-visible">
 
           {/* Top Row on Mobile: Logo + Right Actions */}
@@ -139,13 +164,17 @@ const Navigation: React.FC<NavigationProps> = ({
             {/* Logo */}
             <div className="flex items-center gap-8">
               <div
-                className="cursor-pointer flex items-center gap-2 group"
+                className="flex items-center gap-3 cursor-pointer group"
                 onClick={() => { onCategorySelect('All'); }}
               >
-                <span className="font-serif text-2xl font-bold tracking-tighter uppercase transition-opacity hover:opacity-90">
-                  <span className="text-news-accent">Planetary</span>
-                  <span className="text-white">Brief</span>
-                </span>
+                {/* toolcurrent official logo image */}
+                <div className="flex items-center h-8 md:h-10">
+                  <img
+                    src="/logo.png"
+                    alt="toolcurrent"
+                    className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300"
+                  />
+                </div>
               </div>
             </div>
 
@@ -167,34 +196,11 @@ const Navigation: React.FC<NavigationProps> = ({
             </div>
           </div>
 
-          {/* Nav Buttons (Row 2 on Mobile, Centered/Left on Desktop) */}
-          <div className="flex items-center gap-2 w-full md:w-auto md:ml-12">
-            <button
-              onClick={() => { onCategorySelect('All'); }}
-              className={`flex-1 md:flex-none px-3 md:px-4 py-1.5 rounded-md text-[10px] md:text-xs font-bold uppercase tracking-wider shadow-sm transition-all ${['home', 'category', 'article', 'sources'].includes(currentView) ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-            >
-              Articles
-            </button>
-            <button
-              onClick={onActionGuideClick}
-              className={`flex-1 md:flex-none px-3 md:px-4 py-1.5 rounded-md text-[10px] md:text-xs font-bold uppercase tracking-wider shadow-sm transition-all ${(currentView === 'action-guide' || currentView === 'support') ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-            >
-              Action
-            </button>
-            <button
-              onClick={onDashboardClick}
-              className={`flex-1 md:flex-none px-3 md:px-4 py-1.5 rounded-md text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${['dashboard', 'explanation'].includes(currentView) ? 'bg-news-accent/10 text-news-accent' : 'text-news-accent hover:bg-white/10'}`}
-            >
-              <Activity size={14} className={['dashboard', 'explanation'].includes(currentView) ? 'animate-pulse' : ''} />
-              <span>PlanetDash</span>
-            </button>
-          </div>
-
           {/* Desktop Right Actions (Hidden on Mobile) */}
           <div className="hidden md:flex items-center gap-4 ml-auto overflow-visible">
             {/* Expanded Search */}
             {isSearchOpen ? (
-              <div ref={searchContainerRef} className="flex items-center bg-zinc-900 border border-news-accent/50 rounded-full px-3 py-1.5 animate-fade-in relative w-48 md:w-64">
+              <div ref={searchContainerRef} className="flex items-center bg-surface-card border border-border-subtle shadow-elevation rounded-full px-3 py-1.5 animate-fade-in relative w-48 md:w-64">
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -226,8 +232,8 @@ const Navigation: React.FC<NavigationProps> = ({
       </div>
 
       {/* Mobile Search Bar (Only visible when search is open on mobile) */}
-      <div className={`md:hidden ${isSearchOpen ? 'block' : 'hidden'} w-full bg-zinc-900 border-b border-white/10 p-4 animate-fade-in`}>
-        <div className="flex items-center bg-black border border-white/20 rounded-lg px-3 py-2">
+      <div className={`md:hidden ${isSearchOpen ? 'block' : 'hidden'} w-full border-b border-border-divider p-4 animate-fade-in`}>
+        <div className="flex items-center bg-surface-card border border-border-subtle shadow-inner rounded-lg px-3 py-2">
           <Search size={16} className="text-gray-500 mr-2" />
           <input
             type="text"
@@ -244,85 +250,97 @@ const Navigation: React.FC<NavigationProps> = ({
         </div>
       </div>
 
-      {/* Secondary Bar (Categories or Action Menu) */}
-      <div className={`w-full bg-black/80 backdrop-blur border-b border-white/10 transition-all duration-300 ${isScrolled ? 'h-10' : 'h-12'}`}>
+      {/* Secondary Bar */}
+      <div className={`w-full border-b border-border-divider transition-all duration-300 ${isScrolled ? 'h-10' : 'h-12'} relative`}>
         <div className="container mx-auto px-4 md:px-8 h-full flex items-center overflow-x-auto hide-scrollbar">
           <div className="flex items-center gap-6 md:gap-8 min-w-max">
-            {/* PlanetDash Submenu */}
-            {['dashboard', 'explanation'].includes(currentView) ? (
-              <div className="flex items-center gap-4 w-full animate-fade-in">
-                <span className="px-2 py-0.5 rounded border border-news-accent/30 bg-news-accent/5 text-news-accent text-[10px] font-mono uppercase tracking-wider shadow-[0_0_10px_rgba(0,255,157,0.1)]">
-                  Beta Version
-                </span>
-                {lastSyncTime && (
-                  <span className="text-[10px] uppercase tracking-wider text-news-accent font-mono ml-auto md:ml-4 animate-pulse-slow">
-                    Last sync: <span className="font-bold">{lastSyncTime.replace(' (Local time)', '')}</span>
-                  </span>
-                )}
-              </div>
-            ) : (
-              currentView !== 'action-guide' && currentView !== 'support' && navCategories.map(cat => (
+            {navCategories.map(cat => (
+              <div
+                key={cat.id}
+                className="relative"
+                onMouseEnter={() => openDropdown(cat.slug)}
+                onMouseLeave={closeDropdown}
+              >
                 <button
-                  key={cat}
-                  onClick={() => onCategorySelect(cat)}
-                  className={`text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap relative py-1 ${activeCategory === cat ? 'text-news-accent' : 'text-gray-400 hover:text-white'
+                  onClick={() => {
+                    if (onHubClick) {
+                      onHubClick(cat.slug);
+                    } else {
+                      onCategorySelect(cat.id);
+                    }
+                    setActiveDropdown(null);
+                  }}
+                  className={`text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap relative px-2 py-1.5 rounded-md flex items-center gap-1 ${activeCategory === cat.id ? 'text-news-accent bg-surface-hover' : 'text-gray-400 hover:text-white hover:bg-surface-hover'
                     }`}
                 >
-                  {cat}
-                  {activeCategory === cat && (
+                  {cat.label}
+                  {NAV_DROPDOWNS[cat.slug] && (
+                    <svg width="8" height="5" viewBox="0 0 8 5" fill="none" className={`transition-transform ${activeDropdown === cat.slug ? 'rotate-180' : ''}`}>
+                      <path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  )}
+                  {activeCategory === cat.id && (
                     <span className="absolute bottom-0 left-0 w-full h-0.5 bg-news-accent rounded-full"></span>
                   )}
                 </button>
-              )))}
 
-            {/* Show action submenu when Action is active */}
-            {currentView === 'action-guide' && (
-              <>
-                <button
-                  onClick={onActionGuideClick}
-                  className="text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap relative py-1 text-news-accent"
-                >
-                  Guides
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-news-accent rounded-full"></span>
-                </button>
-                <button
-                  onClick={onSupportClick}
-                  className="text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap relative py-1 text-gray-400 hover:text-white"
-                >
-                  Support
-                </button>
-              </>
-            )}
-            {currentView === 'support' && (
-              <>
-                <button
-                  onClick={onActionGuideClick}
-                  className="text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap relative py-1 text-gray-400 hover:text-white"
-                >
-                  Guides
-                </button>
-                <button
-                  onClick={onSupportClick}
-                  className="text-[10px] md:text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap relative py-1 text-news-accent"
-                >
-                  Support
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-news-accent rounded-full"></span>
-                </button>
-              </>
-            )}
+                {/* Dropdown Panel */}
+                {NAV_DROPDOWNS[cat.slug] && activeDropdown === cat.slug && (
+                  <div
+                    className="absolute top-full left-0 mt-2 w-48 bg-surface-card border border-border-subtle rounded-[14px] shadow-elevation overflow-hidden z-50 animate-fade-in"
+                    onMouseEnter={() => openDropdown(cat.slug)}
+                    onMouseLeave={closeDropdown}
+                  >
+                    {NAV_DROPDOWNS[cat.slug].map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          if (onHubClick) onHubClick(item.hub);
+                          setActiveDropdown(null);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs text-news-text hover:text-white hover:bg-surface-hover transition-colors border-b border-border-divider last:border-0 font-medium"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 top-28 bg-black z-40 p-6 animate-fade-in md:hidden border-t border-white/10">
-          <div className="flex flex-col gap-6 text-sm font-bold uppercase tracking-widest">
-            <button onClick={() => { onCategorySelect('All'); setIsMobileMenuOpen(false); }} className="text-left text-white border-b border-white/10 pb-4">Home</button>
-            <button onClick={() => { onShowAbout(); setIsMobileMenuOpen(false); }} className="text-left text-white border-b border-white/10 pb-4">About</button>
-            <button onClick={() => { onSubscribeClick(); setIsMobileMenuOpen(false); }} className="text-left text-white flex items-center gap-2">
-              Subscribe
-            </button>
+        <div className="fixed inset-0 top-28 bg-black z-40 p-6 animate-fade-in md:hidden border-t border-white/10 overflow-y-auto">
+          <div className="flex flex-col gap-1 text-sm font-bold uppercase tracking-widest">
+            <button onClick={() => { onCategorySelect('All'); setIsMobileMenuOpen(false); }} className="text-left text-white border-b border-white/10 py-4">Home</button>
+            {navCategories.map(cat => (
+              <div key={cat.id}>
+                <button
+                  onClick={() => { if (onHubClick) onHubClick(cat.slug); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left text-white border-b border-white/10 py-4 flex items-center justify-between"
+                >
+                  {cat.label}
+                  {NAV_DROPDOWNS[cat.slug] && <svg width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>}
+                </button>
+                {NAV_DROPDOWNS[cat.slug] && (
+                  <div className="pl-4 pb-2 space-y-1">
+                    {NAV_DROPDOWNS[cat.slug].map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => { if (onHubClick) onHubClick(item.hub); setIsMobileMenuOpen(false); }}
+                        className="block w-full text-left text-gray-400 py-2 text-xs"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            <button onClick={() => { onShowAbout(); setIsMobileMenuOpen(false); }} className="text-left text-white border-b border-white/10 py-4">About</button>
+            <button onClick={() => { onSubscribeClick(); setIsMobileMenuOpen(false); }} className="text-left text-white py-4">Subscribe</button>
           </div>
         </div>
       )}
@@ -337,13 +355,13 @@ const Navigation: React.FC<NavigationProps> = ({
             width: `${dropdownPosition.width}px`,
             zIndex: 9999
           }}
-          className="bg-zinc-950 border border-news-accent/30 rounded-xl shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto"
+          className="bg-surface-card border border-border-subtle rounded-[14px] shadow-elevation overflow-hidden max-h-[400px] overflow-y-auto"
         >
           {suggestions.map(article => (
             <div
               key={article.id}
               onClick={() => handleSuggestionClick(article)}
-              className="p-3 border-b border-white/5 hover:bg-white/10 cursor-pointer flex items-center gap-3 transition-colors"
+              className="p-3 border-b border-border-divider hover:bg-surface-hover cursor-pointer flex items-center gap-3 transition-colors"
             >
               <div className="flex-grow min-w-0">
                 <h4 className="text-xs font-bold text-white truncate">{article.title}</h4>

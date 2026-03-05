@@ -6,11 +6,12 @@ const articleSchema = new mongoose.Schema({
     title: String,
     excerpt: String,
     content: [String], // Array of paragraphs
-    category: [String], // Can be single string or array, we'll store as array ideally, but Mixed works for migration
+    category: [String], // Can be single string or array
     imageUrl: String,
     author: String,
     date: String,
     readTime: String,
+    read_time: Number, // minutes (numeric, new field)
     tags: [String],
     keywords: [String],
     location: String,
@@ -19,8 +20,55 @@ const articleSchema = new mongoose.Schema({
         content: String,
         source: String
     },
-    sources: [String], // List of specific sources
-    audioUrl: String,  // Cloudinary URL
+    sources: [String],
+    audioUrl: String,
+
+    // Platform fields — article type determines hub placement
+    article_type: {
+        type: String,
+        enum: ['news', 'review', 'guide', 'best-of', 'ranking', 'comparison', 'intelligence', 'use_case'],
+        default: 'news'
+    },
+
+    // Relational links to Tool entities (stored as tool slugs)
+    primary_tools: [String],    // Tool slugs featured/reviewed in this article
+    comparison_tools: [String], // Tool slugs used in comparison tables
+
+    // FAQ section (for FAQ schema markup)
+    faq: [{
+        question: String,
+        answer: String,
+        _id: false
+    }],
+
+    // Layout-specific fields
+    verdict: String,
+    pros: [String],
+    cons: [String],
+    rating_breakdown: {
+        ease_of_use: Number,
+        features: Number,
+        pricing: Number,
+        integrations: Number,
+        performance: Number
+    },
+    who_its_for: [String],
+    pricing_analysis: String,
+    // Comparison-specific
+    choose_tool_a: [String],
+    choose_tool_b: [String],
+    comparison_rows: [{
+        label: String,
+        tool_a_value: String,
+        tool_b_value: String,
+        _id: false
+    }],
+
+    // SEO
+    meta_title: String,
+    meta_description: String,
+
+    // Publish control
     status: { type: String, enum: ['draft', 'published', 'scheduled'], default: 'published' },
     scheduledPublishDate: Date,
     publishedAt: Date,
@@ -28,3 +76,4 @@ const articleSchema = new mongoose.Schema({
 }, { strict: false }); // strict: false allows for flexible fields if legacy data varies
 
 export default mongoose.model('Article', articleSchema);
+

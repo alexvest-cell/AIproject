@@ -3,12 +3,10 @@
 
 <head>
   <meta charset="UTF-8" />
-  <!-- Usercentrics CMP -->
-  <script id="usercentrics-cmp" src="https://app.usercentrics.eu/browser-ui/latest/loader.js"
-    data-settings-id="HMrN1WLi23IQqs" async></script>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <link rel="icon" type="image/png" href="/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Planetary Brief | Global Environmental Intelligence</title>
+  <title>ToolCurrent | Software Discovery & Intelligence</title>
 
   <style>
     /* Force vertical scrollbar to prevent layout shift between long/short pages */
@@ -31,19 +29,19 @@
   </style>
 
   <!-- Google Analytics (GA4) -->
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-9DNLC07E9F"></script>
+  <!-- TODO: Replace G-XXXXXXXXXX with ToolCurrent's own GA4 Measurement ID -->
+  <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-
-    gtag('config', 'G-9DNLC07E9F');
-  </script>
+    gtag('config', 'G-XXXXXXXXXX');
+  </script> -->
 
   <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7811320496090329"
-    crossorigin="anonymous"></script>
+  <!-- TODO: Replace ca-pub-XXXXXXXXXXXXXXXX with ToolCurrent's own AdSense Publisher ID -->
+  <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+    crossorigin="anonymous"></script> -->
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -51,15 +49,31 @@
       theme: {
         extend: {
           colors: {
-            news: {
-              bg: '#000000', // Pure Black for CBS style
-              paper: '#121212', // Very dark gray for cards
-              text: '#ffffff', // Pure White
-              muted: '#9ca3af', // Gray-400
-              accent: '#10b981', // Emerald-500 (Brand)
-              live: '#ef4444', // Red-500 (Live Indicator)
-              border: '#27272a', // Zinc-800
+            surface: {
+              base: '#0B0F14',
+              alt: '#0F141A',
+              card: '#111826',
+              elevated: '#162033',
+              hover: '#1B2433',
             },
+            border: {
+              subtle: 'rgba(255,255,255,0.06)',
+              divider: 'rgba(255,255,255,0.04)',
+            },
+            news: {
+              bg: '#0B0F14', // Updated Main Background
+              paper: '#111826', // Card Surface
+              text: '#AEB6C2', // Brighter body copy
+              muted: '#7E8794', // Dimmer metadata
+              accent: '#2BD4C3', // New ToolCurrent Cyan accent
+              accentHover: '#3FE7D6', // Gradient target
+              live: '#ef4444',
+              border: 'rgba(255,255,255,0.06)',
+            },
+          },
+          boxShadow: {
+            'elevation': '0 0 0 1px rgba(255,255,255,0.03), 0 8px 24px rgba(0,0,0,0.35)',
+            'elevation-hover': '0 0 0 1px rgba(255,255,255,0.06), 0 12px 32px rgba(0,0,0,0.45)',
           },
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
@@ -88,8 +102,8 @@
     rel="stylesheet">
   <style>
     body {
-      background-color: #000000;
-      color: #ffffff;
+      background-color: #0B0F14;
+      color: #AEB6C2;
       font-family: 'Inter', sans-serif;
     }
 

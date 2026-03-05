@@ -43,12 +43,13 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
             <div className="w-full max-w-md">
                 {/* Logo Header */}
                 <div className="text-center mb-8">
-                    <div className="inline-block">
-                        <h1 className="text-3xl font-serif font-bold tracking-tighter uppercase mb-2">
-                            <span className="text-news-accent">Planetary</span>
-                            <span className="text-white">Brief</span>
-                        </h1>
-                        <div className="h-0.5 bg-gradient-to-r from-transparent via-news-accent to-transparent"></div>
+                    <div className="flex flex-col items-center gap-6">
+                        <img
+                            src="/logo.png"
+                            alt="toolcurrent logo"
+                            className="h-12 w-auto object-contain"
+                        />
+                        <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-news-accent to-transparent opacity-30"></div>
                     </div>
                     <p className="text-gray-400 text-sm mt-4 font-mono">Content Management System</p>
                 </div>
@@ -88,7 +89,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
                         <button
                             type="submit"
                             disabled={loading || !password}
-                            className="w-full bg-news-accent hover:bg-emerald-600 text-black font-bold py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full bg-news-accent hover:bg-news-accentHover text-black font-bold py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <>

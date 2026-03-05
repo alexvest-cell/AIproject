@@ -10,7 +10,7 @@ import multer from 'multer';
 import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 import streamifier from 'streamifier';
-import seedArticles from './seed_data.js';
+import { seedArticles as stackBriefArticles, seedTools, seedComparisons } from './seed_data_toolcurrent.js';
 import dns from 'dns';
 import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
@@ -26,6 +26,8 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 // Models
 import Article from './models/Article.js';
 import Subscriber from './models/Subscriber.js';
+import Tool from './models/Tool.js';
+import Comparison from './models/Comparison.js';
 
 const app = express();
 const port = 3000;
@@ -49,6 +51,59 @@ if (GEMINI_API_KEY) {
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+
+// ==========================================
+// --- SEO ROUTES (Robots & Sitemap) ---
+// ==========================================
+
+// SEO: Robots.txt
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send(`User-agent: *
+Allow: /
+Sitemap: https://toolcurrent.com/sitemap.xml`);
+});
+
+// SEO: Dynamic Sitemap
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const articles = await Article.find({ status: 'published' }).select('slug updatedAt createdAt date');
+    const tools = await Tool.find({ status: 'Active' }).select('slug updatedAt');
+    const comparisons = await Comparison.find({ status: 'published' }).select('slug updatedAt');
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+    // Static Pages
+    const staticPages = ['', 'ai-tools', 'best-software', 'reviews', 'comparisons', 'use-cases', 'guides', 'news', 'about'];
+    staticPages.forEach(p => {
+      xml += `  <url>\n    <loc>https://toolcurrent.com/${p}</loc>\n    <changefreq>daily</changefreq>\n    <priority>${p === '' ? '1.0' : '0.8'}</priority>\n  </url>\n`;
+    });
+
+    // Dynamic: Articles
+    articles.forEach(a => {
+      const lastMod = new Date(a.updatedAt || a.createdAt || a.date).toISOString().split('T')[0];
+      xml += `  <url>\n    <loc>https://toolcurrent.com/article/${a.slug || a.id}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+    });
+
+    // Dynamic: Tools
+    tools.forEach(t => {
+      xml += `  <url>\n    <loc>https://toolcurrent.com/tools/${t.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+    });
+
+    // Dynamic: Comparisons
+    comparisons.forEach(c => {
+      xml += `  <url>\n    <loc>https://toolcurrent.com/compare/${c.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+    });
+
+    xml += '</urlset>';
+    res.type('application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
 
 // Database Connection
 if (MONGODB_URI) {
@@ -96,17 +151,33 @@ function generateSlug(text) {
 // Seeding Logic
 async function seedDatabase() {
   try {
+    // 1. Seed Articles
     const count = await Article.countDocuments();
     if (count === 0) {
-      console.log('Seeding database with initial articles...');
-      // Ensure seed data format matches schema and has slugs
-      const formattedSeed = seedArticles.map(a => ({
+      console.log('Seeding database with ToolCurrent articles...');
+      const formattedSeed = stackBriefArticles.map(a => ({
         ...a,
-        content: Array.isArray(a.content) ? a.content : [a.content], // Ensure content is array
-        slug: a.slug || generateSlug(a.title) // Generate slug if missing
+        content: Array.isArray(a.content) ? a.content : [a.content],
+        slug: a.slug || generateSlug(a.title)
       }));
       await Article.insertMany(formattedSeed);
-      console.log('Seeding complete.');
+      console.log('Article seeding complete.');
+    }
+
+    // 2. Seed Tools
+    const toolCount = await Tool.countDocuments();
+    if (toolCount === 0) {
+      console.log('Seeding database with ToolCurrent tools...');
+      await Tool.insertMany(seedTools);
+      console.log('Tool seeding complete.');
+    }
+
+    // 3. Seed Comparisons
+    const comparisonCount = await Comparison.countDocuments();
+    if (comparisonCount === 0) {
+      console.log('Seeding database with ToolCurrent comparisons...');
+      await Comparison.insertMany(seedComparisons);
+      console.log('Comparison seeding complete.');
     }
   } catch (err) {
     console.error('Seeding error:', err);
@@ -338,6 +409,51 @@ app.get('/api/articles/export-images', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Image export error:', error);
     res.status(500).json({ error: 'Failed to export image URLs' });
+  }
+});
+
+
+// GET Comparisons (public)
+app.get('/api/comparisons', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.json(seedComparisons);
+    }
+    const comparisons = await Comparison.find({ status: 'published' }).lean();
+    // Populate tool_a and tool_b from tools collection
+    const tools = await Tool.find().lean();
+    const toolMap = Object.fromEntries(tools.map(t => [t.slug, t]));
+    const enriched = comparisons.map(c => ({
+      ...c,
+      tool_a: toolMap[c.tool_a_slug] || null,
+      tool_b: toolMap[c.tool_b_slug] || null,
+    }));
+    res.json(enriched);
+  } catch (err) {
+    console.error('GET /api/comparisons error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET Comparison by slug
+app.get('/api/comparisons/:slug', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      const cmp = seedComparisons.find(c => c.slug === req.params.slug);
+      return cmp ? res.json(cmp) : res.status(404).json({ error: 'Not found' });
+    }
+    const comparison = await Comparison.findOne({ slug: req.params.slug }).lean();
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
+    const tools = await Tool.find({ slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } }).lean();
+    const toolMap = Object.fromEntries(tools.map(t => [t.slug, t]));
+    res.json({
+      ...comparison,
+      tool_a: toolMap[comparison.tool_a_slug] || null,
+      tool_b: toolMap[comparison.tool_b_slug] || null,
+    });
+  } catch (err) {
+    console.error(`GET /api/comparisons/${req.params.slug} error:`, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -596,10 +712,10 @@ app.post('/api/generate', async (req, res) => {
       REQUIREMENTS (JOURNALISTIC TONE & SEO):
       - Write as an investigative journalist uncovering a discovery.
       - NO GENERIC CALLS TO ACTION (e.g., "Learn more", "Check our link", "Read now").
-      - MANDATORY FOOTER: Every post MUST end with exactly: "Read on planetarybrief.com". This comes after everything else (including hashtags).
+      - MANDATORY FOOTER: Every post MUST end with exactly: "Read on thetoolcurrent.com". This comes after everything else (including hashtags).
       - ABSOLUTELY NO EXCLAMATION MARKS. Use zero hype.
       - The text should be a fascinating, factual summary that draws the reader in purely based on the intrigue of the fact.
-      - INCLUDE HASHTAGS: Append 3-5 highly relevant, trending environmental hashtags (e.g., #ClimateAction, #Sustainability) to the end of each post's text.
+      - INCLUDE HASHTAGS: Append 3-5 highly relevant, trending AI and tech hashtags (e.g., #ArtificialIntelligence, #TechNews) to the end of each post's text.
       1. Twitter/X: Concise, punchy, under 280 chars, informative. MUST include hashtags and the mandatory footer.
       2. Facebook/Instagram/TikTok: Sophisticated, storytelling tone, zero promotion. MUST include hashtags and the mandatory footer.
       
@@ -632,7 +748,7 @@ app.post('/api/generate', async (req, res) => {
       const targetLength = minMinutes && maxMinutes ? `${minMinutes}-${maxMinutes}` : '5-7';
       const wordCount = Math.floor(((parseInt(minMinutes) || 5) + (parseInt(maxMinutes) || 7)) / 2 * 200);
 
-      systemPrompt = `You are an expert environmental journalist writing for Planetary Brief, a premium environmental intelligence platform.
+      systemPrompt = `You are an expert tech journalist writing for ToolCurrent, a premium technology intelligence platform.
       
       Based on the user's prompt, generate a comprehensive, factual environmental news article.
 
@@ -780,7 +896,7 @@ const sendDigestEmail = async (email, topics, isWelcome = false) => {
     </head>
     <body style="background-color: #18181b; margin: 0; padding: 0;">
       <div class="container">
-        <div class="header"><h1><span class="accent">Planetary</span>Brief</h1></div>
+        <div class="header"><h1><span class="accent">The Stack</span>Brief</h1></div>
         <div class="content">
           ${isWelcome ? '<p style="text-align:center">Welcome to the inner circle.</p>' : '<p style="text-align:center">Your weekly articles.</p>'}
           ${articleRows.map(row => `
@@ -827,9 +943,9 @@ const sendDigestEmail = async (email, topics, isWelcome = false) => {
   }
 
   const info = await transporter.sendMail({
-    from: '"Planetary Brief Intelligence" <briefing@planetarybrief.com>',
+    from: '"ToolCurrent" <briefing@thetoolcurrent.com>',
     to: email,
-    subject: isWelcome ? "Welcome to Planetary Brief" : "Your Weekly Articles",
+    subject: isWelcome ? "Welcome to ToolCurrent" : "Your Weekly Intelligence Report",
     html: emailHtml,
   });
 
@@ -837,14 +953,8 @@ const sendDigestEmail = async (email, topics, isWelcome = false) => {
 };
 
 // --- SERVE FRONTEND (Production) ---
-// This allows the Node server to serve the React app after it's built
-const distPath = path.join(__dirname, '../dist');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get(/(.*)/, (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-}
+// NOTE: Static middleware intentionally placed at END of file (after all API routes).
+// See lines 1627+ for the correct static + SPA fallback.
 
 // --- AI Endpoints ---
 
@@ -858,8 +968,8 @@ app.post('/api/analyze', async (req, res) => {
       model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
-        systemInstruction: `You are the Planetary Brief AI, an intelligent environmental assistant.
-        Goal: Answer user questions on environment, climate, sustainability with high accuracy.
+        systemInstruction: `You are ToolCurrent AI, an intelligent assistant.
+        Goal: Answer user questions on the technology stack, AI, and future trends with high accuracy.
         Tone: Helpful, authoritative, scientific, yet accessible. Avoid alarmism.
         Format: Keep responses concise (under 200 words) unless asked for deep dive. Use markdown.
         Verification: Rely on consensus science (IPCC, NOAA, etc.).`,
@@ -1092,19 +1202,7 @@ app.post('/api/generate-audio', requireAuth, async (req, res) => {
 });
 
 
-// Serve static files from the React app (build directory)
-app.use(express.static(path.join(__dirname, '../dist')));
 
-// SPA fallback: serve index.html for any request that doesn't match API routes or static files
-// Express 5 doesn't support wildcard routes, so we use middleware instead
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-// Start Server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
 
 // --- AI PROVIDER ROUTING ---
 
@@ -1255,3 +1353,290 @@ function processAIResponse(res, text, type) {
   return res.json({ text });
 }
 
+
+// ==========================================
+// --- TOOLS API ---
+// ==========================================
+
+// GET all tools (public)
+app.get('/api/tools', async (req, res) => {
+  try {
+    const { category, pricing, use_case, status, search } = req.query;
+    let query = {};
+
+    if (status) query.status = status;
+    if (category) query.category_tags = category;
+    if (pricing) query.pricing_model = pricing;
+    if (use_case) query.use_case_tags = use_case;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { short_description: { $regex: search, $options: 'i' } },
+        { category_tags: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const tools = await Tool.find(query).sort({ name: 1 });
+    res.json(tools);
+  } catch (error) {
+    console.error('GET /api/tools error:', error);
+    res.status(500).json({ error: 'Failed to fetch tools' });
+  }
+});
+
+// GET single tool by slug (public)
+app.get('/api/tools/:slug', async (req, res) => {
+  try {
+    const tool = await Tool.findOne({ slug: req.params.slug });
+    if (!tool) return res.status(404).json({ error: 'Tool not found' });
+
+    // Also fetch related comparisons
+    const comparisons = await Comparison.find({
+      $or: [
+        { tool_a_slug: req.params.slug },
+        { tool_b_slug: req.params.slug },
+        { tool_c_slug: req.params.slug }
+      ],
+      status: 'published'
+    });
+
+    // Fetch articles referencing this tool
+    const relatedArticles = await Article.find({
+      primary_tools: req.params.slug,
+      status: 'published'
+    }).sort({ createdAt: -1 }).limit(5);
+
+    res.json({ tool, comparisons, relatedArticles });
+  } catch (error) {
+    console.error('GET /api/tools/:slug error:', error);
+    res.status(500).json({ error: 'Failed to fetch tool' });
+  }
+});
+
+// POST create tool (auth required)
+app.post('/api/tools', requireAuth, async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data.id) data.id = 'tool-' + Date.now();
+    if (!data.slug && data.name) data.slug = generateSlug(data.name);
+    data.createdAt = new Date();
+    data.updatedAt = new Date();
+
+    const tool = await Tool.create(data);
+    res.status(201).json(tool);
+  } catch (error) {
+    console.error('POST /api/tools error:', error);
+    if (error.code === 11000) return res.status(400).json({ error: 'Tool with this slug already exists.' });
+    res.status(500).json({ error: 'Failed to create tool: ' + error.message });
+  }
+});
+
+// PUT update tool (auth required)
+app.put('/api/tools/:id', requireAuth, async (req, res) => {
+  try {
+    const updates = { ...req.body, updatedAt: new Date() };
+    const tool = await Tool.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
+    if (!tool) return res.status(404).json({ error: 'Tool not found' });
+    res.json(tool);
+  } catch (error) {
+    console.error('PUT /api/tools/:id error:', error);
+    res.status(500).json({ error: 'Failed to update tool: ' + error.message });
+  }
+});
+
+// DELETE tool (auth required)
+app.delete('/api/tools/:id', requireAuth, async (req, res) => {
+  try {
+    const tool = await Tool.findOneAndDelete({ id: req.params.id });
+    if (!tool) return res.status(404).json({ error: 'Tool not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('DELETE /api/tools/:id error:', error);
+    res.status(500).json({ error: 'Failed to delete tool: ' + error.message });
+  }
+});
+
+
+// ==========================================
+// --- COMPARISONS API ---
+// ==========================================
+
+// GET all comparisons (public)
+app.get('/api/comparisons', async (req, res) => {
+  try {
+    const comparisons = await Comparison.find({ status: 'published' }).sort({ createdAt: -1 });
+
+    // Enrich with tool data
+    const enriched = await Promise.all(comparisons.map(async (c) => {
+      const tool_a = await Tool.findOne({ slug: c.tool_a_slug }).select('name slug logo short_description pricing_model rating_score');
+      const tool_b = await Tool.findOne({ slug: c.tool_b_slug }).select('name slug logo short_description pricing_model rating_score');
+      const tool_c = c.tool_c_slug ? await Tool.findOne({ slug: c.tool_c_slug }).select('name slug logo short_description pricing_model rating_score') : null;
+      return { ...c.toObject(), tool_a, tool_b, tool_c };
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    console.error('GET /api/comparisons error:', error);
+    res.status(500).json({ error: 'Failed to fetch comparisons' });
+  }
+});
+
+// GET single comparison by slug (public)
+app.get('/api/comparisons/:slug', async (req, res) => {
+  try {
+    const comparison = await Comparison.findOne({ slug: req.params.slug });
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
+
+    // Enrich with full tool data
+    const tool_a = await Tool.findOne({ slug: comparison.tool_a_slug });
+    const tool_b = await Tool.findOne({ slug: comparison.tool_b_slug });
+    const tool_c = comparison.tool_c_slug ? await Tool.findOne({ slug: comparison.tool_c_slug }) : null;
+
+    res.json({ ...comparison.toObject(), tool_a, tool_b, tool_c });
+  } catch (error) {
+    console.error('GET /api/comparisons/:slug error:', error);
+    res.status(500).json({ error: 'Failed to fetch comparison' });
+  }
+});
+
+// POST create comparison (auth required)
+app.post('/api/comparisons', requireAuth, async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data.id) data.id = 'cmp-' + Date.now();
+    if (!data.slug && data.title) data.slug = generateSlug(data.title);
+    data.createdAt = new Date();
+    data.updatedAt = new Date();
+
+    const comparison = await Comparison.create(data);
+    res.status(201).json(comparison);
+  } catch (error) {
+    console.error('POST /api/comparisons error:', error);
+    if (error.code === 11000) return res.status(400).json({ error: 'Comparison with this slug already exists.' });
+    res.status(500).json({ error: 'Failed to create comparison: ' + error.message });
+  }
+});
+
+// PUT update comparison (auth required)
+app.put('/api/comparisons/:id', requireAuth, async (req, res) => {
+  try {
+    const updates = { ...req.body, updatedAt: new Date() };
+    const comparison = await Comparison.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
+    res.json(comparison);
+  } catch (error) {
+    console.error('PUT /api/comparisons/:id error:', error);
+    res.status(500).json({ error: 'Failed to update comparison: ' + error.message });
+  }
+});
+
+// DELETE comparison (auth required)
+app.delete('/api/comparisons/:id', requireAuth, async (req, res) => {
+  try {
+    const comparison = await Comparison.findOneAndDelete({ id: req.params.id });
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('DELETE /api/comparisons/:id error:', error);
+    res.status(500).json({ error: 'Failed to delete comparison: ' + error.message });
+  }
+});
+
+// ==========================================
+// --- SEO & SSR-LITE ---
+// ==========================================
+
+// Helper to inject meta tags into index.html
+async function serveWithMeta(req, res, title, description) {
+  try {
+    const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      // Fallback if build doesn't exist (helpful for local dev)
+      return res.send(`<html><head><title>${title}</title><meta name="description" content="${description}"></head><body><div id="root"></div><script type="module" src="/index.tsx"></script></body></html>`);
+    }
+
+    let html = fs.readFileSync(indexPath, 'utf8');
+
+    // Replace Title
+    const titleRegex = /<title>(.*?)<\/title>/;
+    const newTitleTag = `<title>${title} | ToolCurrent</title>`;
+    if (titleRegex.test(html)) {
+      html = html.replace(titleRegex, newTitleTag);
+    } else {
+      html = html.replace('</head>', `${newTitleTag}</head>`);
+    }
+
+    // Replace or Add Description
+    const metaDescRegex = /<meta name="description" content="(.*?)" \/>/;
+    const newMetaDesc = `<meta name="description" content="${description}" />`;
+    if (metaDescRegex.test(html)) {
+      html = html.replace(metaDescRegex, newMetaDesc);
+    } else {
+      html = html.replace('</head>', `${newMetaDesc}</head>`);
+    }
+
+    res.send(html);
+  } catch (e) {
+    console.error('Meta injection error:', e);
+    res.status(500).send('Internal Server Error');
+  }
+}
+
+
+// SSR-Lite Routes for SEO
+app.get('/article/:slug', async (req, res, next) => {
+  try {
+    const article = await Article.findOne({ slug: req.params.slug });
+    if (article) {
+      return serveWithMeta(req, res, article.title, article.seoDescription || article.excerpt);
+    }
+    next();
+  } catch (e) { next(); }
+});
+
+app.get('/tools/:slug', async (req, res, next) => {
+  try {
+    const tool = await Tool.findOne({ slug: req.params.slug });
+    if (tool) {
+      const title = `${tool.name} Review, Pricing & Alternatives`;
+      const desc = tool.meta_description || tool.short_description || `Deep dive review of ${tool.name}. Pricing, features, and key comparison vs other AI tools.`;
+      return serveWithMeta(req, res, title, desc);
+    }
+    next();
+  } catch (e) { next(); }
+});
+
+app.get('/compare/:slug', async (req, res, next) => {
+  try {
+    const comparison = await Comparison.findOne({ slug: req.params.slug });
+    if (comparison) {
+      const title = comparison.meta_title || `${comparison.title}`;
+      const desc = comparison.meta_description || comparison.verdict || `Head-to-head comparison: ${comparison.title}. See the full verdict on ToolCurrent.`;
+      return serveWithMeta(req, res, title, desc);
+    }
+    next();
+  } catch (e) { next(); }
+});
+
+// Serve the rest of the dist folder
+app.use(express.static(path.join(__dirname, '..', 'dist')));
+
+// Fallback for all other frontend routes (SPA)
+app.use((req, res) => {
+  const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // For local dev if dist isn't built
+    res.status(200).send('ToolCurrent API is running. Build frontend with `npm run build` to see the site.');
+  }
+});
+
+// ==========================================
+// --- SERVER START ---
+// ==========================================
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✓ Server running on port ${PORT}`);
+});

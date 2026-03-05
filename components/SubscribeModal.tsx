@@ -100,7 +100,7 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
                 <div className="overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                     {isSuccess ? (
                         <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-news-accent rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+                            <div className="w-16 h-16 bg-news-accent rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(43,212,195,0.4)]">
                                 <Check size={32} className="text-black" />
                             </div>
                             <h3 className="text-2xl font-serif font-bold text-white mb-2">You're on the list.</h3>
@@ -173,7 +173,7 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
                             <button
                                 type="submit"
                                 disabled={true}
-                                className="w-full bg-news-accent hover:bg-emerald-400 text-black py-3 rounded-lg font-bold uppercase tracking-widest text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-news-accent/20"
+                                className="w-full bg-news-accent hover:bg-news-accentHover text-black py-3 rounded-lg font-bold uppercase tracking-widest text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-news-accent/20"
                             >
                                 Subscribe
                                 <Bell size={16} />
