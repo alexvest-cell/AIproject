@@ -1,7 +1,7 @@
 import React from 'react';
 import { Article } from '../../types';
-import { QuickComparisonTable, VerdictBox, ProsConsSection, ArticleFAQ, ToolSummaryCard, RatingBreakdown, ToolSectionBlock, SideBySideHeader, ComparisonDetailTable, ComparisonDecisionSection } from './SharedModules';
-import { ShieldCheck, Info, Check, ArrowRight } from 'lucide-react';
+import { QuickComparisonTable, VerdictBox, ProsConsSection, ArticleFAQ, ToolSummaryCard, RatingBreakdown, ToolSectionBlock, SideBySideHeader, ComparisonDetailTable, ComparisonDecisionSection, RelatedToolsModule, RelatedRankingsModule, ToolsUsedSummary, StepByStepModule, WorkflowBreakdownModule, ComparisonSummaryModule } from './SharedModules';
+import { ShieldCheck, Info, Check, ArrowRight, TrendingUp, BookOpen, Layers } from 'lucide-react';
 
 interface LayoutProps {
     article: Article;
@@ -233,6 +233,189 @@ export const StandardLayout: React.FC<LayoutProps> = ({ article, parsedContent }
             </div>
 
             {article.faq && <ArticleFAQ faq={article.faq} />}
+        </div>
+    );
+};
+
+export const IntelligenceLayout: React.FC<LayoutProps> = ({ article, parsedContent, allArticles }) => {
+    const intro = parsedContent.length > 0 ? parsedContent[0] : null;
+    const analysis = parsedContent.length > 1 ? parsedContent.slice(1) : [];
+
+    return (
+        <div className="flex flex-col gap-0 w-full max-w-[820px]">
+            <header className="mb-10">
+                <div className="flex items-center gap-2 text-news-accent font-bold uppercase tracking-[0.2em] text-[10px] mb-6">
+                    <TrendingUp size={14} />
+                    <span>Intelligence Report</span>
+                </div>
+                <h1 className="text-3xl md:text-5xl font-serif font-bold text-white leading-[1.1] mb-8">
+                    {article.title}
+                </h1>
+                <div className="flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-news-muted border-y border-border-divider/50 py-4 mb-2">
+                    <span className="flex items-center gap-2"><span className="text-white">Updated:</span> {article.date || 'Recently'}</span>
+                    <span className="w-1 h-1 rounded-full bg-border-divider" />
+                    <span className="flex items-center gap-2"><span className="text-white">Status:</span> Live Intelligence</span>
+                </div>
+            </header>
+
+            {/* Intro Segment */}
+            {intro && (
+                <div className="prose prose-lg md:prose-xl prose-invert max-w-none text-white font-serif italic border-l-2 border-news-accent pl-6 mb-12 leading-relaxed">
+                    {intro}
+                </div>
+            )}
+
+            {/* Sub-header for Analysis */}
+            <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-news-muted mb-8 pb-2 border-b border-border-divider/50">Market Analysis</h2>
+
+            {/* Analysis Content */}
+            <div className="prose prose-lg prose-invert max-w-none font-sans leading-relaxed text-news-text mb-12">
+                {analysis}
+            </div>
+
+            {/* Implications Section */}
+            {article.implications && (
+                <div className="my-12 bg-surface-card border border-border-subtle rounded-3xl p-8 md:p-12 shadow-elevation relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-news-accent to-blue-500 opacity-50" />
+                    <div className="flex items-center gap-3 text-news-accent font-bold uppercase tracking-[0.2em] text-xs mb-6">
+                        <Info size={18} />
+                        <span>Strategic Implications</span>
+                    </div>
+                    <div className="prose prose-lg prose-invert max-w-none text-white font-serif leading-relaxed italic">
+                        {article.implications}
+                    </div>
+                </div>
+            )}
+
+            {/* Related Tools Module */}
+            {(article.primary_tools && article.primary_tools.length > 0) && (
+                <RelatedToolsModule toolSlugs={article.primary_tools} />
+            )}
+
+            {/* Related Rankings Module */}
+            {(article.related_rankings && article.related_rankings.length > 0) && (
+                <RelatedRankingsModule rankings={article.related_rankings} allArticles={allArticles} />
+            )}
+
+            {article.faq && <ArticleFAQ faq={article.faq} />}
+        </div>
+    );
+};
+
+export const GuideLayout: React.FC<LayoutProps> = ({ article, parsedContent, allArticles }) => {
+    const intro = parsedContent.length > 0 ? parsedContent[0] : null;
+
+    return (
+        <div className="flex flex-col gap-0 w-full max-w-[820px]">
+            <header className="mb-8">
+                <div className="flex items-center gap-2 text-news-accent font-bold uppercase tracking-[0.2em] text-[10px] mb-6">
+                    <BookOpen size={14} />
+                    <span>Tutorial & Guide</span>
+                </div>
+                <h1 className="text-3xl md:text-5xl font-serif font-bold text-white leading-[1.1] mb-6">
+                    {article.title}
+                </h1>
+                <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-news-muted border-b border-border-divider/50 pb-6">
+                    <span className="flex items-center gap-2"><span className="text-white">Updated:</span> {article.date || 'Recently'}</span>
+                    <span className="w-1 h-1 rounded-full bg-border-divider" />
+                    <span className="flex items-center gap-2"><span className="text-white">Difficulty:</span> Beginner Friendly</span>
+                </div>
+            </header>
+
+            {/* Intro Segment */}
+            {intro && (
+                <div className="mb-10 first-letter:text-5xl first-letter:font-serif first-letter:font-bold first-letter:text-news-accent first-letter:mr-3 first-letter:float-left">
+                    {intro}
+                </div>
+            )}
+
+            {/* Tools Used Summary */}
+            {article.tools_used && article.tools_used.length > 0 && (
+                <ToolsUsedSummary toolSlugs={article.tools_used} />
+            )}
+
+            {/* Step-by-Step Sections */}
+            {article.steps && article.steps.length > 0 && (
+                <StepByStepModule steps={article.steps} />
+            )}
+
+            {/* Remainder of parsed content if any (e.g. conclusion) */}
+            {parsedContent.length > 1 && (
+                <div className="prose prose-lg prose-invert max-w-none font-sans leading-relaxed text-news-text mt-8 mb-12 border-t border-border-divider/30 pt-12">
+                    {parsedContent.slice(1)}
+                </div>
+            )}
+
+            {/* FAQ */}
+            {article.faq && <ArticleFAQ faq={article.faq} />}
+
+            {/* Related Tools */}
+            {article.primary_tools && article.primary_tools.length > 0 && (
+                <RelatedToolsModule toolSlugs={article.primary_tools} />
+            )}
+        </div>
+    );
+};
+
+export const UseCaseLayout: React.FC<LayoutProps> = ({ article, parsedContent }) => {
+    return (
+        <div className="flex flex-col gap-0 w-full max-w-[820px]">
+            <header className="mb-8">
+                <div className="flex items-center gap-2 text-cyan-400 font-bold uppercase tracking-[0.2em] text-[10px] mb-6">
+                    <Layers size={14} />
+                    <span>Use Case & Workflow</span>
+                </div>
+                <h1 className="text-3xl md:text-5xl font-serif font-bold text-white leading-[1.1] mb-6">
+                    {article.title}
+                </h1>
+                <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-news-muted border-b border-border-divider/50 pb-6">
+                    <span className="flex items-center gap-2"><span className="text-white">Updated:</span> {article.date || 'Recently'}</span>
+                    <span className="w-1 h-1 rounded-full bg-border-divider" />
+                    <span className="flex items-center gap-2 text-cyan-400/80 italic font-serif leading-none">Scenario-Driven Analysis</span>
+                </div>
+            </header>
+
+            {/* Кто это для */}
+            {article.who_its_for && article.who_its_for.length > 0 && (
+                <div className="my-10 bg-surface-card border border-border-subtle rounded-2xl p-6 md:p-8 shadow-elevation">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-news-accent mb-5">Primary Target</h3>
+                    <ul className="space-y-3">
+                        {article.who_its_for.map((item, i) => (
+                            <li key={i} className="flex items-start gap-3 text-news-text text-sm">
+                                <span className="w-2 h-2 rounded-full bg-news-accent mt-1.5 flex-shrink-0" />
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {/* Workflow Breakdown */}
+            {article.workflow_stages && article.workflow_stages.length > 0 && (
+                <>
+                    <div className="mt-12 mb-6">
+                        <h2 className="text-2xl md:text-3xl font-serif font-bold text-white">Recommended Workflow</h2>
+                        <div className="h-1 w-20 bg-news-accent mt-4" />
+                    </div>
+                    <WorkflowBreakdownModule stages={article.workflow_stages} />
+                </>
+            )}
+
+            {/* Comparison Summary */}
+            <ComparisonSummaryModule article={article} />
+
+            {/* Parsed Content (Intro/Outro) */}
+            <div className="prose prose-lg prose-invert max-w-none font-sans leading-relaxed text-news-text mt-8 mb-12">
+                {parsedContent}
+            </div>
+
+            {/* FAQ */}
+            {article.faq && <ArticleFAQ faq={article.faq} />}
+
+            {/* Related Rankings */}
+            {article.related_rankings && article.related_rankings.length > 0 && (
+                <RelatedRankingsModule rankingSlugs={article.related_rankings} />
+            )}
         </div>
     );
 };

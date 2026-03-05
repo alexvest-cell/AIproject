@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Article, Tool, Comparison } from '../../types';
 import * as toolsService from '../../services/toolsService';
 import ToolCard from '../ToolCard';
-import { ShieldCheck, Check, X, Loader2, BookOpen, Star, AlertCircle, TrendingUp, Info } from 'lucide-react';
+import { ShieldCheck, Check, X, Loader2, BookOpen, Star, AlertCircle, TrendingUp, Info, ArrowRight } from 'lucide-react';
 
 export const InlineToolCard: React.FC<{ slug: string }> = ({ slug }) => {
     const [tool, setTool] = useState<Tool | null>(null);
@@ -573,3 +573,242 @@ export const ComparisonDecisionSection = ({
         </div>
     );
 };
+
+// ==========================================
+// --- INTELLIGENCE LAYOUT MODULES ---
+// ==========================================
+
+export const RelatedToolsModule: React.FC<{ toolSlugs: string[] }> = ({ toolSlugs }) => {
+    const [tools, setTools] = useState<Tool[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!toolSlugs?.length) {
+            setLoading(false);
+            return;
+        }
+        Promise.all(toolSlugs.map(slug => toolsService.fetchToolBySlug(slug)))
+            .then(results => setTools(results.map(r => r.tool).filter(Boolean)))
+            .finally(() => setLoading(false));
+    }, [toolSlugs]);
+
+    if (loading || tools.length === 0) return null;
+
+    return (
+        <div className="my-16">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-8 pb-2 border-b border-border-divider/50">Featured Intelligence Tools</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {tools.map(tool => (
+                    <div key={tool.id} className="bg-surface-card border border-border-subtle rounded-2xl p-5 hover:border-news-accent/30 transition-all group flex items-center gap-4">
+                        {tool.logo ? (
+                            <img src={tool.logo} alt="" className="w-12 h-12 rounded-lg bg-surface-base p-1.5 border border-border-divider object-contain" />
+                        ) : (
+                            <div className="w-12 h-12 rounded-lg bg-surface-base flex items-center justify-center text-xl font-black text-news-muted">{tool.name[0]}</div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors truncate">{tool.name}</h4>
+                            <div className="flex items-center gap-3 mt-1">
+                                <span className="text-[10px] text-news-accent font-bold"><Star size={10} className="inline mr-1 fill-news-accent" /> {tool.rating_score}/10</span>
+                                <a href={`/tools/${tool.slug}`} className="text-[10px] text-news-muted hover:text-white transition-colors underline decoration-border-divider underline-offset-4">Full Review</a>
+                            </div>
+                        </div>
+                        <a href={tool.website_url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-surface-base border border-border-subtle text-news-muted hover:text-news-accent hover:border-news-accent/50 transition-all">
+                            <ArrowRight size={16} />
+                        </a>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export const RelatedRankingsModule: React.FC<{ rankings: string[]; allArticles: Article[] }> = ({ rankings, allArticles }) => {
+    if (!rankings || rankings.length === 0) return null;
+
+    const rankingArticles = allArticles.filter(a => rankings.includes(a.slug || a.id));
+
+    if (rankingArticles.length === 0) return null;
+
+    return (
+        <div className="my-16 bg-surface-alt/30 border border-border-subtle rounded-2xl p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-6">
+                <TrendingUp size={18} className="text-news-accent" />
+                <h3 className="text-sm font-bold uppercase tracking-widest text-white">Related Industry Rankings</h3>
+            </div>
+            <div className="space-y-4">
+                {rankingArticles.map(article => (
+                    <div key={article.id} className="flex items-center justify-between p-4 bg-surface-card border border-border-subtle rounded-xl hover:border-news-accent/40 transition-all group cursor-pointer">
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-news-accent uppercase tracking-widest">Buyer's Guide</span>
+                            <h4 className="text-base font-bold text-white group-hover:text-news-accent transition-colors">{article.title}</h4>
+                        </div>
+                        <ArrowRight size={20} className="text-news-muted group-hover:text-news-accent transition-all translate-x-0 group-hover:translate-x-1" />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// ==========================================
+// --- GUIDE LAYOUT MODULES ---
+// ==========================================
+
+export const ToolsUsedSummary: React.FC<{ toolSlugs: string[] }> = ({ toolSlugs }) => {
+    const [tools, setTools] = useState<Tool[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!toolSlugs?.length) {
+            setLoading(false);
+            return;
+        }
+        Promise.all(toolSlugs.map(slug => toolsService.fetchToolBySlug(slug)))
+            .then(results => setTools(results.map(r => r.tool).filter(Boolean)))
+            .finally(() => setLoading(false));
+    }, [toolSlugs]);
+
+    if (loading || tools.length === 0) return null;
+
+    return (
+        <div className="my-10 bg-surface-alt/20 border border-border-subtle rounded-2xl p-6">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-4">Tools featured in this guide</h3>
+            <div className="flex flex-wrap gap-3">
+                {tools.map(tool => (
+                    <a key={tool.id} href={`/tools/${tool.slug}`} className="flex items-center gap-2 px-3 py-2 bg-surface-card border border-border-subtle rounded-xl hover:border-news-accent/50 transition-all group">
+                        {tool.logo ? (
+                            <img src={tool.logo} alt="" className="w-5 h-5 rounded object-contain bg-surface-base p-0.5" />
+                        ) : (
+                            <div className="w-5 h-5 rounded bg-surface-base flex items-center justify-center text-[10px] font-black">{tool.name[0]}</div>
+                        )}
+                        <span className="text-xs font-bold text-white group-hover:text-news-accent transition-colors">{tool.name}</span>
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export const StepByStepModule: React.FC<{ steps: { title: string; content: string; tool_slug?: string }[] }> = ({ steps }) => {
+    if (!steps || steps.length === 0) return null;
+
+    return (
+        <div className="space-y-12 my-12">
+            {steps.map((step, index) => (
+                <div key={index} className="relative pl-12 md:pl-16">
+                    {/* Step Number Badge */}
+                    <div className="absolute left-0 top-0 w-8 h-8 md:w-10 md:h-10 rounded-full bg-surface-card border-2 border-news-accent flex items-center justify-center text-news-accent font-black font-serif text-sm md:text-base shadow-[0_0_15px_rgba(43,212,195,0.2)]">
+                        {index + 1}
+                    </div>
+
+                    {/* Step Content */}
+                    <div className="flex flex-col gap-4">
+                        <h3 className="text-xl md:text-2xl font-bold text-white leading-tight">
+                            {step.title}
+                        </h3>
+                        <div className="prose prose-invert max-w-none text-news-text text-lg leading-relaxed font-sans">
+                            {step.content.split('\n\n').map((p, i) => (
+                                <p key={i} className="mb-4">{p}</p>
+                            ))}
+                        </div>
+
+                        {/* Inline Tool Reference */}
+                        {step.tool_slug && (
+                            <div className="mt-4">
+                                <span className="text-[9px] font-bold text-news-muted uppercase tracking-widest mb-2 block">Tool Recommendation</span>
+                                <InlineToolCard slug={step.tool_slug} />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+export const WorkflowBreakdownModule: React.FC<{ stages: { stage_title: string; description: string; tool_slugs: string[] }[] }> = ({ stages }) => {
+    if (!stages || stages.length === 0) return null;
+
+    return (
+        <div className="space-y-12 my-12 relative">
+            {/* Vertical connector line */}
+            <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-gradient-to-b from-news-accent via-border-subtle to-news-accent opacity-20 hidden md:block" />
+
+            {stages.map((stage, index) => (
+                <div key={index} className="relative pl-0 md:pl-20">
+                    {/* Stage Header */}
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="hidden md:flex absolute left-0 top-0 w-12 h-12 rounded-2xl bg-surface-card border border-border-subtle items-center justify-center text-news-accent font-black z-10 shadow-elevation">
+                            {index + 1}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-news-accent uppercase tracking-[0.2em]">Stage {index + 1}</span>
+                            <h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{stage.stage_title}</h3>
+                        </div>
+                    </div>
+
+                    {/* Stage Description */}
+                    <p className="text-news-text text-lg leading-relaxed mb-8 max-w-[700px]">
+                        {stage.description}
+                    </p>
+
+                    {/* Recommended Tools Grid */}
+                    {stage.tool_slugs && stage.tool_slugs.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                            {stage.tool_slugs.map(slug => (
+                                <InlineToolCard key={slug} slug={slug} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
+
+export const ComparisonSummaryModule: React.FC<{ article: Article }> = ({ article }) => {
+    if (!article.comparison_rows || article.comparison_rows.length === 0) return null;
+
+    return (
+        <div className="my-16 bg-surface-base border border-border-subtle rounded-3xl overflow-hidden shadow-elevation">
+            <div className="p-8 border-b border-border-subtle bg-surface-alt/10">
+                <h3 className="text-xl font-bold text-white mb-2">Comparison Summary</h3>
+                <p className="text-news-muted text-sm">Quick decision matrix for the recommended tools in this workflow.</p>
+            </div>
+            <div className="p-0 overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-surface-card/50">
+                            <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-widest text-news-muted border-b border-border-subtle">Feature</th>
+                            <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-widest text-news-accent border-b border-border-subtle">The Winner</th>
+                            <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-widest text-news-muted border-b border-border-subtle">Alternative</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-subtle/50">
+                        {article.comparison_rows.map((row, i) => (
+                            <tr key={i} className="hover:bg-white/5 transition-colors">
+                                <td className="py-5 px-6 font-bold text-white text-sm">{row.label}</td>
+                                <td className="py-5 px-6 text-news-accent font-medium text-sm">{row.tool_a_value}</td>
+                                <td className="py-5 px-6 text-news-text text-sm">{row.tool_b_value}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {article.verdict && (
+                <div className="p-8 bg-news-accent/5 border-t border-border-subtle">
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-news-accent/20 flex items-center justify-center flex-shrink-0">
+                            <ShieldCheck className="text-news-accent" size={24} />
+                        </div>
+                        <div>
+                            <h4 className="text-news-accent font-black uppercase tracking-widest text-[10px] mb-2">Executive Verdict</h4>
+                            <p className="text-white text-lg font-serif italic leading-relaxed">"{article.verdict}"</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+

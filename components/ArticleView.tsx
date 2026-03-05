@@ -4,7 +4,7 @@ import { Article } from '../types';
 import { useAudio } from '../contexts/AudioContext';
 import { ArrowLeft, Loader2, BookOpen, Volume2, StopCircle } from 'lucide-react';
 
-import { RankingLayout, ReviewLayout, ComparisonLayout, StandardLayout } from './article-layouts/Layouts';
+import { RankingLayout, ReviewLayout, ComparisonLayout, StandardLayout, IntelligenceLayout, GuideLayout, UseCaseLayout } from './article-layouts/Layouts';
 import { ArticleSidebar, InlineToolCard } from './article-layouts/SharedModules';
 
 interface ArticleViewProps {
@@ -133,8 +133,10 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
       case 'best-of': return <RankingLayout {...props} />;
       case 'review': return <ReviewLayout {...props} />;
       case 'comparison': return <ComparisonLayout {...props} />;
-      case 'guide':
+      case 'intelligence': return <IntelligenceLayout {...props} />;
+      case 'guide': return <GuideLayout {...props} />;
       case 'use-case':
+      case 'use_case': return <UseCaseLayout {...props} />;
       case 'news':
       default: return <StandardLayout {...props} />;
     }

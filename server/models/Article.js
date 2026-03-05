@@ -43,6 +43,7 @@ const articleSchema = new mongoose.Schema({
 
     // Layout-specific fields
     verdict: String,
+    implications: String, // High-impact final section for Intelligence layout
     pros: [String],
     cons: [String],
     rating_breakdown: {
@@ -57,12 +58,30 @@ const articleSchema = new mongoose.Schema({
     // Comparison-specific
     choose_tool_a: [String],
     choose_tool_b: [String],
+    related_rankings: [String], // Related ranking article slugs
     comparison_rows: [{
         label: String,
         tool_a_value: String,
         tool_b_value: String,
         _id: false
     }],
+    // Guide-specific
+    steps: [{
+        title: String,
+        content: String,
+        tool_slug: String,
+        _id: false
+    }],
+    tools_used: [String], // Tool slugs for guide summary section
+    // Use Case-specific
+    workflow_stages: [{
+        stage_title: String,
+        description: String,
+        tool_slugs: [String],
+        _id: false
+    }],
+
+
 
     // SEO
     meta_title: String,
