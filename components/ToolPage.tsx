@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Tool, Comparison, Article } from '../types';
-import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone } from 'lucide-react';
+import { Tool, Comparison, Article, Stack } from '../types';
+import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon } from 'lucide-react';
+import { RelatedContent } from './RelatedContent';
 
 interface ToolPageProps {
     slug: string;
     onBack: () => void;
     onArticleClick: (article: Article) => void;
     onComparisonClick: (slug: string) => void;
+    onAlternativesClick: (slug: string) => void;
+    onStackClick?: (slug: string) => void;
 }
 
 const PRICING_COLORS: Record<string, string> = {
@@ -16,10 +19,12 @@ const PRICING_COLORS: Record<string, string> = {
     Enterprise: 'bg-orange-900/50 text-orange-400 border-orange-700',
 };
 
-const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick }) => {
+const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick }) => {
     const [tool, setTool] = useState<Tool | null>(null);
     const [comparisons, setComparisons] = useState<Comparison[]>([]);
+    const [alternatives, setAlternatives] = useState<Tool[]>([]);
     const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
+    const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -28,12 +33,16 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
         setError(null);
         // Scroll restoration managed by browser
 
-        fetch(`/api/tools/${slug}`)
-            .then(r => r.ok ? r.json() : Promise.reject('Tool not found'))
-            .then(data => {
+        Promise.all([
+            fetch(`/api/tools/${slug}`).then(r => r.ok ? r.json() : Promise.reject('Tool not found')),
+            fetch(`/api/tools/${slug}/alternatives`).then(r => r.ok ? r.json() : { alternatives: [] })
+        ])
+            .then(([data, altData]) => {
                 setTool(data.tool);
                 setComparisons(data.comparisons || []);
                 setRelatedArticles(data.relatedArticles || []);
+                setStacks(data.stacks || []);
+                setAlternatives(altData.alternatives || []);
 
                 if (data.tool) {
                     // Update Page Meta
@@ -103,8 +112,11 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
     const sections = [];
     if (tool.full_description) sections.push({ id: 'overview', label: 'Overview' });
+    if ((tool as any).screenshots?.length > 0) sections.push({ id: 'screenshots', label: 'Screenshots' });
+    if (alternatives && alternatives.length > 0) sections.push({ id: 'alternatives', label: 'Alternatives' });
     if (tool.key_features?.length > 0) sections.push({ id: 'features', label: 'Features' });
     if (tool.pros?.length > 0 || tool.cons?.length > 0) sections.push({ id: 'proscons', label: 'Pros & Cons' });
+    if (stacks.length > 0) sections.push({ id: 'stacks', label: 'Ecosystems' });
     if (comparisons.length > 0) sections.push({ id: 'comparisons', label: 'Comparisons' });
     if (relatedArticles.length > 0) sections.push({ id: 'related', label: 'Related' });
 
@@ -128,6 +140,10 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
     return (
         <div className="min-h-screen bg-surface-base text-news-text font-sans relative pt-[112px]">
+            <style>{`
+                .hide-scrollbar::-webkit-scrollbar { display: none; }
+                .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}</style>
             <JumpNav sections={sections} />
 
             <div className="container mx-auto px-4 md:px-8 py-10 max-w-5xl">
@@ -150,9 +166,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     <Zap size={10} /> AI-Powered
                                 </span>
                             )}
-                            {tool.status === 'Discontinued' && (
-                                <span className="text-xs font-bold uppercase px-3 py-1 rounded-full bg-red-500/15 text-red-400 border border-transparent">
-                                    Discontinued
+                            {(tool as any).last_updated && (
+                                <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-news-muted">
+                                    <Calendar size={12} /> Last updated: {new Date((tool as any).last_updated).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                                 </span>
                             )}
                         </div>
@@ -188,6 +204,30 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             <section id="overview" className="scroll-mt-24">
                                 <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Overview</h2>
                                 <p className="text-news-text leading-relaxed text-lg">{tool.full_description}</p>
+                            </section>
+                        )}
+
+                        {/* Top Alternatives moved to bottom RelatedContent section */}
+
+                        {/* Product Screenshots */}
+                        {(tool as any).screenshots?.length > 0 && (
+                            <section id="screenshots" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-6 border-b border-border-divider pb-2 flex items-center gap-2">
+                                    <ImageIcon size={16} /> Product Screenshots
+                                </h2>
+                                <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
+                                    {(tool as any).screenshots.map((s: any, i: number) => (
+                                        <div key={i} className="flex-shrink-0 w-4/5 sm:w-[400px] snap-start relative group cursor-pointer" onClick={() => window.open(s.url, '_blank')}>
+                                            <div className="aspect-video rounded-xl overflow-hidden bg-surface-card border border-border-subtle shadow-lg">
+                                                <img src={s.url} alt={s.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Maximize2 className="text-white" size={24} />
+                                                </div>
+                                            </div>
+                                            {s.caption && <p className="text-[10px] text-news-muted mt-2 font-medium italic">{s.caption}</p>}
+                                        </div>
+                                    ))}
+                                </div>
                             </section>
                         )}
 
@@ -249,46 +289,24 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </section>
                         )}
 
-                        {/* Related Comparisons */}
-                        {comparisons.length > 0 && (
-                            <section id="comparisons" className="scroll-mt-24">
-                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Head-to-Head Comparisons</h2>
-                                <div className="space-y-3">
-                                    {comparisons.map(c => (
-                                        <button
-                                            key={c.id}
-                                            onClick={() => onComparisonClick(c.slug)}
-                                            className="w-full text-left bg-surface-card hover:bg-surface-hover border border-border-subtle shadow-elevation hover:shadow-elevation-hover hover:-translate-y-0.5 rounded-xl p-5 transition-all group"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-semibold text-white group-hover:text-news-accent transition-colors uppercase tracking-tight">{c.title}</span>
-                                                <Zap size={14} className="text-news-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            </div>
-                                            {c.verdict && <p className="text-xs text-news-text mt-2 line-clamp-2 leading-relaxed italic border-l-2 border-border-divider pl-3">{c.verdict}</p>}
-                                        </button>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-
-                        {/* Related Articles */}
-                        {relatedArticles.length > 0 && (
-                            <section id="related" className="scroll-mt-24">
-                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Related Intel & Guides</h2>
-                                <div className="space-y-3">
-                                    {relatedArticles.map(a => (
-                                        <button
-                                            key={a.id}
-                                            onClick={() => onArticleClick(a)}
-                                            className="w-full text-left bg-surface-card hover:bg-surface-hover border border-border-subtle shadow-elevation hover:shadow-elevation-hover hover:-translate-y-0.5 rounded-xl p-5 transition-all group"
-                                        >
-                                            <span className="font-semibold text-white text-sm group-hover:text-news-accent transition-colors">{a.title}</span>
-                                            <p className="text-xs text-news-text mt-2 line-clamp-2">{a.excerpt}</p>
-                                        </button>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
+                        {/* Related Content Modules using internal linking system */}
+                        <div className="space-y-8 mt-12 bg-surface-alt/20 p-6 rounded-2xl border border-border-subtle">
+                            {alternatives.length > 0 && (
+                                <RelatedContent type="tools" title="Top Alternatives" items={alternatives.slice(0, 5)} className="mt-0 pt-0 border-none" />
+                            )}
+                            {comparisons.length > 0 && (
+                                <RelatedContent type="comparisons" title="Compare With" items={comparisons.slice(0, 5)} className="mt-0 pt-0 border-none" />
+                            )}
+                            {stacks.length > 0 && (
+                                <RelatedContent type="stacks" title="Used in Ecosystems" items={stacks.slice(0, 3)} className="mt-0 pt-0 border-none" />
+                            )}
+                            {relatedArticles.some(a => a.title.toLowerCase().includes('best') || a.title.toLowerCase().includes('top')) && (
+                                <RelatedContent type="rankings" title="Featured in Rankings" items={relatedArticles.filter(a => a.title.toLowerCase().includes('best') || a.title.toLowerCase().includes('top')).slice(0, 4)} className="mt-0 pt-0 border-none" />
+                            )}
+                            {relatedArticles.some(a => !a.title.toLowerCase().includes('best') && !a.title.toLowerCase().includes('top')) && (
+                                <RelatedContent type="guides" title="Implementation Guides" items={relatedArticles.filter(a => !a.title.toLowerCase().includes('best') && !a.title.toLowerCase().includes('top')).slice(0, 3)} className="mt-0 pt-0 border-none" />
+                            )}
+                        </div>
                     </div>
 
                     {/* Sidebar */}
@@ -324,17 +342,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         )}
 
-                        {/* Use Cases */}
-                        {tool.use_case_tags?.length > 0 && (
-                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4">Best For</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {tool.use_case_tags.map(u => (
-                                        <span key={u} className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-transparent">{u}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        {/* Use Cases (Simplified in sidebar if preferred, or remove if redundant) */}
+                        {/* Removing redundant sidebar use cases as it is now a main section */}
 
                         {/* Rating */}
                         {tool.rating_score > 0 && (

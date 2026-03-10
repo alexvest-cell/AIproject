@@ -15,7 +15,10 @@ import AudioPlayer from './components/AudioPlayer';
 import { AudioProvider } from './contexts/AudioContext';
 import ToolPage from './components/ToolPage';
 import ComparisonPage from './components/ComparisonPage';
+import AlternativesPage from './components/AlternativesPage';
 import HubPage from './components/HubPage';
+import StackHubPage from './components/StackHubPage';
+import StackPage from './components/StackPage';
 import { Section, Article } from './types';
 import { featuredArticle, newsArticles as staticNewsArticles } from './data/content';
 
@@ -46,10 +49,13 @@ function App() {
   const [activeSection, setActiveSection] = useState<Section>(Section.HERO);
   const [view, setView] = useState<
     'home' | 'category' | 'article' | 'sources' | 'about' | 'subscribe' | 'admin' |
-    'hub' | 'tool' | 'comparison'
+    'hub' | 'tool' | 'comparison' | 'alternatives' | 'stacks' | 'stack'
   >(() => {
     const path = window.location.pathname;
     if (path === '/about') return 'about';
+    if (path === '/stacks') return 'stacks';
+    if (path.startsWith('/stacks/')) return 'stack';
+    if (path.startsWith('/tools/') && path.endsWith('/alternatives')) return 'alternatives';
     if (path.startsWith('/tools/')) return 'tool';
     if (path.startsWith('/compare/')) return 'comparison';
     const hubPaths = ['/ai-tools', '/best-software', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
@@ -60,6 +66,10 @@ function App() {
   const [activeHub, setActiveHub] = useState<string>('');
   const [activeToolSlug, setActiveToolSlug] = useState<string>('');
   const [activeComparisonSlug, setActiveComparisonSlug] = useState<string>();
+  const [activeAlternativesToolSlug, setActiveAlternativesToolSlug] = useState<string>('');
+  const [activeStackSlug, setActiveStackSlug] = useState<string>('');
+  const [workflowFilter, setWorkflowFilter] = useState<string>('');
+  const [urlQueryString, setUrlQueryString] = useState(() => typeof window !== 'undefined' ? window.location.search : '');
 
   // Hydrate history state on mount to ensure back button works for initial entry
   useEffect(() => {
@@ -187,10 +197,53 @@ function App() {
           window.history.replaceState({ view: 'article', articleId: foundArticle.id }, '', preferredPath);
         }
       }
-    } else if (pathname === '/ai-tools' || pathname === '/best-software' || pathname === '/comparisons') {
+    } else if (pathname.startsWith('/best-software/') && articles.length > 0) {
+      const identifier = pathname.replace('/best-software/', '');
+      if (identifier) {
+        let foundArticle = articles.find(a => a.slug === identifier);
+        if (!foundArticle) {
+          foundArticle = articles.find(a => a.id === identifier);
+        }
+
+        if (foundArticle) {
+          setCurrentArticle(foundArticle);
+          setView('article');
+          const preferredPath = `/best-software/${foundArticle.slug || foundArticle.id}`;
+          if (pathname !== preferredPath) {
+            window.history.replaceState({ view: 'article', articleId: foundArticle.id }, '', preferredPath);
+          }
+        } else {
+          // Article not found, show hub
+          setActiveHub('best-software');
+          setWorkflowFilter(params.get('workflow') || '');
+          setUrlQueryString(window.location.search);
+          setView('hub');
+        }
+      } else {
+        // Just /best-software/
+        setActiveHub('best-software');
+        setWorkflowFilter(params.get('workflow') || '');
+        setUrlQueryString(window.location.search);
+        setView('hub');
+      }
+    } else if (pathname === '/ai-tools' || pathname === '/best-software' || pathname === '/comparisons' || 
+               pathname === '/reviews' || pathname === '/use-cases' || pathname === '/guides' || pathname === '/news') {
       const hub = pathname.replace('/', '');
+      const wf = params.get('workflow') || '';
       setActiveHub(hub);
+      setWorkflowFilter(wf);
+      setUrlQueryString(window.location.search);
       setView('hub');
+    } else if (pathname === '/stacks') {
+      setView('stacks');
+    } else if (pathname.startsWith('/stacks/')) {
+      const slug = pathname.replace('/stacks/', '');
+      setActiveStackSlug(slug);
+      setView('stack');
+    } else if (pathname.startsWith('/tools/') && pathname.endsWith('/alternatives')) {
+      const slug = pathname.replace('/tools/', '').replace('/alternatives', '');
+      setActiveAlternativesToolSlug(slug);
+      setView('alternatives');
     } else if (pathname.startsWith('/tools/')) {
       const slug = pathname.replace('/tools/', '');
       setActiveToolSlug(slug);
@@ -227,11 +280,24 @@ function App() {
             break;
           case 'hub':
             setActiveHub(event.state.hub);
+            setWorkflowFilter(event.state.workflow || '');
+            setUrlQueryString(event.state.queryStr || '');
             setView('hub');
+            break;
+          case 'alternatives':
+            setActiveAlternativesToolSlug(event.state.slug);
+            setView('alternatives');
             break;
           case 'tool':
             setActiveToolSlug(event.state.slug);
             setView('tool');
+            break;
+          case 'stacks':
+            setView('stacks');
+            break;
+          case 'stack':
+            setActiveStackSlug(event.state.slug);
+            setView('stack');
             break;
           case 'comparison':
             setActiveComparisonSlug(event.state.slug);
@@ -253,9 +319,21 @@ function App() {
 
         if (path === '/about') {
           setView('about');
-        } else if (path === '/ai-tools' || path === '/best-software' || path === '/comparisons') {
+        } else if (path === '/ai-tools' || path === '/best-software' || path === '/comparisons' || 
+                   path === '/reviews' || path === '/use-cases' || path === '/guides' || path === '/news') {
+          const wf = event.state?.workflow || '';
           setActiveHub(path.replace('/', ''));
+          setWorkflowFilter(wf);
+          setUrlQueryString(event.state?.queryStr || window.location.search || '');
           setView('hub');
+        } else if (path === '/stacks') {
+          setView('stacks');
+        } else if (path.startsWith('/stacks/')) {
+          setActiveStackSlug(path.replace('/stacks/', ''));
+          setView('stack');
+        } else if (path.startsWith('/tools/') && path.endsWith('/alternatives')) {
+          setActiveAlternativesToolSlug(path.replace('/tools/', '').replace('/alternatives', ''));
+          setView('alternatives');
         } else if (path.startsWith('/tools/')) {
           setActiveToolSlug(path.replace('/tools/', ''));
           setView('tool');
@@ -302,7 +380,12 @@ function App() {
     setView('article');
     window.scrollTo(0, 0);
     const identifier = article.slug || article.id;
-    window.history.pushState({ view: 'article', articleId: article.id }, '', `/article/${identifier}`);
+    
+    // Use prettier URL for rankings if it's a 'best-of' article
+    const isRanking = (article as any).article_type === 'best-of' || (Array.isArray(article.category) ? article.category : [article.category]).includes('Best Of');
+    const path = isRanking ? `/best-software/${identifier}` : `/article/${identifier}`;
+    
+    window.history.pushState({ view: 'article', articleId: article.id }, '', path);
   };
 
 
@@ -311,11 +394,21 @@ function App() {
   };
 
   // Hub navigation
-  const handleHubClick = (hub: string) => {
+  const handleHubClick = (hub: string, workflow?: string, queryStr?: string) => {
+    if (hub === 'stacks') {
+      handleStacksHubPageClick();
+      return;
+    }
     setActiveHub(hub);
+    setWorkflowFilter(workflow || '');
     setView('hub');
     window.scrollTo(0, 0);
-    window.history.pushState({ view: 'hub', hub }, '', `/${hub}`);
+    let finalQs = queryStr || '';
+    if (workflow) {
+      finalQs = `?workflow=${workflow}`;
+    }
+    setUrlQueryString(finalQs);
+    window.history.pushState({ view: 'hub', hub, workflow: workflow || '', queryStr: finalQs }, '', `/${hub}${finalQs}`);
   };
 
   // Tool navigation
@@ -326,12 +419,34 @@ function App() {
     window.history.pushState({ view: 'tool', slug }, '', `/tools/${slug}`);
   };
 
+  // Alternatives navigation
+  const handleAlternativesClick = (toolSlug: string) => {
+    setActiveAlternativesToolSlug(toolSlug);
+    setView('alternatives');
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: 'alternatives', slug: toolSlug }, '', `/tools/${toolSlug}/alternatives`);
+  };
+
   // Comparison navigation
   const handleComparisonClick = (slug: string) => {
     setActiveComparisonSlug(slug);
     setView('comparison');
     window.scrollTo(0, 0);
     window.history.pushState({ view: 'comparison', slug }, '', `/compare/${slug}`);
+  };
+
+  // Stack navigation
+  const handleStacksHubPageClick = () => {
+    setView('stacks');
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: 'stacks' }, '', `/stacks`);
+  };
+
+  const handleStackClick = (slug: string) => {
+    setActiveStackSlug(slug);
+    setView('stack');
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: 'stack', slug }, '', `/stacks/${slug}`);
   };
 
   const handleShowAbout = () => {
@@ -448,6 +563,7 @@ function App() {
                 sidebarArticlesOverride={sidebarArticles}
                 articles={articles}
                 onHubClick={handleHubClick}
+                onStackClick={handleStackClick}
               />
               {/* Pass DYNAMIC articles to Portfolio */}
               <Portfolio
@@ -493,6 +609,7 @@ function App() {
               onArticleSelect={handleArticleClick}
               allArticles={articles} // Pass dynamic articles
               onShowAbout={handleShowAbout}
+              onStackClick={handleStackClick}
             />
           )}
 
@@ -501,13 +618,16 @@ function App() {
           )}
 
           {view === 'hub' && (
-            <HubPage
+          <HubPage
               hub={activeHub as any}
               articles={articles}
               onArticleClick={handleArticleClick}
               onToolClick={handleToolClick}
               onComparisonClick={handleComparisonClick}
               onBack={handleBackToFeed}
+              workflowFilter={workflowFilter}
+              queryString={urlQueryString}
+              onStackClick={handleStackClick}
             />
           )}
 
@@ -515,6 +635,18 @@ function App() {
             <ToolPage
               slug={activeToolSlug}
               onBack={() => window.history.back()}
+              onArticleClick={handleArticleClick}
+              onComparisonClick={handleComparisonClick}
+              onAlternativesClick={handleAlternativesClick}
+              onStackClick={handleStackClick}
+            />
+          )}
+
+          {view === 'alternatives' && activeAlternativesToolSlug && (
+            <AlternativesPage
+              toolSlug={activeAlternativesToolSlug}
+              onBack={() => window.history.back()}
+              onToolClick={handleToolClick}
               onArticleClick={handleArticleClick}
               onComparisonClick={handleComparisonClick}
             />
@@ -528,7 +660,21 @@ function App() {
             />
           )}
 
+          {view === 'stacks' && (
+            <StackHubPage
+              onStackClick={handleStackClick}
+            />
+          )}
 
+          {view === 'stack' && activeStackSlug && (
+            <StackPage
+              slug={activeStackSlug}
+              onBack={() => window.history.back()}
+              onToolClick={handleToolClick}
+              onArticleClick={handleArticleClick}
+              onComparisonClick={handleComparisonClick}
+            />
+          )}
 
           {/* Global Footer available on all pages */}
           <Contact

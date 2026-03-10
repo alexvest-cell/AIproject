@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Article, Tool, Comparison } from '../types';
+import { Article, Tool, Comparison, Stack } from '../types';
 import { ArrowRight, Star, Filter, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio } from 'lucide-react';
 
 type HubType = 'ai-tools' | 'best-software' | 'reviews' | 'comparisons' | 'use-cases' | 'guides' | 'news';
@@ -11,32 +11,76 @@ interface HubPageProps {
     onToolClick: (slug: string) => void;
     onComparisonClick: (slug: string) => void;
     onBack: () => void;
+    workflowFilter?: string;
+    queryString?: string;
+    onStackClick?: (slug: string) => void;
 }
 
-const HUB_META: Record<HubType, { label: string; description: string; articleType?: string; showTools?: boolean; showComparisons?: boolean }> = {
-    'ai-tools': { label: 'AI Tools', description: 'Explore the leading AI and software tools across writing, productivity, automation, development, and more. Filter by category, pricing, and use case to find the right tool for your workflow.', showTools: true },
-    'best-software': { label: 'Best Software', description: 'Curated rankings of the best tools and software for every workflow and team size.', articleType: 'best-of' },
-    'reviews': { label: 'Reviews', description: 'Independent, in-depth evaluations of modern software tools. Each review analyzes features, pricing, performance, and real-world use cases.', articleType: 'review' },
-    'comparisons': { label: 'Comparisons', description: 'Compare the leading AI and software tools side-by-side to find the best option for your workflow.', showComparisons: true },
-    'use-cases': { label: 'Use Cases', description: 'Explore real-world workflows showing how modern teams combine AI and software tools to automate tasks, improve productivity, and build smarter systems.', articleType: 'use-case' },
-    'guides': { label: 'Guides', description: 'Step-by-step guides for mastering modern software tools, building smarter workflows, and automating everyday work.', articleType: 'guide' },
-    'news': { label: 'News', description: 'Breaking developments, product launches, and major updates across AI and modern software tools.', articleType: 'news' },
+const HUB_META: Record<HubType, { label: string; description: string; titleTag: string; articleType?: string; showTools?: boolean; showComparisons?: boolean }> = {
+    'ai-tools': { 
+        label: 'AI Tools', 
+        description: 'Explore the leading AI and software tools across writing, productivity, automation, development, and more. Filter by category, pricing, and use case to find the right tool for your workflow.', 
+        titleTag: 'AI Tools Directory: Top-Rated Software & Solutions (2026)',
+        showTools: true 
+    },
+    'best-software': { 
+        label: 'Best Software', 
+        description: 'Explore curated rankings of the best AI tools and software platforms across productivity, automation, development, marketing, and more.', 
+        titleTag: 'Best AI Software & Tools: 2026 Rankings & Reviews',
+        articleType: 'best-of' 
+    },
+    'reviews': { 
+        label: 'Reviews', 
+        description: 'Independent, in-depth evaluations of modern software tools. Each review analyzes features, pricing, performance, and real-world use cases.', 
+        titleTag: 'Software Reviews: Unbiased AI & Tool Evaluations',
+        articleType: 'review' 
+    },
+    'comparisons': { 
+        label: 'Comparisons', 
+        description: 'Compare the leading AI and software tools side-by-side to find the best option for your workflow.', 
+        titleTag: 'AI Tool Comparisons: Compare Side-by-Side',
+        showComparisons: true 
+    },
+    'use-cases': { 
+        label: 'Use Cases', 
+        description: 'Explore real-world workflows showing how modern teams combine AI and software tools to automate tasks, improve productivity, and build smarter systems.', 
+        titleTag: 'AI Use Cases & Workflows: Practical Implementations',
+        articleType: 'use-case' 
+    },
+    'guides': { 
+        label: 'Guides', 
+        description: 'Step-by-step guides for mastering modern software tools, building smarter workflows, and automating everyday work.', 
+        titleTag: 'Software Guides & Tutorials: Master Your Stack',
+        articleType: 'guide' 
+    },
+    'news': { 
+        label: 'News', 
+        description: 'Breaking developments, product launches, and major updates across AI and modern software tools.', 
+        titleTag: 'AI News & Software Updates: Latest Developments',
+        articleType: 'news' 
+    },
 };
 
 const ITEMS_PER_PAGE = 12;
 
 // ─── Shared Components ────────────────────────────────────────────────────────
 
-const HubHeader: React.FC<{ hub: HubType; onBack: () => void }> = ({ hub, onBack }) => {
+const HubHeader: React.FC<{ hub: HubType; onBack: () => void; titleOverride?: string }> = ({ hub, onBack, titleOverride }) => {
     const meta = HUB_META[hub];
+    
+    // SEO: Update document title
+    useEffect(() => {
+        document.title = `${titleOverride || meta.titleTag} | ToolCurrent`;
+    }, [hub, titleOverride, meta]);
+
     return (
         <div className="bg-surface-alt border-b border-border-divider">
-            <div className="container mx-auto px-4 md:px-8 pt-[140px] md:pt-[150px] pb-10 md:pb-12">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-2">ToolCurrent</p>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-3 text-white">{meta.label}</h1>
-                <p className="text-news-text max-w-xl">{meta.description}</p>
+            <div className="container mx-auto px-4 md:px-8 pt-[140px] md:pt-[150px] pb-10 md:pb-12 text-center md:text-left">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-2">ToolCurrent Directory</p>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-4 text-white leading-tight">{titleOverride || meta.label}</h1>
+                <p className="text-news-text text-base md:text-lg max-w-2xl leading-relaxed mx-auto md:mx-0">{meta.description}</p>
                 {hub === 'reviews' && (
-                    <p className="text-xs text-news-muted mt-3 max-w-xl border-l-2 border-border-divider pl-3">
+                    <p className="text-xs text-news-muted mt-5 max-w-xl border-l-2 border-border-divider pl-4 mx-auto md:mx-0">
                         Every ToolCurrent review is based on hands-on testing, feature analysis, pricing evaluation, and comparison with competing tools.
                     </p>
                 )}
@@ -117,25 +161,102 @@ const PRICING_OPTIONS = ['All', 'Free', 'Freemium', 'Paid'];
 const CAT_FILTERS = ['All', 'AI Writing', 'Productivity', 'Automation', 'Developer Tools', 'Marketing Tools', 'CRM', 'AI Image'];
 const USE_CASE_FILTERS = ['All', 'Content Creation', 'Coding', 'Workflow Automation', 'Note Taking', 'Customer Support'];
 
+// ─── Workflow config: category filters + display names ────────────────────────
+const WORKFLOW_CONFIG: Record<string, {
+    label: string;
+    catFilter: string;
+    relatedRankingKeywords: string[];
+    relatedGuideKeywords: string[];
+    relatedUseCaseKeywords: string[];
+}> = {
+    students:       { label: 'Students',      catFilter: 'Productivity',      relatedRankingKeywords: ['student', 'writing', 'note'],    relatedGuideKeywords: ['student', 'writing', 'productiv'],  relatedUseCaseKeywords: ['student', 'note', 'research'] },
+    startups:       { label: 'Startups',      catFilter: 'Automation',        relatedRankingKeywords: ['startup', 'automati', 'crm'],     relatedGuideKeywords: ['startup', 'automat', 'growth'],     relatedUseCaseKeywords: ['startup', 'marketing', 'automat'] },
+    developers:     { label: 'Developers',    catFilter: 'Developer Tools',   relatedRankingKeywords: ['coding', 'developer', 'ai cod'],  relatedGuideKeywords: ['coding', 'developer', 'github'],    relatedUseCaseKeywords: ['engineer', 'developer', 'coding'] },
+    marketing:      { label: 'Marketers',     catFilter: 'Marketing',         relatedRankingKeywords: ['marketing', 'seo', 'writing'],    relatedGuideKeywords: ['marketing', 'seo', 'content'],      relatedUseCaseKeywords: ['marketing', 'content', 'seo'] },
+    creators:       { label: 'Creators',      catFilter: 'AI Image',          relatedRankingKeywords: ['image', 'video', 'creative'],     relatedGuideKeywords: ['image', 'video', 'design'],         relatedUseCaseKeywords: ['creator', 'content', 'design'] },
+    'small-business': { label: 'Small Business', catFilter: 'CRM',            relatedRankingKeywords: ['business', 'crm', 'automat'],    relatedGuideKeywords: ['business', 'crm', 'automat'],       relatedUseCaseKeywords: ['business', 'crm', 'automat'] },
+    automation:     { label: 'Automation',    catFilter: 'Automation',        relatedRankingKeywords: ['automat', 'zapier', 'agent'],     relatedGuideKeywords: ['automat', 'zapier', 'make'],        relatedUseCaseKeywords: ['automat', 'workflow', 'agent'] },
+    enterprise:     { label: 'Enterprise',    catFilter: 'CRM',               relatedRankingKeywords: ['enterprise', 'crm', 'project'],   relatedGuideKeywords: ['enterprise', 'project', 'security'], relatedUseCaseKeywords: ['enterprise', 'business', 'team'] },
+};
+
+const TRENDING_TOOL_SLUGS = ['chatgpt', 'claude', 'midjourney', 'notion', 'perplexity', 'runway'];
+
+const POPULAR_CATEGORIES = [
+    { label: 'AI Writing Tools',     icon: PenLine,      filter: 'AI Writing' },
+    { label: 'AI Coding Tools',      icon: Code2,        filter: 'Developer Tools' },
+    { label: 'AI Image Generators',  icon: ImageIcon,    filter: 'AI Image' },
+    { label: 'AI Automation Tools',  icon: Zap,          filter: 'Automation' },
+    { label: 'AI Productivity Tools', icon: Layers,       filter: 'Productivity' },
+    { label: 'AI Marketing Tools',   icon: Megaphone,    filter: 'Marketing Tools' },
+];
+
 const AIToolsHub: React.FC<{
     onToolClick: (s: string) => void;
     articles: Article[];
     onArticleClick: (a: Article) => void;
-}> = ({ onToolClick, articles, onArticleClick }) => {
+    workflowFilter?: string;
+    queryString?: string;
+    onStackClick?: (slug: string) => void;
+}> = ({ onToolClick, articles, onArticleClick, workflowFilter, queryString, onStackClick }) => {
     const [tools, setTools] = useState<Tool[]>([]);
+    const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [pricingFilter, setPricingFilter] = useState('All');
-    const [catFilter, setCatFilter] = useState('All');
+    const wfConfig = workflowFilter ? WORKFLOW_CONFIG[workflowFilter] : null;
+    const [catFilter, setCatFilter] = useState(wfConfig?.catFilter || 'All');
     const [useCaseFilter, setUseCaseFilter] = useState('All');
     const [sortBy, setSortBy] = useState<'rating' | 'popular' | 'newest' | 'price'>('rating');
     const [visibleCount, setVisibleCount] = useState(TOOLS_PER_PAGE);
+
+    // Sync query string to filters
+    useEffect(() => {
+        if (workflowFilter && WORKFLOW_CONFIG[workflowFilter]) {
+            setCatFilter(WORKFLOW_CONFIG[workflowFilter].catFilter || 'All');
+            return;
+        }
+
+        const params = new URLSearchParams(queryString || '');
+        const cat = params.get('category');
+        const sort = params.get('sort');
+        const price = params.get('pricing') || params.get('price');
+
+        if (cat) {
+            const low = cat.toLowerCase();
+            if (low.includes('coding') || low.includes('developer')) setCatFilter('Developer Tools');
+            else if (low.includes('writing')) setCatFilter('AI Writing');
+            else if (low.includes('image')) setCatFilter('AI Image');
+            else if (low.includes('automation')) setCatFilter('Automation');
+            else if (low.includes('productivity')) setCatFilter('Productivity');
+            else if (low.includes('crm')) setCatFilter('CRM');
+            else if (low.includes('marketing')) setCatFilter('Marketing Tools');
+            else setCatFilter('All');
+        } else {
+            setCatFilter('All');
+        }
+
+        if (sort === 'new' || sort === 'newest') setSortBy('newest');
+        else if (sort === 'rating') setSortBy('rating');
+        else setSortBy('rating');
+
+        if (price) {
+            const lowMatch = PRICING_OPTIONS.find(p => p.toLowerCase() === (price || '').toLowerCase());
+            setPricingFilter(lowMatch || 'All');
+        } else {
+            setPricingFilter('All');
+        }
+    }, [queryString, workflowFilter]);
 
     useEffect(() => {
         fetch('/api/tools')
             .then(r => r.json())
             .then(d => { setTools(d); setLoading(false); })
             .catch(() => setLoading(false));
+
+        fetch('/api/stacks')
+            .then(r => r.ok ? r.json() : [])
+            .then(d => setStacks(d))
+            .catch(() => {});
     }, []);
 
     // Reset pagination when filters change
@@ -179,71 +300,173 @@ const AIToolsHub: React.FC<{
 
     if (loading) return <div className="flex items-center justify-center py-24 text-gray-500"><div className="w-6 h-6 border-2 border-news-accent border-t-transparent rounded-full animate-spin mr-3" /> Loading tools…</div>;
 
+    // Cross-hub recommendations for workflow
+    const wfBestOf = wfConfig ? articles.filter(a => (a as any).article_type === 'best-of' &&
+        wfConfig.relatedRankingKeywords.some(kw => `${a.title} ${a.excerpt}`.toLowerCase().includes(kw))).slice(0, 3) : [];
+    const wfGuides = wfConfig ? articles.filter(a => (a as any).article_type === 'guide' &&
+        wfConfig.relatedGuideKeywords.some(kw => `${a.title} ${a.excerpt}`.toLowerCase().includes(kw))).slice(0, 3) : [];
+    const wfUseCases = wfConfig ? articles.filter(a => (a as any).article_type === 'use-case' &&
+        wfConfig.relatedUseCaseKeywords.some(kw => `${a.title} ${a.excerpt}`.toLowerCase().includes(kw))).slice(0, 3) : [];
+
+    // Recommended stack based on workflow
+    const recommendedStack = wfConfig ? stacks.find(s => {
+        const swf = s.workflow_category?.toLowerCase() || '';
+        const l = wfConfig.label.toLowerCase();
+        if (l.includes('develop') && swf.includes('develop')) return true;
+        if (l.includes('market') && swf.includes('market')) return true;
+        if (l.includes('startup') && swf.includes('startup')) return true;
+        if (l.includes('creator') && (swf.includes('creation') || swf.includes('creator'))) return true;
+        if (l.includes('automat') && swf.includes('automat')) return true;
+        return false;
+    }) : undefined;
+
     return (
         <div>
-            {/* Category Explorer */}
-            <div className="mb-10">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-4">Explore by Category</p>
-                <HScrollRow>
-                    {CATEGORY_EXPLORER.map(({ label, icon: Icon, filter }) => {
-                        const count = tools.filter(t => t.category_tags?.some(c => c.toLowerCase().includes(filter.toLowerCase()))).length;
-                        if (count === 0) return null;
-                        return (
-                            <button
-                                key={label}
-                                onClick={() => setCatFilter(catFilter === filter ? 'All' : filter)}
-                                className={`group flex-shrink-0 flex flex-col items-center gap-2 px-5 py-4 rounded-2xl border transition-all shadow-elevation min-w-[96px] ${
-                                    catFilter === filter
-                                        ? 'bg-news-accent/10 border-news-accent/50 text-news-accent'
-                                        : 'bg-surface-card border-border-subtle hover:bg-surface-hover hover:border-border-divider text-news-muted hover:text-white'
-                                }`}
-                            >
-                                <Icon size={20} className="flex-shrink-0" />
-                                <span className="text-xs font-bold text-center leading-tight">{label}</span>
-                                <span className="text-[9px] opacity-60">{count} tools</span>
-                            </button>
-                        );
-                    })}
-                </HScrollRow>
-            </div>
+            {/* Workflow Banner — shown when arriving via a workflow button */}
+            {wfConfig && (
+                <div className="mb-8 p-5 rounded-2xl border border-news-accent/30 bg-news-accent/5 flex flex-col gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Workflow Discovery</p>
+                            <h2 className="text-xl font-black text-white">Tools for {wfConfig.label}</h2>
+                            <p className="text-sm text-news-muted mt-1">Showing tools relevant to your workflow. Use filters below to explore further.</p>
+                        </div>
+                        <button
+                            onClick={() => setCatFilter('All')}
+                            className="text-[10px] font-bold text-news-muted hover:text-white border border-border-subtle hover:border-border-divider rounded-lg px-3 py-2 transition-colors flex-shrink-0"
+                        >
+                            Clear workflow
+                        </button>
+                    </div>
 
-            {/* Top Rated strip */}
-            {topRated.length >= 2 && (
-                <div className="mb-10">
-                    <div className="flex items-center gap-2 mb-4">
-                        <TrendingUp size={12} className="text-news-accent" />
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted">Top Rated Tools</p>
+                    {recommendedStack && onStackClick && (
+                        <div className="mt-2 p-4 rounded-xl border border-border-subtle bg-surface-card flex flex-col md:flex-row items-center gap-4 justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-news-accent/10 flex items-center justify-center flex-shrink-0">
+                                    <Layers className="text-news-accent" size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-0.5">Recommended Stack</p>
+                                    <h3 className="text-sm font-bold text-white leading-snug">{recommendedStack.name}</h3>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => onStackClick(recommendedStack.slug)}
+                                className="w-full md:w-auto flex-shrink-0 px-4 py-2 rounded-lg bg-news-accent text-black font-bold text-[10px] uppercase tracking-widest hover:bg-news-accentHover transition-colors flex items-center justify-center gap-1"
+                            >
+                                View Stack <ArrowRight size={12} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Popular AI Tool Categories */}
+            {!wfConfig && !hasActiveFilters && (
+                <div className="mb-12">
+                    <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                        <LayoutGrid size={20} className="text-news-accent" /> Popular AI Tool Categories
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                        {POPULAR_CATEGORIES.map(({ label, icon: Icon, filter }) => {
+                            const count = tools.filter(t => t.category_tags?.some(c => c.toLowerCase().includes(filter.toLowerCase()))).length;
+                            return (
+                                <button
+                                    key={label}
+                                    onClick={() => setCatFilter(filter)}
+                                    className="group flex flex-col items-center justify-center p-6 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/50 hover:bg-surface-hover hover:-translate-y-1 transition-all shadow-elevation"
+                                >
+                                    <div className="w-12 h-12 rounded-2xl bg-surface-base border border-border-subtle flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <Icon className="text-news-accent" size={24} />
+                                    </div>
+                                    <span className="text-[11px] font-black text-white uppercase tracking-wider text-center mb-1 group-hover:text-news-accent transition-colors">{label}</span>
+                                    <span className="text-[10px] text-news-muted">{count} tools</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Trending AI Tools */}
+            {!wfConfig && !hasActiveFilters && (
+                <div className="mb-12">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-black text-white flex items-center gap-2">
+                            <Flame size={20} className="text-news-accent" /> Trending AI Tools
+                        </h2>
                     </div>
                     <HScrollRow>
-                        {topRated.map(tool => (
+                        {TRENDING_TOOL_SLUGS.map(slug => {
+                            const tool = tools.find(t => t.slug === slug);
+                            if (!tool) return null;
+                            return (
+                                <button
+                                    key={tool.slug}
+                                    onClick={() => onToolClick(tool.slug)}
+                                    className="group flex-shrink-0 flex items-center gap-4 px-5 py-4 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/40 hover:bg-surface-hover transition-all shadow-elevation min-w-[240px]"
+                                >
+                                    {tool.logo ? (
+                                        <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0">
+                                            <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
+                                        </div>
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-sm font-black text-news-muted flex-shrink-0">
+                                            {tool.name[0]}
+                                        </div>
+                                    )}
+                                    <div className="text-left">
+                                        <p className="font-bold text-white group-hover:text-news-accent transition-colors">{tool.name}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] text-news-muted">{tool.category_tags?.[0]}</span>
+                                            {tool.rating_score > 0 && (
+                                                <span className="text-[10px] font-bold text-news-accent flex items-center gap-0.5">
+                                                    <Star size={9} className="fill-news-accent" />{tool.rating_score.toFixed(1)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </HScrollRow>
+                </div>
+            )}
+
+            {/* Recently Added Tools (only on initial view) */}
+            {!wfConfig && !hasActiveFilters && (
+                <div className="mb-12">
+                     <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                        <Zap size={20} className="text-news-accent" /> Recently Added
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {[...tools].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 3).map(tool => (
                             <button
-                                key={tool.slug}
+                                key={tool.id}
                                 onClick={() => onToolClick(tool.slug)}
-                                className="group flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/40 hover:bg-surface-hover transition-all shadow-elevation"
+                                className="group flex items-center gap-4 p-5 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/30 hover:bg-surface-hover transition-all shadow-elevation text-left"
                             >
                                 {tool.logo ? (
-                                    <div className="w-8 h-8 rounded-lg bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0">
-                                        <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
+                                    <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0 shadow-inner">
+                                        <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" />
                                     </div>
                                 ) : (
-                                    <div className="w-8 h-8 rounded-lg bg-surface-base border border-border-subtle flex items-center justify-center text-xs font-black text-news-muted flex-shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-base font-black text-news-muted flex-shrink-0 shadow-inner">
                                         {tool.name[0]}
                                     </div>
                                 )}
-                                <div className="text-left">
-                                    <p className="text-sm font-bold text-white group-hover:text-news-accent transition-colors whitespace-nowrap">{tool.name}</p>
-                                    <div className="flex items-center gap-1.5">
-                                        {tool.rating_score > 0 && (
-                                            <span className="text-[10px] font-bold text-news-accent flex items-center gap-0.5">
-                                                <Star size={9} className="fill-news-accent" />{tool.rating_score.toFixed(1)}
-                                            </span>
-                                        )}
-                                        <span className="text-[9px] text-news-muted">{tool.category_tags?.[0]}</span>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-sm font-bold text-white truncate group-hover:text-news-accent transition-colors">{tool.name}</h3>
+                                    <p className="text-[10px] text-news-muted truncate mt-0.5">{tool.short_description}</p>
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-surface-base border border-border-subtle text-news-muted">{tool.category_tags?.[0]}</span>
+                                        <span className="text-[9px] font-bold text-emerald-400">New</span>
                                     </div>
                                 </div>
+                                <ArrowRight size={14} className="text-news-muted group-hover:text-news-accent group-hover:translate-x-1 transition-all" />
                             </button>
                         ))}
-                    </HScrollRow>
+                    </div>
                 </div>
             )}
 
@@ -405,13 +628,16 @@ const AIToolsHub: React.FC<{
                                 <p className="text-news-text text-xs leading-relaxed line-clamp-2 flex-1 mb-4">{tool.short_description}</p>
 
                                 {/* Pricing footer */}
-                                <div className="pt-3 border-t border-border-divider">
-                                    <span className={`text-[9px] px-2 py-0.5 rounded border font-bold ${
+                                <div className="pt-4 border-t border-border-divider flex items-center justify-between">
+                                    <span className={`text-[10px] px-2.5 py-1 rounded-lg border font-bold ${
                                         tool.pricing_model === 'Free' || tool.pricing_model === 'Freemium'
-                                            ? 'bg-news-accent/15 text-news-accent border-news-accent/20'
+                                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
                                             : 'bg-blue-500/15 text-blue-400 border-blue-500/20'
                                     }`}>
-                                        {tool.pricing_model}{tool.starting_price ? ` · ${tool.starting_price}` : ''}
+                                        {tool.pricing_model}{tool.starting_price && tool.starting_price !== 'Free' ? ` · ${tool.starting_price}` : ''}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-news-muted group-hover:text-white transition-colors flex items-center gap-1">
+                                        View Tool <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                                     </span>
                                 </div>
                             </button>
@@ -432,20 +658,380 @@ const AIToolsHub: React.FC<{
                 </div>
             )}
 
-            {/* Related Rankings */}
-            {relatedRankings.length > 0 && (
-                <div className="mt-16 pt-10 border-t border-border-divider">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-5">Related Rankings</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {relatedRankings.map(a => (
+            {/* Cross-Hub Workflow Recommendations (workflow mode) */}
+            {wfConfig && (wfBestOf.length > 0 || wfGuides.length > 0 || wfUseCases.length > 0) && (
+                <div className="mt-16 pt-10 border-t border-border-divider space-y-10">
+                    {wfBestOf.length > 0 && (
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-4">Related Rankings for {wfConfig.label}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                {wfBestOf.map(a => (
+                                    <button key={a.id} onClick={() => onArticleClick(a)}
+                                        className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all shadow-elevation"
+                                    >
+                                        <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-2">Best Of</p>
+                                        <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
+                                        <span className="text-[10px] text-news-muted flex items-center gap-1 mt-2 group-hover:text-white transition-colors">View ranking <ArrowRight size={9} /></span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {wfGuides.length > 0 && (
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-4">Related Guides for {wfConfig.label}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                {wfGuides.map(a => (
+                                    <button key={a.id} onClick={() => onArticleClick(a)}
+                                        className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all shadow-elevation"
+                                    >
+                                        <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400 mb-2">Guide</p>
+                                        <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
+                                        <span className="text-[10px] text-news-muted flex items-center gap-1 mt-2 group-hover:text-white transition-colors">Read guide <ArrowRight size={9} /></span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {wfUseCases.length > 0 && (
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-4">Related Use Cases for {wfConfig.label}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                {wfUseCases.map(a => (
+                                    <button key={a.id} onClick={() => onArticleClick(a)}
+                                        className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all shadow-elevation"
+                                    >
+                                        <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 mb-2">Use Case</p>
+                                        <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
+                                        <span className="text-[10px] text-news-muted flex items-center gap-1 mt-2 group-hover:text-white transition-colors">Read workflow <ArrowRight size={9} /></span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Related Research & Insights (Structured) */}
+            {!wfConfig && (
+                <div className="mt-20 pt-12 border-t border-border-divider space-y-16">
+                    {/* Related Rankings */}
+                    {relatedRankings.length > 0 && (
+                        <div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-black text-white flex items-center gap-2">
+                                    <BookOpen size={20} className="text-news-accent" /> Expert Rankings
+                                </h2>
+                                <button className="text-[10px] font-bold text-news-muted hover:text-white transition-colors">View all rankings →</button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                                {relatedRankings.map(a => (
+                                    <button
+                                        key={a.id}
+                                        onClick={() => onArticleClick(a)}
+                                        className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-5 hover:bg-surface-hover hover:-translate-y-1 hover:border-news-accent/30 transition-all shadow-elevation"
+                                    >
+                                        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-news-accent mb-3">Best Of</p>
+                                        <h4 className="font-bold text-white group-hover:text-news-accent transition-colors leading-snug mb-3 line-clamp-2">{a.title}</h4>
+                                        <span className="text-[10px] text-news-muted flex items-center gap-1 group-hover:text-white transition-colors">
+                                            View ranking <ArrowRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Related Guides */}
+                    {articles.filter(a => (a as any).article_type === 'guide').length > 0 && (
+                        <div>
+                             <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-black text-white flex items-center gap-2">
+                                    <Workflow size={20} className="text-blue-400" /> Implementation Guides
+                                </h2>
+                                <button className="text-[10px] font-bold text-news-muted hover:text-white transition-colors">View all guides →</button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                                {articles.filter(a => (a as any).article_type === 'guide').slice(0, 3).map(a => (
+                                    <button
+                                        key={a.id}
+                                        onClick={() => onArticleClick(a)}
+                                        className="group flex flex-col bg-surface-card border border-border-subtle rounded-2xl overflow-hidden hover:bg-surface-hover hover:-translate-y-1 hover:border-blue-400/30 transition-all shadow-elevation text-left"
+                                    >
+                                        {a.imageUrl && (
+                                            <div className="w-full aspect-video overflow-hidden">
+                                                <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                                            </div>
+                                        )}
+                                        <div className="p-5">
+                                            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-blue-400 mb-2">Guide</p>
+                                            <h4 className="font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── Best Software Hub ──────────────────────────────────────────────────────────────
+const RANKING_CATEGORY_EXPLORER = [
+    { label: 'AI Tools',              icon: Brain,       filter: 'ai' },
+    { label: 'Productivity Software', icon: Layers,      filter: 'productiv' },
+    { label: 'Automation Platforms',  icon: Zap,         filter: 'automat' },
+    { label: 'Developer Tools',       icon: Code2,       filter: 'dev' },
+    { label: 'Marketing Software',    icon: Megaphone,   filter: 'market' },
+    { label: 'Business Software',     icon: Briefcase,   filter: 'business' },
+];
+
+const RANKING_FILTERS = ['All', 'AI Tools', 'Productivity', 'Automation', 'Developer Tools', 'Marketing'];
+
+const BestSoftwareHub: React.FC<{ 
+    articles: Article[]; 
+    onArticleClick: (a: Article) => void;
+    workflowFilter?: string;
+    queryString?: string;
+}> = ({ articles, onArticleClick, workflowFilter, queryString }) => {
+    const [allTools, setAllTools] = useState<Tool[]>([]);
+    const [catFilter, setCatFilter] = useState('All');
+    const [wfFilter, setWfFilter] = useState(workflowFilter || 'All');
+    const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'most-tools'>('popular');
+
+    // Sync query string to filters
+    useEffect(() => {
+        const params = new URLSearchParams(queryString || '');
+        const cat = params.get('category');
+        const wf = workflowFilter || params.get('workflow');
+
+        if (cat) {
+            const low = cat.toLowerCase();
+            if (low.includes('ai-tools')) setCatFilter('AI Tools');
+            else if (low.includes('productivity')) setCatFilter('Productivity');
+            else if (low.includes('automation')) setCatFilter('Automation');
+            else if (low.includes('developer')) setCatFilter('Developer Tools');
+            else if (low.includes('marketing')) setCatFilter('Marketing');
+            else if (low.includes('business')) setCatFilter('Business Software');
+            else if (low.includes('writing')) setCatFilter('AI Writing');
+            else if (low.includes('coding')) setCatFilter('AI Coding');
+            else if (low.includes('crm')) setCatFilter('CRM');
+            else setCatFilter('All');
+        } else {
+            setCatFilter('All');
+        }
+
+        if (wf) {
+            setWfFilter(wf);
+        } else {
+            setWfFilter('All');
+        }
+    }, [queryString, workflowFilter]);
+
+    useEffect(() => {
+        fetch('/api/tools').then(r => r.json()).then(setAllTools).catch(() => {});
+    }, []);
+
+    const toolMap = React.useMemo(() => {
+        const m: Record<string, Tool> = {};
+        allTools.forEach(t => { m[t.slug] = t; });
+        return m;
+    }, [allTools]);
+
+    const bestOf = articles.filter(a => (a as any).article_type === 'best-of');
+    const reviews = articles.filter(a => (a as any).article_type === 'review').slice(0, 4);
+
+    // Popular = featured or first 4
+    const popularRankings = bestOf.filter(a => a.isFeaturedDiscover || (a as any).isFeaturedCategory).slice(0, 4)
+        .concat(bestOf.slice(0, 4)).filter((v, i, arr) => arr.findIndex(x => x.id === v.id) === i).slice(0, 4);
+    // New = last 3 added
+    const newRankings = bestOf.slice(-3).reverse();
+
+    const matchesCat = (a: Article) => {
+        const text = `${a.title} ${a.excerpt} ${(a as any).topic || ''} ${(Array.isArray(a.category) ? a.category : [a.category]).join(' ')}`.toLowerCase();
+        
+        // Workflow filter (from query/mega menu)
+        if (wfFilter !== 'All') {
+            const wf = wfFilter.toLowerCase();
+            if (!text.includes(wf)) return false;
+        }
+
+        // Category filter (chip/query)
+        if (catFilter === 'All') return true;
+        const q = catFilter.toLowerCase().replace(' tools', '').replace(' software', '').replace(' platforms', '');
+        return text.includes(q);
+    };
+
+    const filtered = bestOf.filter(matchesCat);
+    const sorted = [...filtered].sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+        if (sortBy === 'most-tools') return ((b as any).tools_reviewed || 0) - ((a as any).tools_reviewed || 0);
+        return 0;
+    });
+
+    if (bestOf.length === 0) return <EmptyState hub="best-software" />;
+
+    // Shared ranking card sub-component
+    const RankingCard: React.FC<{ a: Article; index: number; large?: boolean }> = ({ a, index, large = false }) => {
+        const toolSlugs: string[] = (a as any).primary_tools || [];
+        const toolsReviewed: number = (a as any).tools_reviewed || toolSlugs.length || 0;
+        const category = (Array.isArray(a.category) ? a.category[0] : a.category) || (a as any).topic || 'Rankings';
+        return (
+            <button
+                onClick={() => onArticleClick(a)}
+                className={`group w-full text-left bg-surface-card border border-border-subtle shadow-elevation hover:shadow-elevation-hover hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all flex flex-col ${large ? 'p-6' : 'p-4'}`}
+            >
+                <div className="flex items-start justify-between gap-3 mb-4">
+                    <span className={`font-black text-white/10 group-hover:text-news-accent/20 transition-colors leading-none tabular-nums flex-shrink-0 ${large ? 'text-5xl' : 'text-4xl'}`}>
+                        {(index + 1).toString().padStart(2, '0')}
+                    </span>
+                    {a.imageUrl && (
+                        <div className="w-20 h-14 rounded-xl overflow-hidden border border-border-subtle flex-shrink-0">
+                            <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                    )}
+                </div>
+                <h3 className={`font-black text-white group-hover:text-news-accent transition-colors leading-snug mb-3 ${large ? 'text-lg' : 'text-sm'} line-clamp-2`}>
+                    {a.title}
+                </h3>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-surface-base border border-border-subtle text-news-muted mb-3 self-start">
+                    {category}
+                </span>
+                {toolsReviewed > 0 && (
+                    <p className="text-[10px] text-news-muted mb-3">{toolsReviewed} tools reviewed</p>
+                )}
+                {toolSlugs.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap mb-3">
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-news-muted mr-1">Top tools:</span>
+                        {toolSlugs.slice(0, 4).map(slug => {
+                            const t = toolMap[slug];
+                            return t?.logo ? (
+                                <div key={slug} title={t.name} className="w-5 h-5 rounded bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0">
+                                    <img src={t.logo} alt={t.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
+                                </div>
+                            ) : (
+                                <span key={slug} className="text-[8px] px-1.5 py-0.5 bg-surface-base border border-border-subtle rounded text-news-muted">{slug}</span>
+                            );
+                        })}
+                    </div>
+                )}
+                <div className="mt-auto pt-3 border-t border-border-divider">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent flex items-center gap-1 group-hover:text-white transition-colors">
+                        View ranking <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                    </span>
+                </div>
+            </button>
+        );
+    };
+
+    return (
+        <div className="space-y-16">
+            {/* 1. Popular Rankings */}
+            {popularRankings.length > 0 && (
+                <section>
+                    <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                        <TrendingUp size={20} className="text-news-accent" /> Popular Rankings
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        {popularRankings.map((a, i) => <RankingCard key={a.id} a={a} index={i} large />)}
+                    </div>
+                </section>
+            )}
+
+            {/* 2. Category Explorer */}
+            <section>
+                <h2 className="text-xl font-black text-white mb-6">Explore Rankings by Category</h2>
+                <HScrollRow>
+                    {RANKING_CATEGORY_EXPLORER.map(({ label, icon: Icon, filter }) => {
+                        const count = bestOf.filter(a => {
+                            const text = `${a.title} ${a.excerpt} ${(a as any).topic || ''} ${(Array.isArray(a.category) ? a.category : [a.category]).join(' ')}`;
+                            return text.toLowerCase().includes(filter);
+                        }).length;
+                        return (
                             <button
-                                key={a.id}
-                                onClick={() => onArticleClick(a)}
+                                key={label}
+                                onClick={() => setCatFilter(catFilter === label ? 'All' : label)}
+                                className={`group flex-shrink-0 flex flex-col items-center gap-2 px-5 py-4 rounded-2xl border transition-all shadow-elevation min-w-[120px] ${
+                                    catFilter === label
+                                        ? 'bg-news-accent/10 border-news-accent/50 text-news-accent'
+                                        : 'bg-surface-card border-border-subtle hover:bg-surface-hover hover:border-border-divider text-news-muted hover:text-white'
+                                }`}
+                            >
+                                <Icon size={20} className="flex-shrink-0" />
+                                <span className="text-xs font-bold text-center leading-tight">{label}</span>
+                                <span className="text-[9px] opacity-60">{count} rankings</span>
+                            </button>
+                        );
+                    })}
+                </HScrollRow>
+            </section>
+
+            {/* 3. New Rankings */}
+            {newRankings.length > 0 && (
+                <section>
+                    <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                        <Flame size={18} className="text-news-accent" /> New Rankings
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        {newRankings.map((a, i) => <RankingCard key={a.id} a={a} index={i} />)}
+                    </div>
+                </section>
+            )}
+
+            {/* 4. All Rankings with Filter + Sort */}
+            <section>
+                <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-surface-card rounded-2xl border border-border-subtle shadow-elevation">
+                    <div className="flex items-center gap-2 text-xs text-news-muted font-bold uppercase tracking-widest">
+                        <Filter size={12} /> Filter
+                    </div>
+                    <div className="flex flex-wrap gap-2 flex-1">
+                        {RANKING_FILTERS.map(f => (
+                            <button key={f} onClick={() => setCatFilter(f)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                                    catFilter === f
+                                        ? 'bg-news-accent text-white border-news-accent'
+                                        : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'
+                                }`}>{f}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="relative flex-shrink-0">
+                        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
+                            className="appearance-none bg-surface-base border border-border-subtle text-news-muted text-xs font-bold rounded-xl px-3 py-2 pr-7 focus:outline-none focus:border-news-accent cursor-pointer"
+                        >
+                            <option value="popular">Most Popular</option>
+                            <option value="newest">Newest</option>
+                            <option value="most-tools">Most Tools Reviewed</option>
+                        </select>
+                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
+                    </div>
+                </div>
+
+                <p className="text-xs text-news-muted uppercase tracking-widest mb-6">{sorted.length} Rankings</p>
+
+                {sorted.length === 0 ? (
+                    <div className="text-center py-16 border border-dashed border-border-subtle rounded-2xl text-gray-500">No rankings in this category yet.</div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {sorted.map((a, i) => <RankingCard key={a.id} a={a} index={i} />)}
+                    </div>
+                )}
+            </section>
+
+            {/* 5. Related Reviews */}
+            {reviews.length > 0 && (
+                <div className="pt-10 border-t border-border-divider">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-5">Related Reviews</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {reviews.map(a => (
+                            <button key={a.id} onClick={() => onArticleClick(a)}
                                 className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all shadow-elevation"
                             >
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-2">Best Of</p>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-2">Review</p>
                                 <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
-                                <span className="text-[10px] text-news-muted flex items-center gap-1 mt-2 group-hover:text-white transition-colors">View ranking <ArrowRight size={9} /></span>
+                                <span className="text-[10px] text-news-muted flex items-center gap-1 mt-2 group-hover:text-white transition-colors">Read review <ArrowRight size={9} /></span>
                             </button>
                         ))}
                     </div>
@@ -455,64 +1041,6 @@ const AIToolsHub: React.FC<{
     );
 };
 
-// ─── Best Software Hub ────────────────────────────────────────────────────────
-const BEST_OF_GROUPS = [
-    { label: 'AI Tools', cats: ['AI Writing', 'AI Image', 'AI Video', 'Chatbot'] },
-    { label: 'Productivity Software', cats: ['Productivity', 'Project Management', 'Knowledge Base'] },
-    { label: 'Business Software', cats: ['CRM', 'Marketing', 'Sales'] },
-    { label: 'Developer Tools', cats: ['Developer Tools', 'Automation', 'No-Code'] },
-    { label: 'Creative Software', cats: ['Design', 'Creative Tools', 'AI Image'] },
-];
-
-const BestSoftwareHub: React.FC<{ articles: Article[]; onArticleClick: (a: Article) => void }> = ({ articles, onArticleClick }) => {
-    const bestOf = articles.filter(a => (a as any).article_type === 'best-of');
-
-    return (
-        <div className="space-y-12">
-            {BEST_OF_GROUPS.map(group => {
-                const items = bestOf.filter(a => {
-                    const cats = Array.isArray(a.category) ? a.category : [a.category];
-                    const topic = (a as any).topic || '';
-                    return group.cats.some(c =>
-                        cats.some(ac => ac.toLowerCase().includes(c.toLowerCase())) ||
-                        topic.toLowerCase().includes(c.toLowerCase())
-                    );
-                }).slice(0, 5);
-
-                if (items.length === 0) return null;
-
-                return (
-                    <div key={group.label} className="bg-surface-alt rounded-2xl p-6 border border-border-subtle shadow-elevation">
-                        <div className="flex items-end justify-between mb-5 pb-4 border-b border-border-divider">
-                            <div>
-                                <h2 className="text-base font-black text-white">{group.label}</h2>
-                                <p className="text-[10px] text-news-muted uppercase tracking-widest mt-1">{items.length} Tracked Categories</p>
-                            </div>
-                            <Star size={16} className="text-news-accent opacity-50 mb-1" />
-                        </div>
-                        <div className="space-y-2">
-                            {items.map((a, i) => (
-                                <button
-                                    key={a.id}
-                                    onClick={() => onArticleClick(a)}
-                                    className="group w-full text-left flex items-center gap-4 p-3 rounded-xl border border-border-subtle bg-surface-card shadow-sm hover:bg-surface-hover hover:-translate-y-0.5 hover:shadow-elevation transition-all"
-                                >
-                                    <span className="text-2xl font-black text-white/5 group-hover:text-white/20 w-8 flex-shrink-0 tabular-nums">{(i + 1).toString().padStart(2, '0')}</span>
-                                    <div className="flex-grow min-w-0">
-                                        <h3 className="text-sm font-bold text-news-text leading-snug line-clamp-2 group-hover:text-white">{a.title}</h3>
-                                    </div>
-                                    <ArrowRight size={14} className="text-news-muted group-hover:text-white flex-shrink-0" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                );
-            })}
-
-            {bestOf.length === 0 && <EmptyState hub="best-software" />}
-        </div>
-    );
-};
 
 // ─── Comparisons Hub ──────────────────────────────────────────────────────────
 const COMP_CATEGORIES = ['All', 'AI Assistants', 'Productivity Tools', 'Automation Platforms', 'AI Writing', 'Developer Tools', 'Image Generation'];
@@ -1534,12 +2062,150 @@ const GuidesHubInner: React.FC<{
 };
 
 // ─── News Hub ──────────────────────────────────────────────────────────────────
-// TODO: Implement full news hub redesign (featured story, chronofeed, filters, etc.)
 const NewsHubInner: React.FC<{
     articles: Article[];
     onArticleClick: (a: Article) => void;
 }> = ({ articles, onArticleClick }) => {
-    return <ArticleGridHub hub="news" articles={articles} onArticleClick={onArticleClick} />;
+    const [activeTopic, setActiveTopic] = useState('All');
+    const [sortBy, setSortBy] = useState<'latest' | 'trending'>('latest');
+
+    const newsArticles = articles.filter(a => {
+        const type = (a as any).article_type;
+        const cats = Array.isArray(a.category) ? a.category : [a.category];
+        return type === 'news' || cats.some(c => c === 'AI News');
+    });
+
+    const topics = ['All', 'AI Models', 'Product Launches', 'Open Source', 'Funding', 'Regulation'];
+
+    const filtered = newsArticles.filter(a => 
+        activeTopic === 'All' || a.topic === activeTopic || (Array.isArray(a.category) && a.category.includes(activeTopic))
+    );
+
+    // Featured is the newest "featured" news or just the latest news
+    const featured = filtered.find(a => a.isFeaturedDiscover) || filtered[0];
+    const latestDevelopments = filtered.filter(a => a.id !== featured?.id);
+
+    if (newsArticles.length === 0) return <EmptyState hub="news" />;
+
+    return (
+        <div className="space-y-16">
+            {/* 1. Featured Story */}
+            {featured && (
+                <section>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-black text-white flex items-center gap-2">
+                            <Star size={20} className="text-news-accent fill-news-accent" />
+                            Featured Story
+                        </h2>
+                    </div>
+                    <button 
+                        onClick={() => onArticleClick(featured)}
+                        className="group w-full relative aspect-[21/9] rounded-3xl overflow-hidden border border-border-divider shadow-elevation-hover hover:border-news-accent transition-all"
+                    >
+                        <img src={featured.imageUrl} alt={featured.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-101 transition-transform duration-700" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                        <div className="absolute bottom-0 left-0 p-8 md:p-12 text-left max-w-3xl">
+                            <span className="inline-block px-3 py-1 rounded-full bg-news-accent text-black text-[10px] font-black uppercase tracking-widest mb-4">Must Read</span>
+                            <h3 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4 group-hover:text-news-accent transition-colors">{featured.title}</h3>
+                            <p className="text-gray-300 text-lg line-clamp-2 mb-6 hidden md:block">{featured.excerpt}</p>
+                            <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
+                                <span>{featured.date}</span>
+                                <span>•</span>
+                                <span>{featured.topic}</span>
+                            </div>
+                        </div>
+                    </button>
+                </section>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                {/* 2. ChronoFeed (Main Column) */}
+                <div className="lg:col-span-8 space-y-8">
+                    <div className="flex items-center justify-between border-b border-border-divider pb-4">
+                        <h2 className="text-xl font-black text-white">Latest Developments</h2>
+                        <div className="flex items-center gap-4">
+                            <select 
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as any)}
+                                className="bg-surface-card border border-border-subtle text-[10px] font-bold uppercase tracking-widest text-news-muted rounded-lg px-3 py-1.5 focus:outline-none focus:border-news-accent"
+                            >
+                                <option value="latest">Sort: Newest</option>
+                                <option value="trending">Sort: Trending</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        {latestDevelopments.map(a => (
+                            <button 
+                                key={a.id} 
+                                onClick={() => onArticleClick(a)}
+                                className="group w-full text-left flex gap-6 p-4 rounded-2xl bg-surface-card border border-border-subtle hover:bg-surface-hover hover:border-news-accent transition-all shadow-elevation"
+                            >
+                                <div className="w-48 h-32 flex-shrink-0 rounded-xl overflow-hidden border border-border-subtle">
+                                    <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all" />
+                                </div>
+                                <div className="flex-grow py-1">
+                                    <div className="flex items-center gap-3 mb-2 text-[10px] font-bold uppercase tracking-widest">
+                                        <span className="text-news-accent">{a.topic}</span>
+                                        <span className="text-news-muted">{a.date}</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-2 leading-snug group-hover:text-news-accent transition-colors">{a.title}</h3>
+                                    <p className="text-sm text-news-text line-clamp-2">{a.excerpt}</p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* 3. Sidebar (Filters & Trending) */}
+                <div className="lg:col-span-4 space-y-12">
+                    {/* Filters */}
+                    <div className="bg-surface-alt border border-border-divider rounded-3xl p-6">
+                        <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                             <Filter size={14} className="text-news-accent" />
+                             Topic Navigation
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                            {topics.map(t => (
+                                <button
+                                    key={t}
+                                    onClick={() => setActiveTopic(t)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                                        activeTopic === t 
+                                        ? 'bg-news-accent text-black border-news-accent shadow-[0_0_15px_rgba(43,212,195,0.3)]' 
+                                        : 'bg-surface-card text-news-muted border-border-subtle hover:border-news-accent hover:text-white'
+                                    }`}
+                                >
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Major Updates / Trending */}
+                    <div className="space-y-6">
+                        <h3 className="text-sm font-black text-white uppercase tracking-widest px-2">Major Updates</h3>
+                        <div className="space-y-4">
+                            {newsArticles.slice(0, 3).map((a, i) => (
+                                <button 
+                                    key={a.id} 
+                                    onClick={() => onArticleClick(a)}
+                                    className="group w-full text-left flex items-start gap-4 p-4 rounded-2xl bg-surface-card border border-border-subtle hover:bg-surface-hover hover:border-news-accent transition-all"
+                                >
+                                    <span className="text-2xl font-black text-white/5 group-hover:text-news-accent/20 transition-colors mt-1">0{i+1}</span>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-news-accent uppercase tracking-widest mb-1">{a.topic}</p>
+                                        <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-tight line-clamp-2">{a.title}</h4>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // ─── Generic Article Grid Hub ─────────────────────────────────────────────────
@@ -1614,18 +2280,70 @@ const ArticleGridHub: React.FC<{
 };
 
 // ─── Main HubPage ─────────────────────────────────────────────────────────────
-const HubPage: React.FC<HubPageProps> = ({ hub: rawHub, articles, onArticleClick, onToolClick, onComparisonClick, onBack }) => {
+const HubPage: React.FC<HubPageProps> = ({ hub: rawHub, articles, onArticleClick, onToolClick, onComparisonClick, onBack, workflowFilter, queryString, onStackClick }) => {
     // Safety: fall back to 'ai-tools' if we get an unrecognized hub value
     const hub: HubType = (rawHub && HUB_META[rawHub as HubType]) ? rawHub as HubType : 'ai-tools';
     const meta = HUB_META[hub];
 
+    let dynamicLabel = meta.label;
+    if (hub === 'ai-tools' && queryString) {
+        const params = new URLSearchParams(queryString);
+        const cat = params.get('category');
+        const sort = params.get('sort');
+        const price = params.get('pricing') || params.get('price');
+        
+        if (cat) {
+            const low = cat.toLowerCase();
+            if (low.includes('writing')) dynamicLabel = 'AI Writing Tools';
+            else if (low.includes('coding') || low.includes('developer')) dynamicLabel = 'AI Coding Tools';
+            else if (low.includes('image')) dynamicLabel = 'AI Image Tools';
+            else if (low.includes('automation')) dynamicLabel = 'Automation Tools';
+            else if (low.includes('productivity')) dynamicLabel = 'Productivity Tools';
+            else if (low.includes('crm')) dynamicLabel = 'CRM Software';
+            else if (low.includes('marketing')) dynamicLabel = 'Marketing Tools';
+        } else if (price === 'free') {
+            dynamicLabel = 'Free AI Tools';
+        } else if (price === 'freemium') {
+            dynamicLabel = 'Freemium AI Tools';
+        } else if (sort === 'new' || sort === 'newest') {
+            dynamicLabel = 'Newest AI Tools';
+        } else if (sort === 'rating') {
+            dynamicLabel = 'Top Rated AI Tools';
+        }
+    } else if (hub === 'best-software' && (queryString || workflowFilter)) {
+        const params = new URLSearchParams(queryString || '');
+        const cat = params.get('category');
+        const wf = workflowFilter || params.get('workflow');
+        
+        if (cat) {
+            const low = cat.toLowerCase();
+            if (low.includes('ai-tools')) dynamicLabel = 'AI Software Rankings';
+            else if (low.includes('productivity')) dynamicLabel = 'Productivity Software Rankings';
+            else if (low.includes('automation')) dynamicLabel = 'Automation Software Rankings';
+            else if (low.includes('developer')) dynamicLabel = 'Developer Tools Rankings';
+            else if (low.includes('marketing')) dynamicLabel = 'Marketing Software Rankings';
+            else if (low.includes('business')) dynamicLabel = 'Business Software Rankings';
+            else if (low.includes('writing')) dynamicLabel = 'AI Writing Rankings';
+            else if (low.includes('coding')) dynamicLabel = 'AI Coding Rankings';
+            else if (low.includes('crm')) dynamicLabel = 'CRM Platform Rankings';
+        } else if (wf) {
+            const low = wf.toLowerCase();
+            if (low === 'students') dynamicLabel = 'Best Tools for Students';
+            else if (low === 'startups') dynamicLabel = 'Best Tools for Startups';
+            else if (low === 'creators') dynamicLabel = 'Best Tools for Creators';
+            else if (low === 'small-business') dynamicLabel = 'Best Tools for Small Business';
+            else if (low === 'developers') dynamicLabel = 'Best Tools for Developers';
+            else if (low === 'marketing') dynamicLabel = 'Best Tools for Marketers';
+        }
+    }
+
     useEffect(() => {
-        document.title = `${meta.label} | ToolCurrent`;
-    }, [hub]);
+        document.title = `${dynamicLabel} | ToolCurrent`;
+    }, [dynamicLabel]);
 
     const renderContent = () => {
-        if (hub === 'ai-tools') return <AIToolsHub onToolClick={onToolClick} articles={articles} onArticleClick={onArticleClick} />;
-        if (hub === 'best-software') return <BestSoftwareHub articles={articles} onArticleClick={onArticleClick} />;
+        if (hub === 'ai-tools') return <AIToolsHub onToolClick={onToolClick} articles={articles} onArticleClick={onArticleClick} workflowFilter={workflowFilter} queryString={queryString} onStackClick={onStackClick} />;
+        if (hub === 'best-software') return <BestSoftwareHub articles={articles} onArticleClick={onArticleClick} workflowFilter={workflowFilter} queryString={queryString} />;
         if (hub === 'comparisons') return <ComparisonsHub onComparisonClick={onComparisonClick} articles={articles} onArticleClick={onArticleClick} />;
         if (hub === 'reviews') return <ReviewsHub articles={articles} onArticleClick={onArticleClick} onComparisonClick={onComparisonClick} />;
         if (hub === 'use-cases') return <UseCasesHubInner articles={articles} onArticleClick={onArticleClick} />;
@@ -1636,7 +2354,7 @@ const HubPage: React.FC<HubPageProps> = ({ hub: rawHub, articles, onArticleClick
 
     return (
         <div className="min-h-screen bg-surface-base text-news-text font-sans">
-            <HubHeader hub={hub} onBack={onBack} />
+            <HubHeader hub={hub} onBack={onBack} titleOverride={dynamicLabel} />
             <div className="container mx-auto px-4 md:px-8 py-10">
                 {renderContent()}
             </div>

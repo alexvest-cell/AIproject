@@ -1,5 +1,6 @@
-import React from 'react';
-import { ArrowRight, ChevronRight, Zap, Scale, List, GraduationCap, Rocket, Terminal, Megaphone, Palette, Building2, Workflow, Building } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, ChevronRight, Zap, Scale, List, GraduationCap, Rocket, Terminal, Megaphone, Palette, Building2, Workflow, Building, Layers } from 'lucide-react';
+import { Stack } from '../types';
 
 interface HeroProps {
     onReadFeatured?: () => void;
@@ -7,18 +8,19 @@ interface HeroProps {
     featuredArticleOverride?: any;
     sidebarArticlesOverride?: any[];
     articles?: any[];
-    onHubClick?: (hub: string) => void;
+    onHubClick?: (hub: string, workflow?: string) => void;
+    onStackClick?: (slug: string) => void;
 }
 
 const USE_CASES = [
-    { label: 'Students', icon: GraduationCap, hub: 'best-software', filter: 'Students' },
-    { label: 'Startups', icon: Rocket, hub: 'ai-tools', filter: 'Startups' },
-    { label: 'Developers', icon: Terminal, hub: 'ai-tools', filter: 'Developers' },
-    { label: 'Marketers', icon: Megaphone, hub: 'best-software', filter: 'Marketers' },
-    { label: 'Creators', icon: Palette, hub: 'ai-tools', filter: 'Creators' },
-    { label: 'Small Business', icon: Building2, hub: 'best-software', filter: 'Small Business' },
-    { label: 'Automation', icon: Workflow, hub: 'guides', filter: '' },
-    { label: 'Enterprise', icon: Building, hub: 'reviews', filter: '' },
+    { label: 'Students',      icon: GraduationCap, hub: 'ai-tools', workflow: 'students' },
+    { label: 'Startups',      icon: Rocket,        hub: 'ai-tools', workflow: 'startups' },
+    { label: 'Developers',    icon: Terminal,      hub: 'ai-tools', workflow: 'developers' },
+    { label: 'Marketers',     icon: Megaphone,     hub: 'ai-tools', workflow: 'marketing' },
+    { label: 'Creators',      icon: Palette,       hub: 'ai-tools', workflow: 'creators' },
+    { label: 'Small Business', icon: Building2,    hub: 'ai-tools', workflow: 'small-business' },
+    { label: 'Automation',    icon: Workflow,      hub: 'ai-tools', workflow: 'automation' },
+    { label: 'Enterprise',    icon: Building,      hub: 'ai-tools', workflow: 'enterprise' },
 ];
 
 const STATS = [
@@ -27,9 +29,19 @@ const STATS = [
     { value: '500+', label: 'Ranking & Research Articles' },
 ];
 
-const Hero: React.FC<HeroProps> = ({ onHubClick }) => {
-    const handleHub = (hub: string) => {
-        if (onHubClick) onHubClick(hub);
+const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
+    const [stacks, setStacks] = useState<Stack[]>([]);
+
+    useEffect(() => {
+        // Fetch published stacks for discovery block
+        fetch('/api/stacks')
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setStacks(data.slice(0, 6)))
+            .catch(err => console.error("Error fetching stacks:", err));
+    }, []);
+
+    const handleHub = (hub: string, workflow?: string) => {
+        if (onHubClick) onHubClick(hub, workflow);
     };
 
     return (
@@ -120,14 +132,14 @@ const Hero: React.FC<HeroProps> = ({ onHubClick }) => {
                     </div>
 
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {USE_CASES.map((uc, i) => {
                             const IconComponent = uc.icon;
                             return (
                                 <button
                                     key={i}
-                                    onClick={() => handleHub(uc.hub)}
-                                    className="group flex items-center justify-between p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:shadow-elevation-hover hover:border-border-divider hover:-translate-y-0.5 transition-all text-left"
+                                    onClick={() => handleHub(uc.hub, uc.workflow)}
+                                    className="group flex items-center justify-between p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:shadow-elevation-hover hover:border-border-divider hover:-translate-y-0.5 transition-all text-left min-h-[56px]"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 rounded-lg bg-surface-base border border-border-divider group-hover:border-news-accent/30 transition-colors flex-shrink-0">
@@ -141,6 +153,70 @@ const Hero: React.FC<HeroProps> = ({ onHubClick }) => {
                         })}
                     </div>
                 </div>
+
+                {/* ── Build a Complete Software Stack */}
+                {stacks.length > 0 && (
+                    <div className="mb-0 pb-16">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Ecosystems</p>
+                                <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">Build a Complete Software Stack</h2>
+                                <p className="text-sm text-news-muted mt-2 max-w-2xl">Discover curated stacks of tools that work seamlessly together for specific workflows.</p>
+                            </div>
+                            <button
+                                onClick={() => handleHub('stacks')}
+                                className="flex flex-shrink-0 items-center gap-1 text-xs text-news-accent hover:text-white transition-colors font-bold"
+                            >
+                                Explore All Stacks <ArrowRight size={12} />
+                            </button>
+                        </div>
+
+                        {/* Mobile: Horizontal Scroll | Desktop: Grid */}
+                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-4 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
+                            {stacks.map(stack => (
+                                <button
+                                    key={stack.slug}
+                                    onClick={() => onStackClick?.(stack.slug)}
+                                    className="group text-left bg-surface-card border border-border-subtle hover:border-news-accent/50 rounded-2xl p-5 hover:bg-surface-hover hover:shadow-[0_0_20px_rgba(43,212,195,0.1)] transition-all min-w-[280px] md:min-w-0 snap-start flex flex-col h-full"
+                                >
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2.5 rounded-xl bg-news-accent/10 border border-news-accent/20 group-hover:border-news-accent/50 group-hover:bg-news-accent/20 transition-all flex-shrink-0">
+                                            <Layers size={20} className="text-news-accent" />
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] uppercase font-bold tracking-widest text-news-muted block mb-0.5">{stack.workflow_category}</span>
+                                            <h3 className="font-bold text-white group-hover:text-news-accent transition-colors leading-tight line-clamp-1">{stack.name}</h3>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-news-text mb-4 line-clamp-2 flex-grow">{stack.short_description}</p>
+                                    
+                                    <div className="mb-4">
+                                        <p className="text-[9px] font-bold text-news-muted uppercase tracking-widest mb-2">Tools included:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {stack.tools?.slice(0, 4).map(toolSlug => (
+                                                <div key={toolSlug} className="px-2 py-1 rounded bg-surface-base border border-border-subtle group-hover:border-white/10 text-[9px] font-bold text-news-text capitalize">
+                                                    {toolSlug.replace(/-/g, ' ')}
+                                                </div>
+                                            ))}
+                                            {stack.tools && stack.tools.length > 4 && (
+                                                <div className="px-2 py-1 rounded bg-surface-base border border-border-subtle text-[9px] font-bold text-news-muted">
+                                                    +{stack.tools.length - 4} more
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-border-divider/50 flex items-center justify-between mt-auto">
+                                        <span className="text-[10px] text-news-accent font-bold uppercase tracking-tight">
+                                            View Stack Details
+                                        </span>
+                                        <ArrowRight size={14} className="text-news-muted group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </section>
     );

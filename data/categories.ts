@@ -43,6 +43,13 @@ export const CATEGORIES: CategoryDefinition[] = [
         imageUrl: "https://placehold.co/1200x800?text=Use+Cases"
     },
     {
+        id: "Stacks",
+        label: "Stacks",
+        slug: "stacks",
+        description: "Explore curated software stacks used by developers, marketers, creators, and startups to build efficient workflows.",
+        imageUrl: "https://placehold.co/1200x800?text=Stacks"
+    },
+    {
         id: "Guides",
         label: "Guides",
         slug: "guides",

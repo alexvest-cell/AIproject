@@ -110,6 +110,8 @@ export interface Comparison {
   tool_a?: Tool;
   tool_b?: Tool;
   tool_c?: Tool;
+  alternativeComparisons?: Comparison[];
+  relatedRankings?: Article[];
   comparison_table: ComparisonTableRow[];
   verdict?: string;
   body?: string;
@@ -123,8 +125,30 @@ export interface Comparison {
   createdAt?: string;
 }
 
-export interface ToolPageData {
-  tool: Tool;
+export interface Stack {
+  id: string;
+  name: string;
+  slug: string;
+  hero_image?: string;
+  short_description: string;
+  full_description?: string;
+  workflow_category: string;
+  tools: string[];
+  workflow_steps: {
+    title: string;
+    description: string;
+    tool_slugs: string[];
+  }[];
+  status: 'Draft' | 'Published';
+  meta_title?: string;
+  meta_description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StackPageData {
+  stack: Stack;
+  tools: Tool[];
   comparisons: Comparison[];
   relatedArticles: Article[];
 }

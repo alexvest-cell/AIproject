@@ -1,6 +1,6 @@
 import React from 'react';
 import { Article } from '../../types';
-import { QuickComparisonTable, VerdictBox, ProsConsSection, ArticleFAQ, ToolSummaryCard, RatingBreakdown, ToolSectionBlock, SideBySideHeader, ComparisonDetailTable, ComparisonDecisionSection, RelatedToolsModule, RelatedRankingsModule, ToolsUsedSummary, StepByStepModule, WorkflowBreakdownModule, ComparisonSummaryModule } from './SharedModules';
+import { QuickComparisonTable, VerdictBox, ProsConsSection, ArticleFAQ, ToolSummaryCard, RatingBreakdown, ToolSectionBlock, SideBySideHeader, ComparisonDetailTable, ComparisonDecisionSection, RelatedToolsModule, RelatedRankingsModule, ToolsUsedSummary, StepByStepModule, WorkflowBreakdownModule, ComparisonSummaryModule, RecommendedStackModule } from './SharedModules';
 import { ShieldCheck, Info, Check, ArrowRight, TrendingUp, BookOpen, Layers } from 'lucide-react';
 
 interface LayoutProps {
@@ -8,6 +8,7 @@ interface LayoutProps {
     parsedContent: React.ReactNode[];
     onArticleSelect: (article: Article) => void;
     allArticles: Article[];
+    onStackClick?: (slug: string) => void;
 }
 
 export const RankingLayout: React.FC<LayoutProps> = ({ article, parsedContent }) => {
@@ -357,7 +358,7 @@ export const GuideLayout: React.FC<LayoutProps> = ({ article, parsedContent, all
     );
 };
 
-export const UseCaseLayout: React.FC<LayoutProps> = ({ article, parsedContent }) => {
+export const UseCaseLayout: React.FC<LayoutProps> = ({ article, parsedContent, onStackClick }) => {
     return (
         <div className="flex flex-col gap-0 w-full max-w-[820px]">
             <header className="mb-8">
@@ -398,6 +399,7 @@ export const UseCaseLayout: React.FC<LayoutProps> = ({ article, parsedContent })
                         <div className="h-1 w-20 bg-news-accent mt-4" />
                     </div>
                     <WorkflowBreakdownModule stages={article.workflow_stages} />
+                    <RecommendedStackModule article={article} onStackClick={onStackClick} />
                 </>
             )}
 

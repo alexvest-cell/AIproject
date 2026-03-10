@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { generateArticleSchema, generateFAQSchema, injectSchema } from '../utils/schema';
 import { Article } from '../types';
 import { useAudio } from '../contexts/AudioContext';
@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, BookOpen, Volume2, StopCircle } from 'lucide-react'
 
 import { RankingLayout, ReviewLayout, ComparisonLayout, StandardLayout, IntelligenceLayout, GuideLayout, UseCaseLayout } from './article-layouts/Layouts';
 import { ArticleSidebar, InlineToolCard } from './article-layouts/SharedModules';
+import { RelatedContent } from './RelatedContent';
 
 interface ArticleViewProps {
   article: Article;
@@ -13,6 +14,7 @@ interface ArticleViewProps {
   onArticleSelect: (article: Article) => void;
   allArticles: Article[];
   onShowAbout: () => void;
+  onStackClick?: (slug: string) => void;
 }
 
 const ArticleDataVisual = ({ article }: { article: Article }) => {
@@ -42,8 +44,22 @@ const ArticleDataVisual = ({ article }: { article: Article }) => {
   );
 };
 
-const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSelect, allArticles, onShowAbout }) => {
+const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSelect, allArticles, onShowAbout, onStackClick }) => {
   const { playArticle, pauseAudio, resumeAudio, isPlaying, isLoading, currentArticle } = useAudio();
+  const [relatedTools, setRelatedTools] = useState<any[]>([]);
+  const [relatedComparisons, setRelatedComparisons] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (article?.slug) {
+      fetch(`/api/articles/${article.slug}/related`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.tools) setRelatedTools(data.tools);
+          if (data.comparisons) setRelatedComparisons(data.comparisons);
+        })
+        .catch(console.error);
+    }
+  }, [article?.slug]);
 
   useEffect(() => {
     // Scroll intentionally removed so browser can manage scroll state
@@ -127,7 +143,7 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
   const articleType = (article as any).article_type || 'news';
 
   const renderLayout = () => {
-    const props = { article, parsedContent, onArticleSelect, allArticles };
+    const props = { article, parsedContent, onArticleSelect, allArticles, onStackClick };
     switch (articleType) {
       case 'ranking':
       case 'best-of': return <RankingLayout {...props} />;
@@ -151,6 +167,22 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
           {/* Main Content Area */}
           <main className="w-full">
             {renderLayout()}
+
+            {/* Dynamic Article Internal Linking Modules */}
+            <div className="mt-16 space-y-8 bg-surface-alt/20 p-6 rounded-2xl border border-border-subtle">
+              {['ranking', 'best-of'].includes(articleType) && relatedTools.length > 0 && (
+                <RelatedContent type="tools" title="Tools Mentioned in this Ranking" items={relatedTools} className="mt-0 pt-0 border-none" />
+              )}
+              {['guide', 'use-case', 'use_case'].includes(articleType) && relatedTools.length > 0 && (
+                <RelatedContent type="tools" title="Related Tools" items={relatedTools} className="mt-0 pt-0 border-none" />
+              )}
+              {['guide', 'use-case', 'use_case'].includes(articleType) && (
+                <RelatedContent type="guides" title="Related Guides" items={allArticles.filter(a => article.category && a.category && a.category.some(c => article.category?.includes(c)) && a.id !== article.id).slice(0, 3)} className="mt-0 pt-0 border-none" />
+              )}
+              {relatedComparisons.length > 0 && (
+                <RelatedContent type="comparisons" title="Compare Mentioned Tools" items={relatedComparisons} className="mt-0 pt-0 border-none" />
+              )}
+            </div>
           </main>
 
           {/* Global Sidebar System */}

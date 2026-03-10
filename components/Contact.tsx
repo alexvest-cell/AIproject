@@ -26,7 +26,7 @@ const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCate
               Categories
             </h3>
             <ul className="space-y-3">
-              {CATEGORIES.slice(0, 6).map((cat) => (
+              {[...CATEGORIES.slice(0, 6), { id: 'guides', label: 'Guides' }, { id: 'news', label: 'News' }].map((cat) => (
                 <li key={cat.id}>
                   <button
                     onClick={() => onCategorySelect && onCategorySelect(cat.id)}

@@ -6,6 +6,11 @@ const toolSchema = new mongoose.Schema({
     name: { type: String, required: true },
     slug: { type: String, unique: true, required: true },
     logo: String,
+    // Media
+    screenshots: [{
+        url: String,
+        caption: String
+    }],
     featured_image: String,
     short_description: { type: String, maxlength: 160 },
     full_description: String,

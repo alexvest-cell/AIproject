@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Article, Tool, Comparison } from '../../types';
+import { Article, Tool, Comparison, Stack } from '../../types';
 import * as toolsService from '../../services/toolsService';
 import ToolCard from '../ToolCard';
-import { ShieldCheck, Check, X, Loader2, BookOpen, Star, AlertCircle, TrendingUp, Info, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Check, X, Loader2, BookOpen, Star, AlertCircle, TrendingUp, Info, ArrowRight, Layers } from 'lucide-react';
 
 export const InlineToolCard: React.FC<{ slug: string }> = ({ slug }) => {
     const [tool, setTool] = useState<Tool | null>(null);
@@ -812,3 +812,63 @@ export const ComparisonSummaryModule: React.FC<{ article: Article }> = ({ articl
     );
 };
 
+export const RecommendedStackModule: React.FC<{ article: Article; onStackClick?: (slug: string) => void }> = ({ article, onStackClick }) => {
+    const [stacks, setStacks] = useState<Stack[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch('/api/stacks')
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setStacks(data))
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, []);
+
+    if (loading || stacks.length === 0) return null;
+
+    // Try to match stack by looking at article.category or tags
+    const cats = Array.isArray(article.category) ? article.category : [article.category];
+    const searchString = `${cats.join(' ')} ${article.title}`.toLowerCase();
+    
+    const recommendedStack = stacks.find(s => {
+        const swf = s.workflow_category?.toLowerCase() || '';
+        if (searchString.includes('develop') && swf.includes('develop')) return true;
+        if (searchString.includes('market') && swf.includes('market')) return true;
+        if (searchString.includes('startup') && swf.includes('startup')) return true;
+        if (searchString.includes('creator') && (swf.includes('creation') || swf.includes('creator'))) return true;
+        if (searchString.includes('automat') && swf.includes('automat')) return true;
+        return false;
+    });
+
+    if (!recommendedStack) return null;
+
+    return (
+        <div className="my-12 p-6 md:p-8 rounded-2xl border border-news-accent/30 bg-surface-card flex flex-col items-start gap-4 shadow-elevation relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-news-accent" />
+            <div className="flex items-center gap-3 w-full">
+                <div className="w-12 h-12 rounded-xl bg-news-accent/10 flex items-center justify-center flex-shrink-0">
+                    <Layers className="text-news-accent" size={24} />
+                </div>
+                <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-1">Featured Tool Stack</p>
+                    <h3 className="text-xl font-bold text-white leading-snug">{recommendedStack.name}</h3>
+                </div>
+            </div>
+            <p className="text-news-text text-base leading-relaxed max-w-2xl">{recommendedStack.short_description}</p>
+            <div className="mt-2 w-full pt-6 border-t border-border-divider/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-news-muted font-bold tracking-widest uppercase truncate">
+                    Includes {recommendedStack.tools?.length || 0} essential tools
+                </div>
+                <button
+                    onClick={() => {
+                        if (onStackClick) onStackClick(recommendedStack.slug);
+                        else window.location.href = `/stacks/${recommendedStack.slug}`;
+                    }}
+                    className="w-full sm:w-auto flex-shrink-0 px-6 py-3 rounded-xl bg-news-accent text-black font-bold text-xs uppercase tracking-widest hover:bg-news-accentHover transition-colors flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(43,212,195,0.2)]"
+                >
+                    View Complete Stack <ArrowRight size={14} />
+                </button>
+            </div>
+        </div>
+    );
+};

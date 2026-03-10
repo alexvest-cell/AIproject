@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Comparison, Tool } from '../types';
 import { ChevronLeft, ExternalLink, Check, X, ArrowRight } from 'lucide-react';
 import { ComparisonDecisionSection, ArticleFAQ } from './article-layouts/SharedModules';
+import { RelatedContent } from './RelatedContent';
 
 interface ComparisonPageProps {
     slug: string;
@@ -194,20 +195,18 @@ const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, onBack, onToolCli
                     </section>
                 )}
 
-                {/* Tool CTAs */}
-                <section className="border border-white/10 rounded-2xl p-6 bg-zinc-900">
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Explore Each Tool</h2>
-                    <div className="flex flex-wrap gap-3">
-                        {tools.map(tool => (
-                            <a key={tool.id}
-                                href={tool.affiliate_url || tool.website_url || '#'}
-                                target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-4 py-2 rounded-lg transition-colors">
-                                Try {tool.name} <ExternalLink size={12} />
-                            </a>
-                        ))}
-                    </div>
-                </section>
+                {/* Related Content Modules using internal linking system */}
+                <div className="space-y-8 mt-12 bg-surface-alt/20 p-6 rounded-2xl border border-border-subtle">
+                    {tools.length > 0 && (
+                        <RelatedContent type="tools" title="Compared Tools" items={tools} className="mt-0 pt-0 border-none" />
+                    )}
+                    {data.alternativeComparisons && data.alternativeComparisons.length > 0 && (
+                        <RelatedContent type="comparisons" title="Alternative Comparisons" items={data.alternativeComparisons} className="mt-0 pt-0 border-none" />
+                    )}
+                    {data.relatedRankings && data.relatedRankings.length > 0 && (
+                        <RelatedContent type="rankings" title="Related Rankings" items={data.relatedRankings} className="mt-0 pt-0 border-none" />
+                    )}
+                </div>
             </div>
         </div>
     );

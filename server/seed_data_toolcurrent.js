@@ -38,6 +38,11 @@ export const seedTools = [
         rating_score: 4.8,
         review_count: 1250,
         featured_image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=1200',
+        last_updated: new Date('2026-03-01T00:00:00Z'),
+        screenshots: [
+            { url: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=800', caption: 'ChatGPT Dashboard' },
+            { url: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&q=80&w=800', caption: 'Custom GPTs' }
+        ],
     },
     {
         id: 'tool-claude',
@@ -61,6 +66,11 @@ export const seedTools = [
         rating_score: 4.7,
         review_count: 850,
         featured_image: 'https://images.unsplash.com/photo-1593508512255-86ab42a8e620?auto=format&fit=crop&q=80&w=1200',
+        last_updated: new Date('2026-03-05T00:00:00Z'),
+        screenshots: [
+            { url: 'https://images.unsplash.com/photo-1593508512255-86ab42a8e620?auto=format&fit=crop&q=80&w=800', caption: 'Claude Interface' },
+            { url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=800', caption: 'Large Context Analysis' }
+        ],
     },
     {
         id: 'tool-notion',
@@ -197,9 +207,154 @@ export const seedTools = [
         supported_platforms: ['Web', 'iOS', 'Android'],
         ai_enabled: true,
         rating_score: 4.4,
-        review_count: 4100,
         featured_image: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&q=80&w=1200',
+        last_updated: new Date('2026-03-09T00:00:00Z'),
+        screenshots: [
+            { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800', caption: 'Sales Pipeline' },
+            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=800', caption: 'Marketing Automation' },
+            { url: 'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&q=80&w=800', caption: 'Contact Management' }
+        ],
     },
+    {
+        id: 'tool-perplexity',
+        name: 'Perplexity',
+        slug: 'perplexity',
+        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Perplexity_AI_logo.svg/1024px-Perplexity_AI_logo.svg.png',
+        short_description: 'AI-powered search engine that provides direct answers with cited sources.',
+        full_description: 'Perplexity AI is a conversational search engine that delivers accurate, real-time answers to queries. Unlike traditional search, it synthesizes information from across the web and provides direct citations for every claim, making it a favorite for researchers and students.',
+        category_tags: ['AI Search', 'Research', 'Productivity'],
+        use_case_tags: ['Students', 'Researchers', 'Developers'],
+        pricing_model: 'Freemium',
+        starting_price: '$20/mo',
+        website_url: 'https://perplexity.ai',
+        status: 'Active',
+        key_features: ['Real-time web search', 'Pro Discovery mode', 'File upload & analysis', 'Source citations'],
+        pros: ['Direct answers with links', 'Clean, ad-free interface', 'Powerful research-focused models'],
+        cons: ['Pro tier is expensive', 'Can occasionally miss niche forum discussions', 'Limited creative writing features'],
+        integrations: ['Chrome Extension', 'API'],
+        supported_platforms: ['Web', 'iOS', 'Android'],
+        ai_enabled: true,
+        rating_score: 4.8,
+        review_count: 520,
+        featured_image: 'https://images.unsplash.com/photo-1542435503-956c469947f6?auto=format&fit=crop&q=80&w=1200',
+        createdAt: new Date('2026-03-05T10:00:00Z'),
+    },
+    {
+        id: 'tool-runway',
+        name: 'Runway',
+        slug: 'runway',
+        logo: 'https://upload.wikimedia.org/wikipedia/commons/0/04/Runway_Gen-2_logo.jpg',
+        short_description: 'Next-generation AI video generation and editing tools for professional creators.',
+        full_description: 'Runway is a leader in generative video. From Gen-2 (text-to-video) to advanced tools like Frame Interpolation and Inpainting, it provides an entire creative suite for the next era of filmmaking.',
+        category_tags: ['AI Video', 'Creative Tools', 'Design'],
+        use_case_tags: ['Creators', 'Marketers', 'Designers'],
+        pricing_model: 'Paid',
+        starting_price: '$12/mo',
+        website_url: 'https://runwayml.com',
+        status: 'Active',
+        key_features: ['Gen-2 Text-to-Video', 'Gen-1 Video-to-Video', 'Magic Tools suite', 'Frame Interpolation'],
+        pros: ['Vanguard of AI video tech', 'Extremely powerful editing features', 'Regularly updated with new models'],
+        cons: ['Steep learning curve', 'Generation tokens can be expensive', 'Requires high-speed internet for smooth previewing'],
+        integrations: ['Adobe Premiere Pro', 'API'],
+        supported_platforms: ['Web', 'iOS'],
+        ai_enabled: true,
+        rating_score: 4.7,
+        review_count: 310,
+        featured_image: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&q=80&w=1200',
+        createdAt: new Date('2026-03-08T14:30:00Z'),
+    },
+    {
+        id: 'tool-salesforce',
+        name: 'Salesforce',
+        slug: 'salesforce',
+        logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f9/Salesforce.com_logo.svg',
+        short_description: 'The global leader in enterprise CRM and sales automation.',
+        full_description: 'Salesforce is the industry standard for enterprise customer relationship management, offering deeply customizable solutions for sales, service, marketing, and more.',
+        category_tags: ['CRM', 'Marketing', 'Sales'],
+        use_case_tags: ['Enterprise', 'Sales Teams', 'Marketers'],
+        pricing_model: 'Paid',
+        starting_price: '$25/mo',
+        website_url: 'https://salesforce.com',
+        status: 'Active',
+        key_features: ['Lead management', 'Quote to cash', 'Einstein AI', 'Custom apps'],
+        pros: ['Highly customizable', 'Massive ecosystem', 'Enterprise-grade security'],
+        cons: ['Expensive implementation', 'Steep learning curve', 'Complex deployment'],
+        integrations: ['Slack', 'HubSpot', 'Zapier', 'Google Workspace'],
+        supported_platforms: ['Web', 'iOS', 'Android'],
+        ai_enabled: true,
+        rating_score: 4.6,
+        review_count: 5200,
+        featured_image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=1200',
+    },
+    {
+        id: 'tool-zoho-crm',
+        name: 'Zoho CRM',
+        slug: 'zoho-crm',
+        logo: 'https://upload.wikimedia.org/wikipedia/commons/3/30/Zoho_logo.svg',
+        short_description: 'A comprehensive CRM platform with an affordable pricing structure for growing businesses.',
+        full_description: 'Zoho CRM provides a robust set of features that rival enterprise platforms but at a fraction of the cost. It integrates perfectly with the massive Zoho software ecosystem.',
+        category_tags: ['CRM', 'Sales', 'Productivity'],
+        use_case_tags: ['Small Business', 'Sales Teams'],
+        pricing_model: 'Freemium',
+        starting_price: '$14/mo',
+        website_url: 'https://zoho.com/crm',
+        status: 'Active',
+        key_features: ['Sales force automation', 'Canvas design studio', 'Zia AI assistant', 'Omnichannel communication'],
+        pros: ['Incredible value for money', 'Vast native ecosystem', 'Highly customizable UI'],
+        cons: ['UI can sometimes feel disjointed', 'Customer support can be slow', 'Initial setup takes time'],
+        integrations: ['Google Workspace', 'Microsoft 365', 'Slack', 'Mailchimp'],
+        supported_platforms: ['Web', 'iOS', 'Android'],
+        ai_enabled: true,
+        rating_score: 4.5,
+        review_count: 1850,
+        featured_image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=1200',
+    },
+    {
+        id: 'tool-pipedrive',
+        name: 'Pipedrive',
+        slug: 'pipedrive',
+        logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/52/Pipedrive_logo.svg/1200px-Pipedrive_logo.svg.png',
+        short_description: 'A visual, easy-to-use CRM built by salespeople, for salespeople.',
+        full_description: 'Pipedrive focuses heavily on activity-based selling and pipeline management. Its visual drag-and-drop interface makes tracking deals incredibly intuitive for sales teams.',
+        category_tags: ['CRM', 'Sales'],
+        use_case_tags: ['Sales Teams', 'Small Business', 'Startups'],
+        pricing_model: 'Paid',
+        starting_price: '$12.50/mo',
+        website_url: 'https://pipedrive.com',
+        status: 'Active',
+        key_features: ['Visual sales pipeline', 'Activity tracking', 'Custom chatbots', 'Revenue forecasting'],
+        pros: ['Extremely intuitive interface', 'Easy to set up', 'Action-oriented design'],
+        cons: ['Lacks advanced marketing tools', 'Not ideal for enterprise needs', 'Limited custom reporting'],
+        integrations: ['Trello', 'Zapier', 'Mailchimp', 'Asana'],
+        supported_platforms: ['Web', 'iOS', 'Android'],
+        ai_enabled: true,
+        rating_score: 4.4,
+        review_count: 1200,
+        featured_image: 'https://images.unsplash.com/photo-1552581234-26160860f223?auto=format&fit=crop&q=80&w=1200',
+    },
+    {
+        id: 'tool-freshsales',
+        name: 'Freshsales',
+        slug: 'freshsales',
+        logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Freshworks_logo_icon.svg/1024px-Freshworks_logo_icon.svg.png',
+        short_description: 'An AI-powered CRM that combines sales and marketing. Part of the Freshworks suite.',
+        full_description: 'Freshsales gives teams a 360-degree view of their customers. Built-in phone, email, and chat streamline communication, while Freddy AI helps score leads automatically.',
+        category_tags: ['CRM', 'Marketing', 'Sales'],
+        use_case_tags: ['Small Business', 'Mid-Market', 'Sales Teams'],
+        pricing_model: 'Freemium',
+        starting_price: '$15/mo',
+        website_url: 'https://freshworks.com/crm',
+        status: 'Active',
+        key_features: ['Built-in telephony', 'Freddy AI lead scoring', 'Visual sales pipeline', 'Workflow automation'],
+        pros: ['Clean, modern interface', 'Excellent multi-channel support built-in', 'Good value tier'],
+        cons: ['Reporting could be more flexible', 'Limited integrations compared to rivals', 'Support quality varies'],
+        integrations: ['Freshdesk', 'Zapier', 'Outlook', 'QuickBooks'],
+        supported_platforms: ['Web', 'iOS', 'Android'],
+        ai_enabled: true,
+        rating_score: 4.3,
+        review_count: 890,
+        featured_image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80&w=1200',
+    }
 ];
 
 // ─── COMPARISONS ───────────────────────────────────────────────────────────────
@@ -935,4 +1090,151 @@ export const seedArticles = [
         primary_tools: ['chatgpt', 'claude', 'linear'],
         content: generateBody('Developer AI Workflow', 'Use Case Study'),
     },
+];
+
+// ─── STACKS ───────────────────────────────────────────────────────────────────
+
+export const seedStacks = [
+    {
+        id: 'stack-ai-marketing',
+        name: 'AI Marketing Stack',
+        slug: 'ai-marketing-stack',
+        hero_image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=1200',
+        short_description: 'A complete AI-driven marketing pipeline from ideation to distribution.',
+        full_description: 'This stack combines the best AI tools for modern marketing teams. Use ChatGPT for strategy and ideation, Grammarly to polish the copy, Zapier to automate distribution, and HubSpot to track leads and campaign performance.',
+        workflow_category: 'Marketing',
+        tools: ['chatgpt', 'grammarly', 'zapier', 'hubspot-crm'],
+        workflow_steps: [
+            {
+                title: '1. Strategy & Ideation',
+                description: 'Generate campaign ideas, outline content, and define audience personas using advanced AI models.',
+                tool_slugs: ['chatgpt']
+            },
+            {
+                title: '2. Copywriting & Editing',
+                description: 'Draft the marketing copy and ensure tone, clarity, and grammatical perfection.',
+                tool_slugs: ['grammarly', 'chatgpt']
+            },
+            {
+                title: '3. Automation & Distribution',
+                description: 'Automatically publish content across channels and sync leads directly into your CRM.',
+                tool_slugs: ['zapier']
+            },
+            {
+                title: '4. Lead Management & Analytics',
+                description: 'Capture leads, track engagement, and manage customer relationships.',
+                tool_slugs: ['hubspot-crm']
+            }
+        ],
+        status: 'Published'
+    },
+    {
+        id: 'stack-ai-developer',
+        name: 'AI Developer Stack',
+        slug: 'ai-developer-stack',
+        hero_image: 'https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&q=80&w=1200',
+        short_description: 'The definitive AI toolchain for rapid software development and project management.',
+        full_description: 'Modern engineering teams use AI to accelerate every phase of development. Use Claude for complex architectural reasoning and heavy coding, Linear to track issues, and Notion to maintain team wikis and PRD documents.',
+        workflow_category: 'Development',
+        tools: ['claude', 'chatgpt', 'notion', 'linear'],
+        workflow_steps: [
+            {
+                title: '1. Architecture & Specs',
+                description: 'Draft technical specifications, DB schemas, and system architecture documents.',
+                tool_slugs: ['notion', 'claude']
+            },
+            {
+                title: '2. Coding & Debugging',
+                description: 'Use large-context models to understand entire codebases, write boilerplate, and debug complex errors.',
+                tool_slugs: ['claude', 'chatgpt']
+            },
+            {
+                title: '3. Issue Tracking',
+                description: 'Manage sprints, track bugs, and coordinate deployments with high-speed issue tracking.',
+                tool_slugs: ['linear']
+            }
+        ],
+        status: 'Published'
+    },
+    {
+        id: 'stack-startup-ops',
+        name: 'Startup Operations Stack',
+        slug: 'startup-operations-stack',
+        hero_image: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&q=80&w=1200',
+        short_description: 'The lean operational foundation for early-stage startups and founders.',
+        full_description: 'Run your startup with maximum leverage. Manage all knowledge and docs in Notion, track customer relationships in HubSpot, write investor updates with Grammarly, and tie it all together autonomously with Zapier.',
+        workflow_category: 'Startup Operations',
+        tools: ['notion', 'zapier', 'hubspot-crm', 'grammarly'],
+        workflow_steps: [
+            {
+                title: '1. Company Wiki & Planning',
+                description: 'Maintain the company handbook, meeting notes, and OKRs in a central system.',
+                tool_slugs: ['notion']
+            },
+            {
+                title: '2. Sales & CRM',
+                description: 'Track deals, manage a lean sales pipeline, and communicate with early customers.',
+                tool_slugs: ['hubspot-crm']
+            },
+            {
+                title: '3. Workflow Automation',
+                description: 'Connect your website forms to your CRM, alert the team in Slack, and automate repetitive tasks.',
+                tool_slugs: ['zapier']
+            },
+            {
+                title: '4. External Communication',
+                description: 'Ensure all founder emails, pitch decks, and external docs are flawlessly written.',
+                tool_slugs: ['grammarly']
+            }
+        ],
+        status: 'Published'
+    },
+    {
+        id: 'stack-creator-stack',
+        name: 'Creator Stack',
+        slug: 'creator-stack',
+        hero_image: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=1200',
+        short_description: 'Essential tools for content creators and digital artists.',
+        full_description: 'A powerful combination for visual and written content creation. Use Midjourney for state-of-the-art visuals, ChatGPT for scripting, and Notion for planning.',
+        workflow_category: 'Creative',
+        tools: ['midjourney', 'chatgpt', 'notion'],
+        workflow_steps: [
+            { title: '1. Visual Generation', description: 'Create stunning AI art and assets.', tool_slugs: ['midjourney'] },
+            { title: '2. Scripting & Idea Gen', description: 'Draft video scripts and social copy.', tool_slugs: ['chatgpt'] },
+            { title: '3. Content Calendar', description: 'Organize your publishing schedule.', tool_slugs: ['notion'] }
+        ],
+        status: 'Published'
+    },
+    {
+        id: 'stack-automation-pro',
+        name: 'Automation Pro Stack',
+        slug: 'automation-pro-stack',
+        hero_image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200',
+        short_description: 'Advanced no-code automation for high-growth teams.',
+        full_description: 'Automate everything from lead gen to reporting. Pair Zapier with your existing toolkit to create an autonomous business system.',
+        workflow_category: 'Automation',
+        tools: ['zapier', 'chatgpt', 'hubspot-crm'],
+        workflow_steps: [
+            { title: '1. Logic Building', description: 'Map out your critical business paths.', tool_slugs: ['zapier'] },
+            { title: '2. Data Enrichment', description: 'Use AI to clean and analyze data mid-stream.', tool_slugs: ['chatgpt'] },
+            { title: '3. CRM Sync', description: 'Keep your sales data updated without manual entry.', tool_slugs: ['hubspot-crm'] }
+        ],
+        status: 'Published'
+    },
+    {
+        id: 'stack-ai-researcher',
+        name: 'AI Research Stack',
+        slug: 'ai-researcher-stack',
+        hero_image: 'https://images.unsplash.com/photo-1593508512255-86ab42a8e620?auto=format&fit=crop&q=80&w=1200',
+        short_description: 'A deep-dive toolkit for researchers and analysts.',
+        full_description: 'Maximize your analytical capabilities with long-context models and structured knowledge bases.',
+        workflow_category: 'Research',
+        tools: ['claude', 'chatgpt', 'notion', 'grammarly'],
+        workflow_steps: [
+            { title: '1. Data Synthesis', description: 'Process long documents and extract insights.', tool_slugs: ['claude'] },
+            { title: '2. Comparative Analysis', description: 'Cross-reference multiple sources using AI.', tool_slugs: ['chatgpt'] },
+            { title: '3. Knowledge Base', description: 'Store your findings in a structured wiki.', tool_slugs: ['notion'] }
+        ],
+        status: 'Published'
+    }
 ];

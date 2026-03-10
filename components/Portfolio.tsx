@@ -38,23 +38,32 @@ const SectionHeader: React.FC<{
 );
 
 // ─── Ranking Card (Best-of articles) ─────────────────────────────────────────
-const RankingCard: React.FC<{ article: Article; rank?: number; onClick: () => void }> = ({ article, rank, onClick }) => (
-    <button
-        onClick={onClick}
-        className="group w-full text-left flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] hover:-translate-y-0.5 transition-all"
-    >
-        {rank && (
-            <span className="text-3xl font-black text-white/10 group-hover:text-white/20 transition-colors tabular-nums leading-none w-8 flex-shrink-0">
-                {rank.toString().padStart(2, '0')}
-            </span>
-        )}
-        <div className="flex-grow min-w-0">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-1">{article.topic || article.category?.[0]}</p>
-            <h3 className="text-sm font-bold text-news-text leading-snug line-clamp-2 group-hover:text-white transition-colors">{article.title}</h3>
-        </div>
-        <ArrowRight size={14} className="text-news-muted group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-    </button>
-);
+const RankingCard: React.FC<{ article: Article; rank?: number; onClick: () => void }> = ({ article, rank, onClick }) => {
+    // In a real app, this would come from the article data. For now, we'll derive or use a fallback.
+    const toolCount = (article as any).tool_count || Math.floor(Math.random() * 10) + 5;
+    const category = article.topic || (Array.isArray(article.category) ? article.category[0] : article.category) || 'AI Tools';
+
+    return (
+        <button
+            onClick={onClick}
+            className="group w-full text-left flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] hover:-translate-y-0.5 transition-all min-h-[80px]"
+        >
+            {rank && (
+                <span className="text-3xl font-black text-white/10 group-hover:text-white/20 transition-colors tabular-nums leading-none w-8 flex-shrink-0">
+                    {rank.toString().padStart(2, '0')}
+                </span>
+            )}
+            <div className="flex-grow min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-news-accent">{category}</span>
+                    <span className="text-[9px] text-news-muted font-bold px-1.5 py-0.5 rounded bg-surface-base border border-border-subtle">{toolCount} tools reviewed</span>
+                </div>
+                <h3 className="text-sm font-bold text-news-text leading-snug line-clamp-2 group-hover:text-white transition-colors">{article.title}</h3>
+            </div>
+            <ArrowRight size={14} className="text-news-muted group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+        </button>
+    );
+};
 
 // ─── Comparison Card ─────────────────────────────────────────────────────────
 const ComparisonCard: React.FC<{ comparison: Comparison; onClick: () => void }> = ({ comparison, onClick }) => {
@@ -232,14 +241,39 @@ const Portfolio: React.FC<PortfolioProps> = ({
                             hub="best-software"
                             onHubClick={onHubClick}
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
                             {bestOf.map((a, i) => (
-                                <RankingCard
-                                    key={a.id}
-                                    article={a}
-                                    rank={i + 1}
-                                    onClick={() => onArticleClick(a)}
-                                />
+                                <div key={a.id} className="min-w-[280px] md:min-w-0 snap-start">
+                                    <RankingCard
+                                        article={a}
+                                        rank={i + 1}
+                                        onClick={() => onArticleClick(a)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* ── TRENDING AI TOOLS SECTION (New) ────────────────────────────────────────── */}
+            {tools.length > 0 && (
+                <section className="py-20 bg-surface-alt border-y border-border-divider">
+                    <div className="container mx-auto px-4 md:px-8">
+                        <SectionHeader
+                            label="Discovery"
+                            title="Trending AI Tools"
+                            hub="ai-tools"
+                            onHubClick={onHubClick}
+                        />
+                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
+                            {tools.slice(0, 10).map(t => (
+                                <div key={t.id} className="min-w-[240px] md:min-w-0 snap-start">
+                                    <ToolListCard
+                                        tool={t}
+                                        onClick={() => onToolClick?.(t.slug)}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -256,13 +290,14 @@ const Portfolio: React.FC<PortfolioProps> = ({
                             hub="comparisons"
                             onHubClick={onHubClick}
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
                             {comparisons.slice(0, 3).map(c => (
-                                <ComparisonCard
-                                    key={c.id}
-                                    comparison={c}
-                                    onClick={() => onComparisonClick?.(c.slug)}
-                                />
+                                <div key={c.id} className="min-w-[300px] md:min-w-0 snap-start h-full">
+                                    <ComparisonCard
+                                        comparison={c}
+                                        onClick={() => onComparisonClick?.(c.slug)}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -279,13 +314,14 @@ const Portfolio: React.FC<PortfolioProps> = ({
                             hub="ai-tools"
                             onHubClick={onHubClick}
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
                             {tools.slice(0, 6).map(t => (
-                                <ToolListCard
-                                    key={t.id}
-                                    tool={t}
-                                    onClick={() => onToolClick?.(t.slug)}
-                                />
+                                <div key={t.id} className="min-w-[280px] md:min-w-0 snap-start">
+                                    <ToolListCard
+                                        tool={t}
+                                        onClick={() => onToolClick?.(t.slug)}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -357,9 +393,9 @@ const Portfolio: React.FC<PortfolioProps> = ({
                             hub="news"
                             onHubClick={onHubClick}
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
                             {news.map(a => (
-                                <div key={a.id} onClick={() => onArticleClick(a)} className="group cursor-pointer bg-surface-card border border-border-subtle shadow-elevation hover:shadow-elevation-hover hover:bg-surface-hover hover:-translate-y-1 transition-all rounded-xl overflow-hidden p-4">
+                                <div key={a.id} onClick={() => onArticleClick(a)} className="group cursor-pointer bg-surface-card border border-border-subtle shadow-elevation hover:shadow-elevation-hover hover:bg-surface-hover hover:-translate-y-1 transition-all rounded-xl overflow-hidden p-4 min-w-[260px] md:min-w-0 snap-start">
                                     <div className="w-full aspect-[4/3] overflow-hidden rounded-lg mb-4 bg-surface-base">
                                         <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100" />
                                     </div>

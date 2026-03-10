@@ -10,7 +10,7 @@ import multer from 'multer';
 import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 import streamifier from 'streamifier';
-import { seedArticles as stackBriefArticles, seedTools, seedComparisons } from './seed_data_toolcurrent.js';
+import { seedArticles as stackBriefArticles, seedTools, seedComparisons, seedStacks } from './seed_data_toolcurrent.js';
 import dns from 'dns';
 import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
@@ -28,6 +28,7 @@ import Article from './models/Article.js';
 import Subscriber from './models/Subscriber.js';
 import Tool from './models/Tool.js';
 import Comparison from './models/Comparison.js';
+import Stack from './models/Stack.js';
 
 const app = express();
 const port = 3000;
@@ -70,12 +71,13 @@ app.get('/sitemap.xml', async (req, res) => {
     const articles = await Article.find({ status: 'published' }).select('slug updatedAt createdAt date');
     const tools = await Tool.find({ status: 'Active' }).select('slug updatedAt');
     const comparisons = await Comparison.find({ status: 'published' }).select('slug updatedAt');
+    const stacks = await Stack.find({ status: 'Published' }).select('slug updatedAt');
 
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
     // Static Pages
-    const staticPages = ['', 'ai-tools', 'best-software', 'reviews', 'comparisons', 'use-cases', 'guides', 'news', 'about'];
+    const staticPages = ['', 'ai-tools', 'best-software', 'reviews', 'comparisons', 'stacks', 'use-cases', 'guides', 'news', 'about'];
     staticPages.forEach(p => {
       xml += `  <url>\n    <loc>https://toolcurrent.com/${p}</loc>\n    <changefreq>daily</changefreq>\n    <priority>${p === '' ? '1.0' : '0.8'}</priority>\n  </url>\n`;
     });
@@ -89,11 +91,17 @@ app.get('/sitemap.xml', async (req, res) => {
     // Dynamic: Tools
     tools.forEach(t => {
       xml += `  <url>\n    <loc>https://toolcurrent.com/tools/${t.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>https://toolcurrent.com/tools/${t.slug}/alternatives</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
     });
 
     // Dynamic: Comparisons
     comparisons.forEach(c => {
       xml += `  <url>\n    <loc>https://toolcurrent.com/compare/${c.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+    });
+
+    // Dynamic: Stacks
+    stacks.forEach(s => {
+      xml += `  <url>\n    <loc>https://toolcurrent.com/stacks/${s.slug}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
     });
 
     xml += '</urlset>';
@@ -166,10 +174,16 @@ async function seedDatabase() {
 
     // 2. Seed Tools
     const toolCount = await Tool.countDocuments();
-    if (toolCount === 0) {
-      console.log('Seeding database with ToolCurrent tools...');
-      await Tool.insertMany(seedTools);
-      console.log('Tool seeding complete.');
+    if (toolCount < seedTools.length) {
+      console.log('Updating database with ToolCurrent tools (missing tools detected)...');
+      for (const tool of seedTools) {
+        await Tool.findOneAndUpdate(
+          { slug: tool.slug },
+          tool,
+          { upsert: true, new: true }
+        );
+      }
+      console.log('Tool sync complete.');
     }
 
     // 3. Seed Comparisons
@@ -178,6 +192,20 @@ async function seedDatabase() {
       console.log('Seeding database with ToolCurrent comparisons...');
       await Comparison.insertMany(seedComparisons);
       console.log('Comparison seeding complete.');
+    }
+
+    // 4. Seed Stacks
+    const stackCount = await Stack.countDocuments();
+    if (stackCount < seedStacks.length) {
+      console.log('Updating database with ToolCurrent stacks (missing stacks detected)...');
+      for (const stack of seedStacks) {
+        await Stack.findOneAndUpdate(
+          { slug: stack.slug },
+          stack,
+          { upsert: true, new: true }
+        );
+      }
+      console.log('Stacks sync complete.');
     }
   } catch (err) {
     console.error('Seeding error:', err);
@@ -311,6 +339,35 @@ app.get('/api/articles', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch articles' });
+  }
+});
+
+// GET Related Content for an Article (Tools and Comparisons)
+app.get('/api/articles/:slug/related', async (req, res) => {
+  try {
+    const article = await Article.findOne({ slug: req.params.slug });
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+
+    // Fetch related active tools
+    const tools = await Tool.find({
+      slug: { $in: article.primary_tools || [] },
+      status: 'Active'
+    }).lean();
+
+    // Fetch related comparisons involving those tools
+    const comparisons = await Comparison.find({
+      $or: [
+        { tool_a_slug: { $in: article.primary_tools || [] } },
+        { tool_b_slug: { $in: article.primary_tools || [] } },
+        { tool_c_slug: { $in: article.primary_tools || [] } }
+      ],
+      status: 'published'
+    }).limit(4).lean();
+
+    res.json({ tools, comparisons });
+  } catch (error) {
+    console.error('GET /api/articles/:slug/related error:', error);
+    res.status(500).json({ error: 'Failed to fetch related content' });
   }
 });
 
@@ -1400,13 +1457,22 @@ app.get('/api/tools/:slug', async (req, res) => {
       status: 'published'
     });
 
-    // Fetch articles referencing this tool
+    // Fetch articles referencing this tool OR covering the tool's categories
     const relatedArticles = await Article.find({
-      primary_tools: req.params.slug,
+      $or: [
+        { primary_tools: req.params.slug },
+        { category: { $in: tool.category_tags || [] } }
+      ],
       status: 'published'
-    }).sort({ createdAt: -1 }).limit(5);
+    }).sort({ createdAt: -1 }).limit(10);
 
-    res.json({ tool, comparisons, relatedArticles });
+    // Fetch stacks that feature this tool
+    const stacks = await Stack.find({
+      tools: req.params.slug,
+      status: 'Published'
+    }).lean();
+
+    res.json({ tool, comparisons, relatedArticles, stacks });
   } catch (error) {
     console.error('GET /api/tools/:slug error:', error);
     res.status(500).json({ error: 'Failed to fetch tool' });
@@ -1414,6 +1480,63 @@ app.get('/api/tools/:slug', async (req, res) => {
 });
 
 // POST create tool (auth required)
+
+// GET alternatives for a tool (public)
+// Algorithm: find tools sharing category tags, rank by overlap count then rating, limit 12
+app.get('/api/tools/:slug/alternatives', async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    if (mongoose.connection.readyState !== 1) {
+      // No DB: return empty alternatives gracefully
+      return res.json({ tool: null, alternatives: [], comparisons: [], relatedArticles: [] });
+    }
+
+    const tool = await Tool.findOne({ slug }).lean();
+    if (!tool) return res.status(404).json({ error: 'Tool not found' });
+
+    // Find other active tools that share at least one category tag
+    const candidates = await Tool.find({
+      slug: { $ne: slug },
+      status: 'Active',
+      category_tags: { $in: tool.category_tags || [] }
+    }).lean();
+
+    // Score by category tag overlap, then rating
+    const scored = candidates.map(t => {
+      const overlap = (t.category_tags || []).filter(tag =>
+        (tool.category_tags || []).includes(tag)
+      ).length;
+      return { ...t, _score: overlap * 10 + (t.rating_score || 0) };
+    });
+
+    scored.sort((a, b) => b._score - a._score);
+    const alternatives = scored.slice(0, 12);
+
+    // Comparisons involving this tool
+    const comparisons = await Comparison.find({
+      $or: [
+        { tool_a_slug: slug },
+        { tool_b_slug: slug },
+        { tool_c_slug: slug }
+      ],
+      status: 'published'
+    }).lean();
+
+    // Related ranking/guide articles mentioning this tool
+    const relatedArticles = await Article.find({
+      primary_tools: slug,
+      status: 'published'
+    }).sort({ createdAt: -1 }).limit(6).lean();
+
+    res.json({ tool, alternatives, comparisons, relatedArticles });
+  } catch (error) {
+    console.error('GET /api/tools/:slug/alternatives error:', error);
+    res.status(500).json({ error: 'Failed to fetch alternatives' });
+  }
+});
+
+
 app.post('/api/tools', requireAuth, async (req, res) => {
   try {
     const data = req.body;
@@ -1458,6 +1581,62 @@ app.delete('/api/tools/:id', requireAuth, async (req, res) => {
 
 
 // ==========================================
+// --- STACKS API ---
+// ==========================================
+
+// GET all stacks (public)
+app.get('/api/stacks', async (req, res) => {
+  try {
+    const stacks = await Stack.find({ status: 'Published' }).sort({ createdAt: -1 }).lean();
+    res.json(stacks);
+  } catch (error) {
+    console.error('GET /api/stacks error:', error);
+    res.status(500).json({ error: 'Failed to fetch stacks' });
+  }
+});
+
+// GET single stack by slug (public)
+// Includes fully populated tools, comparisons containing those tools, and articles containing those tools
+app.get('/api/stacks/:slug', async (req, res) => {
+  try {
+    const stack = await Stack.findOne({ slug: req.params.slug }).lean();
+    if (!stack) return res.status(404).json({ error: 'Stack not found' });
+
+    // Populate tools
+    const tools = await Tool.find({ slug: { $in: stack.tools }, status: 'Active' }).lean();
+    
+    // Sort tools to match the order in the stack.tools array
+    const toolMap = Object.fromEntries(tools.map(t => [t.slug, t]));
+    const populatedTools = stack.tools.map(slug => toolMap[slug]).filter(Boolean);
+
+    // Fetch articles referencing these tools or matching the stack's workflow category
+    const relatedArticles = await Article.find({
+      $or: [
+        { primary_tools: { $in: stack.tools } },
+        { category: stack.workflow_category }
+      ],
+      status: 'published'
+    }).sort({ createdAt: -1 }).limit(10).lean();
+
+    // Fetch comparisons involving these tools
+    const comparisons = await Comparison.find({
+      $or: [
+        { tool_a_slug: { $in: stack.tools } },
+        { tool_b_slug: { $in: stack.tools } },
+        { tool_c_slug: { $in: stack.tools } }
+      ],
+      status: 'published'
+    }).limit(6).lean();
+
+    res.json({ stack, tools: populatedTools, relatedArticles, comparisons });
+  } catch (error) {
+    console.error('GET /api/stacks/:slug error:', error);
+    res.status(500).json({ error: 'Failed to fetch stack' });
+  }
+});
+
+
+// ==========================================
 // --- COMPARISONS API ---
 // ==========================================
 
@@ -1492,7 +1671,24 @@ app.get('/api/comparisons/:slug', async (req, res) => {
     const tool_b = await Tool.findOne({ slug: comparison.tool_b_slug });
     const tool_c = comparison.tool_c_slug ? await Tool.findOne({ slug: comparison.tool_c_slug }) : null;
 
-    res.json({ ...comparison.toObject(), tool_a, tool_b, tool_c });
+    // Fetch alternative comparisons
+    const alternativeComparisons = await Comparison.find({
+      $or: [
+        { tool_a_slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } },
+        { tool_b_slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } },
+        { tool_c_slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } }
+      ],
+      slug: { $ne: req.params.slug },
+      status: 'published'
+    }).limit(5);
+
+    // Fetch related rankings
+    const relatedRankings = await Article.find({
+      primary_tools: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] },
+      status: 'published'
+    }).sort({ createdAt: -1 }).limit(4);
+
+    res.json({ ...comparison.toObject(), tool_a, tool_b, tool_c, alternativeComparisons, relatedRankings });
   } catch (error) {
     console.error('GET /api/comparisons/:slug error:', error);
     res.status(500).json({ error: 'Failed to fetch comparison' });
