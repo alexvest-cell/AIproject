@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { generateArticleSchema, generateFAQSchema, injectSchema } from '../utils/schema';
-import { Article } from '../types';
+import { Article, Tool, Comparison } from '../types';
+import * as toolsService from '../services/toolsService';
 import { useAudio } from '../contexts/AudioContext';
 import { ArrowLeft, Loader2, BookOpen, Volume2, StopCircle } from 'lucide-react';
 
@@ -45,9 +46,16 @@ const ArticleDataVisual = ({ article }: { article: Article }) => {
 };
 
 const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSelect, allArticles, onShowAbout, onStackClick }) => {
+  const articleType = (article as any).article_type || 'news';
   const { playArticle, pauseAudio, resumeAudio, isPlaying, isLoading, currentArticle } = useAudio();
   const [relatedTools, setRelatedTools] = useState<any[]>([]);
   const [relatedComparisons, setRelatedComparisons] = useState<any[]>([]);
+  const [reviewData, setReviewData] = useState<{
+    tool?: Tool;
+    alternatives?: Tool[];
+    comparisons?: Comparison[];
+    rankings?: Article[];
+  }>({});
 
   useEffect(() => {
     if (article?.slug) {
@@ -60,6 +68,24 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
         .catch(console.error);
     }
   }, [article?.slug]);
+
+  useEffect(() => {
+    if (articleType === 'review') {
+      const primaryToolSlug = (article.primary_tools?.[0] || article.comparison_tools?.[0] || '').toLowerCase().replace(/\s+/g, '-');
+      if (primaryToolSlug) {
+        toolsService.fetchToolAlternatives(primaryToolSlug)
+          .then(data => {
+            setReviewData({
+              tool: data.tool,
+              alternatives: data.alternatives,
+              comparisons: data.comparisons,
+              rankings: data.relatedArticles
+            });
+          })
+          .catch(console.error);
+      }
+    }
+  }, [articleType, article.slug, article.primary_tools, article.comparison_tools]);
 
   useEffect(() => {
     // Scroll intentionally removed so browser can manage scroll state
@@ -140,14 +166,12 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
     });
   })();
 
-  const articleType = (article as any).article_type || 'news';
-
   const renderLayout = () => {
     const props = { article, parsedContent, onArticleSelect, allArticles, onStackClick };
     switch (articleType) {
       case 'ranking':
       case 'best-of': return <RankingLayout {...props} />;
-      case 'review': return <ReviewLayout {...props} />;
+      case 'review': return <ReviewLayout {...props} {...reviewData} />;
       case 'comparison': return <ComparisonLayout {...props} />;
       case 'intelligence': return <IntelligenceLayout {...props} />;
       case 'guide': return <GuideLayout {...props} />;
@@ -187,7 +211,13 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
 
           {/* Global Sidebar System */}
           <aside className="w-full lg:sticky lg:top-32 mt-12 lg:mt-0 lg:block flex flex-col order-last">
-            <ArticleSidebar article={article} allArticles={allArticles} type={articleType} />
+            <ArticleSidebar 
+              article={article} 
+              allArticles={allArticles} 
+              type={articleType} 
+              tool={reviewData.tool}
+              comparisons={reviewData.comparisons}
+            />
           </aside>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Article } from '../../types';
-import { QuickComparisonTable, VerdictBox, ProsConsSection, ArticleFAQ, ToolSummaryCard, RatingBreakdown, ToolSectionBlock, SideBySideHeader, ComparisonDetailTable, ComparisonDecisionSection, RelatedToolsModule, RelatedRankingsModule, ToolsUsedSummary, StepByStepModule, WorkflowBreakdownModule, ComparisonSummaryModule, RecommendedStackModule } from './SharedModules';
+import { Article, Tool, Comparison } from '../../types';
+import { QuickComparisonTable, VerdictBox, ProsConsSection, ArticleFAQ, ToolSummaryCard, RatingBreakdown, ToolSectionBlock, SideBySideHeader, ComparisonDetailTable, ComparisonDecisionSection, RelatedToolsModule, RelatedRankingsModule, ToolsUsedSummary, StepByStepModule, WorkflowBreakdownModule, ComparisonSummaryModule, RecommendedStackModule, TopAlternativesModule, CompareWithModule, ProductScreenshotModule, FeaturedInRankingsModule } from './SharedModules';
 import { ShieldCheck, Info, Check, ArrowRight, TrendingUp, BookOpen, Layers } from 'lucide-react';
 
 interface LayoutProps {
@@ -9,6 +9,10 @@ interface LayoutProps {
     onArticleSelect: (article: Article) => void;
     allArticles: Article[];
     onStackClick?: (slug: string) => void;
+    tool?: Tool;
+    alternatives?: Tool[];
+    comparisons?: Comparison[];
+    rankings?: Article[];
 }
 
 export const RankingLayout: React.FC<LayoutProps> = ({ article, parsedContent }) => {
@@ -64,7 +68,7 @@ export const RankingLayout: React.FC<LayoutProps> = ({ article, parsedContent })
     );
 };
 
-export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent }) => {
+export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent, tool, alternatives, comparisons, rankings }) => {
     const mainToolSlug = (article.primary_tools?.[0] || article.comparison_tools?.[0] || '').toLowerCase().replace(/\s+/g, '-');
 
     return (
@@ -99,10 +103,19 @@ export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent }) 
             {/* 4. Rating Breakdown */}
             <RatingBreakdown breakdown={article.rating_breakdown} />
 
+            {/* NEW: Top Alternatives */}
+            {tool && alternatives && <TopAlternativesModule tool={tool} alternatives={alternatives} />}
+
+            {/* NEW: Compare With */}
+            {tool && comparisons && <CompareWithModule tool={tool} comparisons={comparisons} />}
+
             {/* 5. Feature deep dive (parsed CMS content) */}
             <div className="prose prose-lg md:prose-xl prose-invert max-w-none font-sans leading-relaxed text-news-text mt-4">
                 {parsedContent}
             </div>
+
+            {/* NEW: Product Screenshots */}
+            {tool && <ProductScreenshotModule tool={tool} />}
 
             {/* 6. Pricing Analysis */}
             {article.pricing_analysis && (
@@ -133,6 +146,9 @@ export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent }) 
 
             {/* 9. Verdict */}
             <VerdictBox article={article} />
+
+            {/* NEW: Featured in Rankings */}
+            {rankings && rankings.length > 0 && <FeaturedInRankingsModule rankings={rankings} />}
 
             {/* 10. FAQ */}
             {article.faq && <ArticleFAQ faq={article.faq} />}

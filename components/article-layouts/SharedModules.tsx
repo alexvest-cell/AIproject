@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Article, Tool, Comparison, Stack } from '../../types';
 import * as toolsService from '../../services/toolsService';
 import ToolCard from '../ToolCard';
-import { ShieldCheck, Check, X, Loader2, BookOpen, Star, AlertCircle, TrendingUp, Info, ArrowRight, Layers } from 'lucide-react';
+import { ShieldCheck, Check, X, Loader2, BookOpen, Star, AlertCircle, TrendingUp, Info, ArrowRight, Layers, Maximize2, Image as ImageIcon } from 'lucide-react';
 
 export const InlineToolCard: React.FC<{ slug: string }> = ({ slug }) => {
     const [tool, setTool] = useState<Tool | null>(null);
@@ -308,7 +308,157 @@ export const RatingBreakdown = ({ breakdown }: { breakdown?: { ease_of_use?: num
 };
 
 
-export const ArticleSidebar = ({ article, allArticles, type }: { article: Article, allArticles: Article[], type: string }) => {
+export const TopAlternativesModule = ({ tool, alternatives }: { tool: Tool; alternatives: Tool[] }) => {
+    if (!alternatives || alternatives.length === 0) return null;
+
+    return (
+        <div className="my-16">
+            <h3 className="text-xl md:text-2xl font-serif font-bold text-white mb-8">Top {tool.name} Alternatives</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {alternatives.slice(0, 3).map(alt => (
+                    <a key={alt.id} href={`/tools/${alt.slug}`} className="group bg-surface-card border border-border-subtle rounded-2xl p-5 hover:border-news-accent/50 transition-all shadow-elevation flex flex-col h-full">
+                        <div className="flex items-start justify-between mb-4">
+                            {alt.logo ? (
+                                <img src={alt.logo} alt={alt.name} className="w-12 h-12 rounded-xl bg-surface-base p-2 border border-border-divider object-contain" />
+                            ) : (
+                                <div className="w-12 h-12 rounded-xl bg-surface-base flex items-center justify-center text-xl font-bold text-news-muted border border-border-divider">
+                                    {alt.name[0]}
+                                </div>
+                            )}
+                            <div className="flex flex-col items-end">
+                                <div className="flex items-center gap-1 text-news-accent font-bold text-sm">
+                                    <Star size={12} className="fill-news-accent" />
+                                    {alt.rating_score}
+                                </div>
+                                <span className="text-[10px] text-news-muted font-bold uppercase tracking-wider mt-1">{alt.pricing_model}</span>
+                            </div>
+                        </div>
+                        <h4 className="text-white font-bold mb-2 group-hover:text-news-accent transition-colors">{alt.name}</h4>
+                        <p className="text-news-muted text-xs line-clamp-2 leading-relaxed mb-4 flex-grow">
+                            {alt.short_description}
+                        </p>
+                        <div className="text-news-accent text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                            View {alt.name} Review <ArrowRight size={10} />
+                        </div>
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export const CompareWithModule = ({ tool, comparisons }: { tool: Tool; comparisons: Comparison[] }) => {
+    if (!comparisons || comparisons.length === 0) return null;
+
+    return (
+        <div className="my-16 border-t border-border-divider pt-12">
+            <h3 className="text-xl md:text-2xl font-serif font-bold text-white mb-8">Compare {tool.name}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {comparisons.slice(0, 4).map(cmp => (
+                    <a key={cmp.id} href={`/compare/${cmp.slug}`} className="p-4 bg-surface-card border border-border-subtle rounded-xl flex items-center justify-between hover:border-white/20 transition-all group">
+                        <span className="text-white font-bold text-sm group-hover:text-news-accent transition-colors">{cmp.title.split(':')[0]}</span>
+                        <ArrowRight size={16} className="text-news-muted group-hover:text-news-accent transition-all translate-x-0 group-hover:translate-x-1" />
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export const ProductScreenshotModule = ({ tool }: { tool: Tool }) => {
+    const [selectedImg, setSelectedImg] = useState<string | null>(null);
+    if (!tool.screenshots || tool.screenshots.length === 0) return null;
+
+    return (
+        <div className="my-16 border-t border-border-divider pt-12">
+            <h3 className="text-xl md:text-2xl font-serif font-bold text-white mb-8">Product Interface</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {tool.screenshots.map((s, i) => (
+                    <div key={i} className="group relative rounded-xl overflow-hidden border border-border-subtle bg-surface-base aspect-video cursor-zoom-in" onClick={() => setSelectedImg(s.url)}>
+                        <img src={s.url} alt={s.caption} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                            <p className="text-white text-xs font-bold">{s.caption}</p>
+                        </div>
+                        <div className="absolute top-3 right-3 p-2 bg-black/40 rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Maximize2 size={16} className="text-white" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Lightbox */}
+            {selectedImg && (
+                <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-300" onClick={() => setSelectedImg(null)}>
+                    <div className="relative max-w-6xl w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                        <img src={selectedImg} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" alt="Product Screenshot" />
+                        <button 
+                            className="absolute top-0 right-0 m-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                            onClick={() => setSelectedImg(null)}
+                        >
+                            <X size={24} />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export const FeaturedInRankingsModule = ({ rankings }: { rankings: Article[] }) => {
+    if (!rankings || rankings.length === 0) return null;
+
+    return (
+        <div className="my-12 py-8 bg-news-accent/5 border-y border-news-accent/10 rounded-xl px-6">
+            <div className="flex items-center gap-3 mb-6">
+                <TrendingUp size={20} className="text-news-accent" />
+                <h3 className="text-sm font-bold uppercase tracking-widest text-white">Featured in Rankings</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {rankings.map(article => (
+                    <a key={article.id} href={`/article/${article.slug || article.id}`} className="flex items-center justify-between p-4 bg-surface-card/60 border border-border-subtle rounded-xl hover:bg-surface-card transition-all group">
+                        <h4 className="text-sm font-bold text-news-text group-hover:text-white transition-colors">{article.title}</h4>
+                        <ArrowRight size={16} className="text-news-muted group-hover:text-news-accent transition-all translate-x-1" />
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export const StickyComparisonWidget = ({ tool, comparisons }: { tool: Tool; comparisons: Comparison[] }) => {
+    if (!comparisons || comparisons.length === 0) return null;
+
+    return (
+        <div className="bg-surface-card border border-border-subtle rounded-xl p-5 shadow-elevation space-y-4">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-news-accent border-b border-border-divider pb-2">
+                Quick Matchups
+            </h4>
+            <div className="space-y-3">
+                {comparisons.slice(0, 3).map(cmp => (
+                    <a key={cmp.id} href={`/compare/${cmp.slug}`} className="block group">
+                        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-base transition-colors border border-transparent hover:border-border-subtle">
+                            <div className="w-8 h-8 rounded bg-surface-base flex items-center justify-center text-[10px] font-bold text-news-muted border border-border-divider">
+                                VS
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-white group-hover:text-news-accent transition-colors truncate">
+                                    {cmp.title.split(':')[0]}
+                                </p>
+                                <p className="text-[10px] text-news-muted">Head-to-head</p>
+                            </div>
+                        </div>
+                    </a>
+                ))}
+            </div>
+            <a href="/comparisons" className="block text-center py-2 text-[10px] font-bold text-news-muted hover:text-white transition-colors border-t border-border-divider mt-2">
+                View All Comparisons →
+            </a>
+        </div>
+    );
+};
+
+
+export const ArticleSidebar = ({ article, allArticles, type, tool, comparisons }: { article: Article, allArticles: Article[], type: string, tool?: Tool, comparisons?: Comparison[] }) => {
     const isRanking = type === 'best-of';
     const isReview = type === 'review';
     const isComparison = type === 'comparison';
@@ -329,7 +479,16 @@ export const ArticleSidebar = ({ article, allArticles, type }: { article: Articl
                             <span>{i + 1}. {t}</span>
                             <TrendingUp size={12} className="text-news-muted" />
                         </div>
-                    )) : (
+                    )) : isReview && tool ? (
+                        <div className="text-xs text-news-text leading-relaxed">
+                            <ul className="space-y-2">
+                                <li className="flex justify-between"><span className="text-news-muted">Price</span> <span className="text-white font-bold">{tool.starting_price}</span></li>
+                                <li className="flex justify-between"><span className="text-news-muted">Model</span> <span className="text-white font-bold">{tool.pricing_model}</span></li>
+                                <li className="flex justify-between"><span className="text-news-muted">AI Ready</span> <span className="text-news-accent font-bold">Yes</span></li>
+                                <li className="flex justify-between"><span className="text-news-muted">Verified</span> <span className="text-news-accent font-bold">Yes</span></li>
+                            </ul>
+                        </div>
+                    ) : (
                         <div className="text-xs text-news-text leading-relaxed">
                             <ul className="space-y-2">
                                 <li className="flex justify-between"><span className="text-news-muted">Update Cycle</span> <span className="text-white font-bold">Bi-weekly</span></li>
@@ -340,6 +499,11 @@ export const ArticleSidebar = ({ article, allArticles, type }: { article: Articl
                     )}
                 </div>
             </div>
+
+            {/* Sticky Widget for Reviews */}
+            {isReview && comparisons && comparisons.length > 0 && (
+                <StickyComparisonWidget tool={tool!} comparisons={comparisons} />
+            )}
 
             {/* Related Content */}
             <div className="bg-surface-card border border-border-subtle rounded-xl p-5 shadow-elevation">

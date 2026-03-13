@@ -422,17 +422,17 @@ const Navigation: React.FC<NavigationProps> = ({
       className={`fixed top-0 left-0 w-full z-50 flex flex-col font-sans overflow-visible transition-colors duration-300 ${isScrolled ? 'bg-surface-base/90 backdrop-blur-md shadow-sm' : 'bg-surface-base'}`}
     >
       {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-      <div className="w-full border-b border-border-divider overflow-visible">
-        <div className="container mx-auto px-4 md:px-8 py-3 md:py-0 md:h-16 flex flex-col md:flex-row gap-3 md:gap-0 overflow-visible">
+      <div className={`w-full border-b border-border-divider overflow-visible transition-all duration-300 ${isScrolled ? 'h-14' : 'h-16'}`}>
+        <div className="container mx-auto px-4 md:px-8 h-full flex items-center overflow-visible">
 
           {/* Mobile row: Logo + actions */}
-          <div className="flex items-center justify-between w-full md:w-auto">
-            <div className="flex items-center gap-8">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center">
               <div
                 className="flex items-center gap-3 cursor-pointer group"
                 onClick={() => onCategorySelect('All')}
               >
-                <div className="flex items-center h-8 md:h-10">
+                <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'h-7 md:h-8' : 'h-8 md:h-10'}`}>
                   <img
                     src="/logo.png"
                     alt="toolcurrent"
@@ -443,20 +443,21 @@ const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Mobile right actions */}
-            <div className="flex md:hidden items-center gap-4">
-              <button onClick={toggleSearch} className="text-gray-400 hover:text-white transition-colors" aria-label="Search">
-                <Search size={18} />
-              </button>
-              <button onClick={onSubscribeClick} className="text-gray-400 hover:text-white transition-colors" aria-label="Subscribe">
-                <Bell size={18} />
+            <div className="flex md:hidden items-center gap-5">
+              <button 
+                onClick={toggleSearch} 
+                className={`transition-colors ${isSearchOpen ? 'text-news-accent' : 'text-gray-400 hover:text-white'}`} 
+                aria-label="Search"
+              >
+                <Search size={22} />
               </button>
               <button
-                className="text-white"
+                className="text-white p-1 -mr-1"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={isMobileMenuOpen}
               >
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
               </button>
             </div>
           </div>
@@ -514,8 +515,8 @@ const Navigation: React.FC<NavigationProps> = ({
         </div>
       </div>
 
-      {/* ── Secondary Nav Bar ─────────────────────────────────────────────── */}
-      <div className={`w-full border-b border-border-divider transition-all duration-300 ${isScrolled ? 'h-10' : 'h-12'} relative`}>
+      {/* ── Secondary Nav Bar (Desktop Only) ─────────────────────────────────────────────── */}
+      <div className={`w-full border-b border-border-divider transition-all duration-300 ${isScrolled ? 'h-10' : 'h-12'} relative hidden md:block`}>
         <div className="container mx-auto px-4 md:px-8 h-full flex items-center overflow-x-auto hide-scrollbar">
           <div className="flex items-center gap-6 md:gap-8 min-w-max">
             {navCategories.map(cat => {
@@ -574,135 +575,242 @@ const Navigation: React.FC<NavigationProps> = ({
         />
       )}
 
-      {/* ── Mobile Menu ───────────────────────────────────────────────────── */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 top-[112px] bg-surface-base z-40 md:hidden border-t border-border-divider overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation menu"
+      {/* ── Mobile Menu Drawer ─────────────────────────────────────────────────── */}
+      <div 
+        className={`fixed inset-0 z-[100] md:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      >
+        {/* Backdrop overlay */}
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        
+        {/* Drawer Content */}
+        <div 
+          className={`absolute top-0 right-0 h-full w-[85%] max-w-[320px] bg-surface-base border-l border-border-divider shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
         >
-          <div className="flex flex-col">
-            {/* Home */}
-            <button
-              onClick={() => { onCategorySelect('All'); setIsMobileMenuOpen(false); }}
-              className="text-left text-white border-b border-border-divider px-6 py-4 text-sm font-bold uppercase tracking-widest hover:bg-surface-hover transition-colors min-h-[52px]"
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between px-6 h-16 border-b border-border-divider flex-shrink-0">
+            <span className="text-xs font-black uppercase tracking-[0.2em] text-news-accent">Navigation</span>
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-gray-400 hover:text-white p-2 -mr-2"
             >
-              Home
+              <X size={24} />
             </button>
+          </div>
 
-            {/* Nav categories with accordion */}
-            {navCategories.map(cat => {
-              const hasMega = !!MEGA_MENUS[cat.slug];
-              const isExpanded = mobileExpanded === cat.slug;
-              return (
-                <div key={cat.id} className="border-b border-border-divider">
-                  <button
-                    onClick={() => {
-                      if (hasMega) {
-                        setMobileExpanded(isExpanded ? null : cat.slug);
-                      } else {
-                        if (onHubClick) onHubClick(cat.slug);
-                        setIsMobileMenuOpen(false);
-                      }
-                    }}
-                    aria-expanded={hasMega ? isExpanded : undefined}
-                    className="w-full text-left text-white px-6 py-4 text-sm font-bold uppercase tracking-widest hover:bg-surface-hover transition-colors flex items-center justify-between min-h-[52px]"
-                  >
-                    {cat.label}
-                    {hasMega && (
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform duration-200 text-news-muted ${isExpanded ? 'rotate-180 text-news-accent' : ''}`}
-                      />
+          {/* Drawer Links */}
+          <div className="flex-1 overflow-y-auto py-6 px-6">
+            <div className="space-y-8">
+              {/* Explore Group */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Explore</p>
+                <div className="grid gap-2">
+                  {/* AI Tools Accordion */}
+                  <div className="flex flex-col gap-1">
+                    <button 
+                      onClick={() => setMobileExpanded(mobileExpanded === 'ai-tools' ? null : 'ai-tools')}
+                      className={`flex items-center justify-between p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all text-left ${mobileExpanded === 'ai-tools' ? 'border-news-accent/40 bg-surface-hover shadow-[0_0_20px_rgba(255,100,50,0.1)]' : ''}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-lg bg-news-accent/10 flex items-center justify-center">
+                          <Sparkles size={18} className="text-news-accent" />
+                        </div>
+                        <span className="text-sm font-bold text-white">AI Tools</span>
+                      </div>
+                      <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${mobileExpanded === 'ai-tools' ? 'rotate-180 text-news-accent' : ''}`} />
+                    </button>
+
+                    {/* AI Tools Sub-sections */}
+                    {mobileExpanded === 'ai-tools' && (
+                      <div className="pl-4 mt-2 space-y-2 animate-fade-in border-l-2 border-border-divider ml-7">
+                        {MEGA_MENUS['ai-tools'].map((col, ci) => {
+                          const colKey = `ai-tools-${ci}`;
+                          const isSubExpanded = mobileSubExpanded === colKey;
+                          return (
+                            <div key={ci} className="flex flex-col gap-1">
+                              <button 
+                                onClick={() => setMobileSubExpanded(isSubExpanded ? null : colKey)}
+                                className="flex items-center justify-between py-2 px-3 text-xs font-bold uppercase tracking-widest text-news-accent hover:bg-surface-hover/50 rounded-lg transition-colors"
+                              >
+                                {col.heading}
+                                <ChevronDown size={12} className={`text-gray-600 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
+                              </button>
+                              
+                              {isSubExpanded && (
+                                <div className="grid gap-1 pl-3 py-1">
+                                  {col.items.map((item, ii) => (
+                                    <button
+                                      key={ii}
+                                      onClick={() => handleMegaItemClick(item)}
+                                      className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-surface-hover/80 text-gray-400 hover:text-white transition-all text-left group"
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        {item.logo ? (
+                                          <div className="w-6 h-6 rounded bg-surface-base border border-border-subtle p-0.5 flex-shrink-0">
+                                            <img src={item.logo} alt={item.label} className="w-full h-full object-contain" />
+                                          </div>
+                                        ) : item.icon ? (
+                                          <item.icon size={14} className="text-gray-500 group-hover:text-news-accent" />
+                                        ) : null}
+                                        <span className="text-sm font-medium truncate">{item.label}</span>
+                                      </div>
+                                      <ChevronRight size={12} className="text-gray-700 opacity-0 group-hover:opacity-100 transition-all" />
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
-                  </button>
+                  </div>
 
-                  {/* Accordion content */}
-                  {hasMega && isExpanded && (
-                    <div className="bg-surface-alt border-t border-border-divider animate-fade-in">
-                      {MEGA_MENUS[cat.slug].map((col, ci) => {
-                        const colKey = `${cat.slug}-${ci}`;
-                        const isSubExpanded = mobileSubExpanded === colKey;
-                        return (
-                          <div key={ci} className="border-b border-border-divider last:border-0">
-                            <button
-                              onClick={() => setMobileSubExpanded(isSubExpanded ? null : colKey)}
-                              aria-expanded={isSubExpanded}
-                              className="w-full text-left px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-news-accent hover:bg-surface-hover transition-colors flex items-center justify-between min-h-[48px]"
-                            >
-                              {col.heading}
-                              <ChevronDown
-                                size={12}
-                                className={`transition-transform duration-200 text-news-muted ${isSubExpanded ? 'rotate-180 text-news-accent' : ''}`}
-                              />
-                            </button>
-                            {isSubExpanded && (
-                              <div className="pb-2 animate-fade-in">
-                                {col.items.map((item, ii) => (
-                                  <button
-                                    key={ii}
-                                    onClick={() => handleMegaItemClick(item)}
-                                    className="w-full text-left px-10 py-3.5 text-sm text-news-text hover:text-white hover:bg-surface-hover transition-colors font-medium flex items-center gap-3 border-b last:border-0 border-border-divider/50"
-                                  >
-                                    {item.logo ? (
-                                      <div className="w-6 h-6 rounded bg-surface-base border border-border-subtle p-0.5 flex-shrink-0">
-                                        <img src={item.logo} alt={item.label} className="w-full h-full object-contain" />
+                  {/* Best Software Accordion */}
+                  <div className="flex flex-col gap-1">
+                    <button 
+                      onClick={() => setMobileExpanded(mobileExpanded === 'best-software' ? null : 'best-software')}
+                      className={`flex items-center justify-between p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all text-left ${mobileExpanded === 'best-software' ? 'border-blue-500/40 bg-surface-hover shadow-[0_0_20px_rgba(59,130,246,0.1)]' : ''}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <Star size={18} className="text-blue-400" />
+                        </div>
+                        <span className="text-sm font-bold text-white">Best Software</span>
+                      </div>
+                      <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${mobileExpanded === 'best-software' ? 'rotate-180 text-blue-400' : ''}`} />
+                    </button>
+
+                    {/* Best Software Sub-sections */}
+                    {mobileExpanded === 'best-software' && (
+                      <div className="pl-4 mt-2 space-y-2 animate-fade-in border-l-2 border-border-divider ml-7">
+                        {MEGA_MENUS['best-software'].map((col, ci) => {
+                          const colKey = `best-software-${ci}`;
+                          const isSubExpanded = mobileSubExpanded === colKey;
+                          return (
+                            <div key={ci} className="flex flex-col gap-1">
+                              <button 
+                                onClick={() => setMobileSubExpanded(isSubExpanded ? null : colKey)}
+                                className="flex items-center justify-between py-2 px-3 text-xs font-bold uppercase tracking-widest text-blue-400 hover:bg-surface-hover/50 rounded-lg transition-colors"
+                              >
+                                {col.heading}
+                                <ChevronDown size={12} className={`text-gray-600 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
+                              </button>
+                              
+                              {isSubExpanded && (
+                                <div className="grid gap-1 pl-3 py-1">
+                                  {col.items.map((item, ii) => (
+                                    <button
+                                      key={ii}
+                                      onClick={() => handleMegaItemClick(item)}
+                                      className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-surface-hover/80 text-gray-400 hover:text-white transition-all text-left group"
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        {item.icon ? (
+                                          <item.icon size={14} className="text-gray-500 group-hover:text-blue-400" />
+                                        ) : null}
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="text-sm font-medium truncate">{item.label}</span>
+                                        </div>
                                       </div>
-                                    ) : item.icon ? (
-                                      <item.icon size={14} className="text-news-muted flex-shrink-0" />
-                                    ) : null}
-                                    
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className="truncate">{item.label}</span>
-                                        {item.badge && (
-                                          <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest ${
-                                            item.badge === 'Popular' ? 'bg-news-accent/15 text-news-accent' : 'bg-blue-500/15 text-blue-400'
-                                          }`}>
-                                            {item.badge}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <ChevronRight size={12} className="text-news-muted flex-shrink-0" />
-                                  </button>
-                                ))}
-                                {/* Mobile View All CTA */}
-                                <button
-                                  onClick={() => handleMegaItemClick({ label: 'View all', href: `/${cat.slug}`, hub: cat.slug })}
-                                  className="w-full text-left px-10 py-4 text-xs font-black uppercase tracking-[0.2em] text-news-accent bg-news-accent/5 hover:bg-news-accent/10 transition-colors flex items-center justify-between"
-                                >
-                                  {cat.slug === 'ai-tools' ? 'Explore all AI tools' : 'Explore all rankings'}
-                                  <ChevronRight size={14} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                                      <ChevronRight size={12} className="text-gray-700 opacity-0 group-hover:opacity-100 transition-all" />
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              );
-            })}
+              </div>
 
-            {/* About & Subscribe */}
-            <button
+              {/* Research Group */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Research</p>
+                <div className="grid gap-2">
+                  <button 
+                    onClick={() => { onHubClick?.('reviews'); setIsMobileMenuOpen(false); }}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                  >
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Reviews</span>
+                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                  </button>
+                  <button 
+                    onClick={() => { onHubClick?.('comparisons'); setIsMobileMenuOpen(false); }}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                  >
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Comparisons</span>
+                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Workflows Group */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Workflows</p>
+                <div className="grid gap-2">
+                  <button 
+                    onClick={() => { onHubClick?.('use-cases'); setIsMobileMenuOpen(false); }}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                  >
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Use Cases</span>
+                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                  </button>
+                  <button 
+                    onClick={() => { onHubClick?.('stacks'); setIsMobileMenuOpen(false); }}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                  >
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Stacks</span>
+                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Learn Group */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Learn</p>
+                <div className="grid gap-2">
+                  <button 
+                    onClick={() => { onHubClick?.('guides'); setIsMobileMenuOpen(false); }}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                  >
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Guides</span>
+                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                  </button>
+                  <button 
+                    onClick={() => { onCategorySelect('All'); setIsMobileMenuOpen(false); }}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                  >
+                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">News</span>
+                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Drawer Footer */}
+          <div className="p-6 border-t border-border-divider space-y-4 flex-shrink-0">
+            <button 
               onClick={() => { onShowAbout(); setIsMobileMenuOpen(false); }}
-              className="text-left text-white border-b border-border-divider px-6 py-4 text-sm font-bold uppercase tracking-widest hover:bg-surface-hover transition-colors min-h-[52px]"
+              className="w-full py-3 rounded-xl bg-surface-card border border-border-subtle text-xs font-bold uppercase tracking-widest text-white hover:bg-surface-hover transition-all"
             >
-              About
+              About ToolCurrent
             </button>
-            <button
+            <button 
               onClick={() => { onSubscribeClick(); setIsMobileMenuOpen(false); }}
-              className="text-left text-news-accent px-6 py-4 text-sm font-bold uppercase tracking-widest hover:bg-surface-hover transition-colors min-h-[52px]"
+              className="w-full py-3 rounded-xl bg-news-accent text-xs font-black uppercase tracking-widest text-black hover:bg-white transition-all shadow-[0_8px_24px_rgba(255,100,50,0.3)]"
             >
               Subscribe
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* ── Search Suggestions Portal ──────────────────────────────────────── */}
       {suggestions.length > 0 && typeof document !== 'undefined' && ReactDOM.createPortal(

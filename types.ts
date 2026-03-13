@@ -86,6 +86,7 @@ export interface Tool {
   ai_enabled: boolean;
   rating_score: number;
   review_count: number;
+  screenshots?: { url: string; caption: string }[];
   meta_title?: string;
   meta_description?: string;
   createdAt?: string;
@@ -144,6 +145,13 @@ export interface Stack {
   meta_description?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ToolPageData {
+  tool: Tool;
+  comparisons: Comparison[];
+  relatedArticles: Article[];
+  stacks?: Stack[];
 }
 
 export interface StackPageData {

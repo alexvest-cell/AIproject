@@ -94,6 +94,11 @@ export const seedTools = [
         rating_score: 4.6,
         review_count: 2100,
         featured_image: 'https://images.unsplash.com/photo-1484417894907-623942c8ee29?auto=format&fit=crop&q=80&w=1200',
+        screenshots: [
+            { url: 'https://images.unsplash.com/photo-1484417894907-623942c8ee29?auto=format&fit=crop&q=80&w=800', caption: 'Notion Workspace' },
+            { url: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?auto=format&fit=crop&q=80&w=800', caption: 'Database View' },
+            { url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800', caption: 'Team Wiki' }
+        ],
     },
     {
         id: 'tool-grammarly',
@@ -117,6 +122,11 @@ export const seedTools = [
         rating_score: 4.5,
         review_count: 3400,
         featured_image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&q=80&w=1200',
+        screenshots: [
+            { url: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&q=80&w=800', caption: 'Grammarly Editor' },
+            { url: 'https://images.unsplash.com/photo-1542435503-956c469947f6?auto=format&fit=crop&q=80&w=800', caption: 'Tone Suggestions' },
+            { url: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=800', caption: 'Mobile Keyboard' }
+        ],
     },
     {
         id: 'tool-zapier',
@@ -457,6 +467,36 @@ export const seedComparisons = [
         ],
         status: 'published',
         meta_title: 'Zapier vs Make 2026 — Automation Platform Comparison',
+    },
+    {
+        id: 'cmp-grammarly-vs-chatgpt',
+        title: 'Grammarly vs ChatGPT: Which writing tool wins in 2026?',
+        slug: 'grammarly-vs-chatgpt',
+        tool_a_slug: 'grammarly',
+        tool_b_slug: 'chatgpt',
+        comparison_table: [
+            { feature: 'Grammar Correction', tool_a_value: 'Best-in-class', tool_b_value: 'Good' },
+            { feature: 'Content Generation', tool_a_value: 'Limited (GrammarlyGO)', tool_b_value: 'Excellent' },
+            { feature: 'Plagiarism Checker', tool_a_value: 'Built-in', tool_b_value: 'None' },
+            { feature: 'Pricing', tool_a_value: '$12/mo', tool_b_value: '$20/mo' },
+        ],
+        verdict: 'Use Grammarly for polishing and editing your own work. Use ChatGPT for generating first drafts and brainstorming ideas.',
+        body: 'The line between writing assistants and generative AI has blurred. Grammarly now has generative features, and ChatGPT has improved its grammar parsing.',
+        choose_tool_a: [
+            'You need real-time grammar and tone feedback as you write',
+            'You write professionally across many platforms (email, Slack, Docs)',
+            'Plagiarism checking is a requirement',
+        ],
+        choose_tool_b: [
+            'You need help generating long-form content from scratch',
+            'You want a general-purpose AI assistant for research and logic',
+            'You prefer a chat-based interface',
+        ],
+        faq: [
+            { question: "Is Grammarly safer than ChatGPT for privacy?", answer: "Grammarly has a longer track record with enterprise security, though both have robust data processing agreements." },
+        ],
+        status: 'published',
+        meta_title: 'Grammarly vs ChatGPT 2026 — Comparison',
     },
 ];
 

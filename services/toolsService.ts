@@ -61,3 +61,14 @@ export async function deleteTool(id: string, token: string): Promise<void> {
     });
     if (!res.ok) throw new Error('Failed to delete tool');
 }
+
+export async function fetchToolAlternatives(slug: string): Promise<{
+    tool: Tool;
+    alternatives: Tool[];
+    comparisons: any[];
+    relatedArticles: any[];
+}> {
+    const res = await fetch(`${API_BASE}/tools/${slug}/alternatives`);
+    if (!res.ok) throw new Error(`Alternatives not found for: ${slug}`);
+    return res.json();
+}

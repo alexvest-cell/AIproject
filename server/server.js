@@ -173,26 +173,26 @@ async function seedDatabase() {
     }
 
     // 2. Seed Tools
-    const toolCount = await Tool.countDocuments();
-    if (toolCount < seedTools.length) {
-      console.log('Updating database with ToolCurrent tools (missing tools detected)...');
-      for (const tool of seedTools) {
-        await Tool.findOneAndUpdate(
-          { slug: tool.slug },
-          tool,
-          { upsert: true, new: true }
-        );
-      }
-      console.log('Tool sync complete.');
+    console.log('Syncing ToolCurrent tools...');
+    for (const tool of seedTools) {
+      await Tool.findOneAndUpdate(
+        { slug: tool.slug },
+        tool,
+        { upsert: true, new: true }
+      );
     }
+    console.log('Tool sync complete.');
 
     // 3. Seed Comparisons
-    const comparisonCount = await Comparison.countDocuments();
-    if (comparisonCount === 0) {
-      console.log('Seeding database with ToolCurrent comparisons...');
-      await Comparison.insertMany(seedComparisons);
-      console.log('Comparison seeding complete.');
+    console.log('Syncing ToolCurrent comparisons...');
+    for (const comparison of seedComparisons) {
+      await Comparison.findOneAndUpdate(
+        { slug: comparison.slug },
+        comparison,
+        { upsert: true, new: true }
+      );
     }
+    console.log('Comparison sync complete.');
 
     // 4. Seed Stacks
     const stackCount = await Stack.countDocuments();
