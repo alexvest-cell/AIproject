@@ -91,7 +91,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     // Parser panel state
     const [showParser, setShowParser] = useState(false);
     const [parseInput, setParseInput] = useState('');
-    const [parseLoading, setParseLoading] = useState(false);
     const [parseErrors, setParseErrors] = useState<string[]>([]);
     const [parseSuccess, setParseSuccess] = useState(false);
 
@@ -254,59 +253,125 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         loadTools();
     };
 
-    const handleParseInput = async () => {
-        setParseLoading(true);
+    // ── Client-side parser (no server call needed) ──────────────────────────
+    const clientParseToolInput = (rawText: string) => {
+        const CATEGORY_PRIMARY_OPTS = ['AI Writing','AI Chatbots','Productivity','Automation','Design','Development','Marketing','Data Analysis','Customer Support','Other'];
+        const USE_CASE_OPTS = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity'];
+        const PLATFORM_OPTS = ['Web','iOS','Android','API','Desktop'];
+        const PRICING_MAP: Record<string, string> = { free:'Free', freemium:'Freemium', paid:'Paid', trial:'Trial', enterprise:'Enterprise' };
+        const DC_OPTS = ['verified','inferred','ai_generated'];
+
+        // Extract <<<FIELD>>>...<<<END_FIELD>>> blocks
+        const extracted: Record<string, string> = {};
+        const rx = /<<<([A-Z0-9_]+)>>>([\s\S]*?)<<<END_\1>>>/g;
+        let m: RegExpExecArray | null;
+        while ((m = rx.exec(rawText)) !== null) {
+            if (!(m[1] in extracted)) extracted[m[1]] = m[2].trim();
+        }
+        if (Object.keys(extracted).length === 0) return { status: 'error' as const, errors: ['No valid <<<FIELD>>>…<<<END_FIELD>>> blocks found'] };
+
+        // Helpers
+        const parseArr = (v?: string): string[] => {
+            if (!v) return [];
+            const items = v.includes('\n') ? v.split('\n') : v.split(',');
+            const seen = new Set<string>();
+            return items.map(s => s.trim()).filter(s => { if (!s || seen.has(s.toLowerCase())) return false; seen.add(s.toLowerCase()); return true; });
+        };
+        const toTitle = (s: string) => s.replace(/\w\S*/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase());
+        const wordCount = (s: string) => (s || '').trim().split(/\s+/).filter(Boolean).length;
+
+        // Map fields
+        const name = extracted['NAME'] || null;
+        const slugRaw = extracted['SLUG'] || (name || '');
+        const slug = slugRaw.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+        const short_description = extracted['SHORT_DESCRIPTION'] || null;
+        const full_description = extracted['LONG_DESCRIPTION'] || null;
+        const starting_price = extracted['STARTING_PRICE'] || null;
+        const website_url = extracted['WEBSITE_URL'] || null;
+        const affiliate_url = extracted['AFFILIATE_URL'] || null;
+        const logo = extracted['LOGO_URL'] || null;
+        const meta_title = extracted['META_TITLE'] || null;
+        const meta_description = extracted['META_DESCRIPTION'] || null;
+
+        const catRaw = (extracted['CATEGORY_PRIMARY'] || '').trim();
+        const category_primary = CATEGORY_PRIMARY_OPTS.find(c => c.toLowerCase() === catRaw.toLowerCase()) || null;
+
+        const pricingRaw = (extracted['PRICING_MODEL'] || '').trim().toLowerCase();
+        const pricing_model = PRICING_MAP[pricingRaw] || 'Freemium';
+
+        const dcRaw = (extracted['DATA_CONFIDENCE'] || '').trim().toLowerCase();
+        const data_confidence = DC_OPTS.includes(dcRaw) ? dcRaw : 'ai_generated';
+
+        const key_features = parseArr(extracted['KEY_FEATURES']);
+        const pros = parseArr(extracted['PROS']);
+        const cons = parseArr(extracted['CONS']);
+
+        const rawInts = parseArr(extracted['INTEGRATIONS']);
+        const seen2 = new Set<string>();
+        const integrations = rawInts.map(toTitle).filter(s => { if (seen2.has(s.toLowerCase())) return false; seen2.add(s.toLowerCase()); return true; });
+
+        const rawUC = parseArr(extracted['USE_CASES']);
+        const use_case_tags = rawUC.map(u => USE_CASE_OPTS.find(v => v.toLowerCase() === u.toLowerCase())).filter(Boolean).slice(0,5) as string[];
+        const invalidUC = rawUC.filter(u => !USE_CASE_OPTS.some(v => v.toLowerCase() === u.toLowerCase()));
+
+        const rawPlat = parseArr(extracted['PLATFORMS']);
+        const supported_platforms = rawPlat.map(p => PLATFORM_OPTS.find(v => v.toLowerCase() === p.toLowerCase())).filter(Boolean) as string[];
+
+        const secondary_tags = parseArr(extracted['SECONDARY_TAGS']);
+
+        // Validate
+        const errors: string[] = [];
+        if (short_description) { const w = wordCount(short_description); if (w < 15 || w > 25) errors.push(`SHORT_DESCRIPTION must be 15–25 words (got ${w})`); }
+        if (full_description) { const w = wordCount(full_description); if (w < 80 || w > 120) errors.push(`LONG_DESCRIPTION must be 80–120 words (got ${w})`); }
+        if (key_features.length < 4 || key_features.length > 6) errors.push(`KEY_FEATURES must have 4–6 items (got ${key_features.length})`);
+        if (pros.length < 3 || pros.length > 5) errors.push(`PROS must have 3–5 items (got ${pros.length})`);
+        if (cons.length < 2 || cons.length > 4) errors.push(`CONS must have 2–4 items (got ${cons.length})`);
+        if (integrations.length < 3 || integrations.length > 6) errors.push(`INTEGRATIONS must have 3–6 items (got ${integrations.length})`);
+        if (use_case_tags.length < 1 || use_case_tags.length > 5) errors.push(`USE_CASES must have 1–5 valid items (got ${use_case_tags.length})`);
+        if (catRaw && !category_primary) errors.push(`CATEGORY_PRIMARY "${catRaw}" is not valid. Options: ${CATEGORY_PRIMARY_OPTS.join(', ')}`);
+        if (invalidUC.length) errors.push(`USE_CASES has unrecognised values: ${invalidUC.join(', ')}`);
+
+        if (errors.length) return { status: 'error' as const, errors };
+
+        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description } };
+    };
+
+    const handleParseInput = () => {
         setParseErrors([]);
         setParseSuccess(false);
-        try {
-            const res = await fetch('/api/tools/parse', {
-                method: 'POST',
-                headers: getAuthHeaders(),
-                body: JSON.stringify({ rawText: parseInput }),
+        const result = clientParseToolInput(parseInput);
+        if (result.status === 'error') {
+            setParseErrors(result.errors);
+        } else {
+            const d = result.data;
+            setToolForm({
+                ...EMPTY_TOOL_FORM,
+                name: d.name || '',
+                slug: d.slug || '',
+                short_description: d.short_description || '',
+                full_description: d.full_description || '',
+                category_primary: d.category_primary || '',
+                pricing_model: d.pricing_model || 'Freemium',
+                starting_price: d.starting_price || '',
+                use_case_tags: d.use_case_tags || [],
+                key_features: Array.isArray(d.key_features) ? d.key_features.join('\n') : '',
+                pros: Array.isArray(d.pros) ? d.pros.join('\n') : '',
+                cons: Array.isArray(d.cons) ? d.cons.join('\n') : '',
+                integrations: Array.isArray(d.integrations) ? d.integrations.join(', ') : '',
+                supported_platforms: d.supported_platforms || [],
+                website_url: d.website_url || '',
+                affiliate_url: d.affiliate_url || '',
+                logo: d.logo || '',
+                secondary_tags: Array.isArray(d.secondary_tags) ? d.secondary_tags.join(', ') : '',
+                data_confidence: d.data_confidence || 'ai_generated',
+                meta_title: d.meta_title || '',
+                meta_description: d.meta_description || '',
             });
-            if (!res.ok) {
-                const text = await res.text().catch(() => '');
-                setParseErrors([`Server error ${res.status}: ${text.slice(0, 200) || res.statusText}`]);
-                return;
-            }
-            const result = await res.json();
-            if (result.status === 'error') {
-                setParseErrors(result.errors);
-            } else {
-                const d = result.data;
-                setToolForm({
-                    ...EMPTY_TOOL_FORM,
-                    name: d.name || '',
-                    slug: d.slug || '',
-                    short_description: d.short_description || '',
-                    full_description: d.full_description || '',
-                    category_primary: d.category_primary || '',
-                    pricing_model: d.pricing_model || 'Freemium',
-                    starting_price: d.starting_price || '',
-                    use_case_tags: d.use_case_tags || [],
-                    key_features: Array.isArray(d.key_features) ? d.key_features.join('\n') : '',
-                    pros: Array.isArray(d.pros) ? d.pros.join('\n') : '',
-                    cons: Array.isArray(d.cons) ? d.cons.join('\n') : '',
-                    integrations: Array.isArray(d.integrations) ? d.integrations.join(', ') : '',
-                    supported_platforms: d.supported_platforms || [],
-                    website_url: d.website_url || '',
-                    affiliate_url: d.affiliate_url || '',
-                    logo: d.logo || '',
-                    secondary_tags: Array.isArray(d.secondary_tags) ? d.secondary_tags.join(', ') : '',
-                    data_confidence: d.data_confidence || 'ai_generated',
-                    meta_title: d.meta_title || '',
-                    meta_description: d.meta_description || '',
-                });
-                setToolErrors({});
-                setEditingToolId(null);
-                setParseSuccess(true);
-                setShowParser(false);
-                setParseInput('');
-            }
-        } catch (err: any) {
-            setParseErrors([`Network error: ${err?.message || 'Could not reach server'}`]);
-        } finally {
-            setParseLoading(false);
+            setToolErrors({});
+            setEditingToolId(null);
+            setParseSuccess(true);
+            setShowParser(false);
+            setParseInput('');
         }
     };
 
@@ -2113,9 +2178,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                             <button
                                                 type="button"
                                                 onClick={handleParseInput}
-                                                disabled={!parseInput.trim() || parseLoading}
-                                                className="w-full py-2 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-xs font-bold text-white transition-colors flex items-center justify-center gap-2">
-                                                {parseLoading ? <><Loader2 size={12} className="animate-spin" /> Parsing…</> : 'Parse & Load Fields'}
+                                                disabled={!parseInput.trim()}
+                                                className="w-full py-2 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-xs font-bold text-white transition-colors">
+                                                Parse & Load Fields
                                             </button>
                                         </div>
                                     )}
