@@ -198,17 +198,24 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         </div>
                         <p className="text-news-text text-lg leading-relaxed mb-4 max-w-2xl">{tool.short_description}</p>
                         <div className="flex flex-wrap gap-2 mb-5">
-                            {tool.category_tags.map(tag => (
+                            {/* category_primary is canonical; fall back to category_tags for legacy tools */}
+                            {(tool.category_primary ? [tool.category_primary] : tool.category_tags).map(tag => (
                                 <a key={tag}
                                    href={`/ai-tools?category=${encodeURIComponent(tag)}`}
                                    className="text-xs px-2 py-1 rounded-full bg-surface-alt shadow-sm text-news-muted border border-border-subtle hover:border-news-accent/40 hover:text-news-accent transition-colors">
                                     {tag}
                                 </a>
                             ))}
-                            {tool.category_tags.length > 0 && (
-                                <a href={`/best-software?category=${encodeURIComponent(tool.category_tags[0])}`}
+                            {/* secondary_tags: SEO label pills, no filter action */}
+                            {(tool as any).secondary_tags?.map((tag: string) => (
+                                <span key={tag} className="text-xs px-2 py-1 rounded-full bg-surface-alt/50 text-news-muted/60 border border-border-subtle/50">
+                                    {tag}
+                                </span>
+                            ))}
+                            {(tool.category_primary || tool.category_tags.length > 0) && (
+                                <a href={`/best-software?category=${encodeURIComponent(tool.category_primary || tool.category_tags[0])}`}
                                    className="text-xs px-2 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 hover:bg-news-accent/20 transition-colors font-medium">
-                                    Best {tool.category_tags[0]} Software →
+                                    Best {tool.category_primary || tool.category_tags[0]} Software →
                                 </a>
                             )}
                         </div>

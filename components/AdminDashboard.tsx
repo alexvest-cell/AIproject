@@ -2003,7 +2003,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 {cmsTab === 'tools' && (
                     <div className="grid grid-cols-12 gap-6">
                         <div className="col-span-12 lg:col-span-7 xl:col-span-8 space-y-4">
-                            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Tools Database</h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Tools Database</h2>
+                                {editingToolId && (
+                                    <button onClick={() => { setEditingToolId(null); setToolForm({ ...EMPTY_TOOL_FORM }); setToolErrors({}); }}
+                                        className="flex items-center gap-1.5 text-xs font-bold text-news-accent border border-news-accent/30 bg-news-accent/10 hover:bg-news-accent/20 px-3 py-1.5 rounded-lg transition-colors">
+                                        <Plus size={13} /> New Tool
+                                    </button>
+                                )}
+                            </div>
                             <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 space-y-4">
                                 <h3 className="text-xs font-bold uppercase tracking-widest text-news-accent mb-2">{editingToolId ? 'Editing Tool' : 'Add New Tool'}</h3>
 
