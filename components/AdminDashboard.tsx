@@ -264,6 +264,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ rawText: parseInput }),
             });
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                setParseErrors([`Server error ${res.status}: ${text.slice(0, 200) || res.statusText}`]);
+                return;
+            }
             const result = await res.json();
             if (result.status === 'error') {
                 setParseErrors(result.errors);
@@ -298,8 +303,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 setShowParser(false);
                 setParseInput('');
             }
-        } catch {
-            setParseErrors(['Parse request failed. Check connection and try again.']);
+        } catch (err: any) {
+            setParseErrors([`Network error: ${err?.message || 'Could not reach server'}`]);
         } finally {
             setParseLoading(false);
         }

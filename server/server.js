@@ -1656,12 +1656,17 @@ app.get('/api/tools/:slug/alternatives', async (req, res) => {
 
 // Parse raw tagged input → validated CMS fields (does NOT save)
 app.post('/api/tools/parse', requireAuth, async (req, res) => {
-  const { rawText } = req.body;
-  if (!rawText || typeof rawText !== 'string') {
-    return res.status(400).json({ status: 'error', errors: ['rawText is required'] });
+  try {
+    const { rawText } = req.body;
+    if (!rawText || typeof rawText !== 'string') {
+      return res.status(400).json({ status: 'error', errors: ['rawText is required'] });
+    }
+    const result = parseToolInput(rawText);
+    res.json(result);
+  } catch (err) {
+    console.error('POST /api/tools/parse error:', err);
+    res.status(500).json({ status: 'error', errors: [`Server error: ${err.message}`] });
   }
-  const result = parseToolInput(rawText);
-  res.json(result);
 });
 
 app.post('/api/tools', requireAuth, async (req, res) => {
