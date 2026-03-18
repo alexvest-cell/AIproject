@@ -37,6 +37,11 @@ export interface Article {
   article_type?: 'news' | 'review' | 'guide' | 'best-of' | 'comparison' | 'use-case';
   primary_tools?: string[];    // Tool slugs
   comparison_tools?: string[]; // Tool slugs
+  use_cases?: string[];        // e.g. ['Content Writing', 'Marketing', 'SEO']
+  // Guide-specific
+  difficulty_level?: 'beginner' | 'intermediate' | 'advanced';
+  tips?: string[];
+  common_mistakes?: string[];
   faq?: { question: string; answer: string }[];
   meta_title?: string;
   meta_description?: string;
@@ -60,6 +65,47 @@ export interface Article {
     tool_a_value: string;
     tool_b_value: string;
   }[];
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  parent_category?: string;
+  featured_tools?: string[];
+  related_categories?: string[];
+  meta_title?: string;
+  meta_description?: string;
+  status?: 'active' | 'inactive';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UseCase {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  primary_category?: string;
+  related_tools?: string[];
+  meta_title?: string;
+  meta_description?: string;
+  status?: 'active' | 'inactive';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CategoryPageData {
+  category: Category;
+  tools: Tool[];
+  featuredTools: Tool[];
+  bestSoftwareArticles: Article[];
+  guides: Article[];
+  relatedCategories: Category[];
+  useCases: UseCase[];
+  comparisons: Comparison[];
 }
 
 export interface Tool {
@@ -141,6 +187,12 @@ export interface Stack {
     tool_slugs: string[];
   }[];
   status: 'Draft' | 'Published';
+  featured?: boolean;
+  toolPreviews?: { slug: string; name: string; logo?: string | null }[];
+  why_it_works?: string[];
+  who_its_for?: string[];
+  not_for?: string[];
+  setup_time_hours?: number;
   meta_title?: string;
   meta_description?: string;
   createdAt?: string;
@@ -159,6 +211,8 @@ export interface StackPageData {
   tools: Tool[];
   comparisons: Comparison[];
   relatedArticles: Article[];
+  relatedStacks?: Stack[];
+  alternativeTools?: Record<string, Tool[]>;
 }
 
 export interface ChatMessage {

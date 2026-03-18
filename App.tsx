@@ -19,6 +19,7 @@ import AlternativesPage from './components/AlternativesPage';
 import HubPage from './components/HubPage';
 import StackHubPage from './components/StackHubPage';
 import StackPage from './components/StackPage';
+import CategoryHubPage from './components/CategoryHubPage';
 import { Section, Article } from './types';
 import { featuredArticle, newsArticles as staticNewsArticles } from './data/content';
 
@@ -49,7 +50,7 @@ function App() {
   const [activeSection, setActiveSection] = useState<Section>(Section.HERO);
   const [view, setView] = useState<
     'home' | 'category' | 'article' | 'sources' | 'about' | 'subscribe' | 'admin' |
-    'hub' | 'tool' | 'comparison' | 'alternatives' | 'stacks' | 'stack'
+    'hub' | 'tool' | 'comparison' | 'alternatives' | 'stacks' | 'stack' | 'tool-category'
   >(() => {
     const path = window.location.pathname;
     if (path === '/about') return 'about';
@@ -58,6 +59,7 @@ function App() {
     if (path.startsWith('/tools/') && path.endsWith('/alternatives')) return 'alternatives';
     if (path.startsWith('/tools/')) return 'tool';
     if (path.startsWith('/compare/')) return 'comparison';
+    if (path.startsWith('/categories/')) return 'tool-category';
     const hubPaths = ['/ai-tools', '/best-software', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
     if (hubPaths.includes(path)) return 'hub';
     return 'home';
@@ -68,6 +70,10 @@ function App() {
   const [activeComparisonSlug, setActiveComparisonSlug] = useState<string>();
   const [activeAlternativesToolSlug, setActiveAlternativesToolSlug] = useState<string>('');
   const [activeStackSlug, setActiveStackSlug] = useState<string>('');
+  const [activeCategorySlug, setActiveCategorySlug] = useState<string>(() => {
+    const path = window.location.pathname;
+    return path.startsWith('/categories/') ? path.replace('/categories/', '') : '';
+  });
   const [workflowFilter, setWorkflowFilter] = useState<string>('');
   const [urlQueryString, setUrlQueryString] = useState(() => typeof window !== 'undefined' ? window.location.search : '');
 
@@ -299,6 +305,10 @@ function App() {
             setActiveStackSlug(event.state.slug);
             setView('stack');
             break;
+          case 'tool-category':
+            setActiveCategorySlug(event.state.slug);
+            setView('tool-category');
+            break;
           case 'comparison':
             setActiveComparisonSlug(event.state.slug);
             setView('comparison');
@@ -328,6 +338,9 @@ function App() {
           setView('hub');
         } else if (path === '/stacks') {
           setView('stacks');
+        } else if (path.startsWith('/categories/')) {
+          setActiveCategorySlug(path.replace('/categories/', ''));
+          setView('tool-category');
         } else if (path.startsWith('/stacks/')) {
           setActiveStackSlug(path.replace('/stacks/', ''));
           setView('stack');
@@ -447,6 +460,13 @@ function App() {
     setView('stack');
     window.scrollTo(0, 0);
     window.history.pushState({ view: 'stack', slug }, '', `/stacks/${slug}`);
+  };
+
+  const handleCategoryHubClick = (slug: string) => {
+    setActiveCategorySlug(slug);
+    setView('tool-category');
+    window.scrollTo(0, 0);
+    window.history.pushState({ view: 'tool-category', slug }, '', `/categories/${slug}`);
   };
 
   const handleShowAbout = () => {
@@ -625,6 +645,7 @@ function App() {
               onToolClick={handleToolClick}
               onComparisonClick={handleComparisonClick}
               onBack={handleBackToFeed}
+              onHubNavigate={handleHubClick}
               workflowFilter={workflowFilter}
               queryString={urlQueryString}
               onStackClick={handleStackClick}
@@ -663,6 +684,8 @@ function App() {
           {view === 'stacks' && (
             <StackHubPage
               onStackClick={handleStackClick}
+              articles={articles}
+              onArticleClick={handleArticleClick}
             />
           )}
 
@@ -673,6 +696,18 @@ function App() {
               onToolClick={handleToolClick}
               onArticleClick={handleArticleClick}
               onComparisonClick={handleComparisonClick}
+              onStackClick={handleStackClick}
+            />
+          )}
+
+          {view === 'tool-category' && activeCategorySlug && (
+            <CategoryHubPage
+              slug={activeCategorySlug}
+              onBack={() => window.history.back()}
+              onToolClick={handleToolClick}
+              onArticleClick={handleArticleClick}
+              onComparisonClick={handleComparisonClick}
+              onCategoryClick={handleCategoryHubClick}
             />
           )}
 

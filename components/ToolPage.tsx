@@ -33,16 +33,26 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
         setError(null);
         // Scroll restoration managed by browser
 
+        const MAX_ALTERNATIVES = 8;
+
         Promise.all([
             fetch(`/api/tools/${slug}`).then(r => r.ok ? r.json() : Promise.reject('Tool not found')),
             fetch(`/api/tools/${slug}/alternatives`).then(r => r.ok ? r.json() : { alternatives: [] })
         ])
-            .then(([data, altData]) => {
+            .then(async ([data, altData]) => {
                 setTool(data.tool);
                 setComparisons(data.comparisons || []);
                 setRelatedArticles(data.relatedArticles || []);
                 setStacks(data.stacks || []);
-                setAlternatives(altData.alternatives || []);
+                let alts: Tool[] = (altData.alternatives || []).slice(0, MAX_ALTERNATIVES);
+                // Fallback: if no alternatives found, show popular tools (excluding this one)
+                if (alts.length === 0) {
+                    const popular = await fetch(`/api/tools?sort=popular&limit=9`)
+                        .then(r => r.ok ? r.json() : [])
+                        .catch(() => []);
+                    alts = (popular as Tool[]).filter((t: Tool) => t.slug !== slug).slice(0, MAX_ALTERNATIVES);
+                }
+                setAlternatives(alts);
 
                 if (data.tool) {
                     // Update Page Meta
@@ -175,8 +185,18 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         <p className="text-news-text text-lg leading-relaxed mb-4 max-w-2xl">{tool.short_description}</p>
                         <div className="flex flex-wrap gap-2 mb-5">
                             {tool.category_tags.map(tag => (
-                                <span key={tag} className="text-xs px-2 py-1 rounded-full bg-surface-alt shadow-sm text-news-muted border border-border-subtle">{tag}</span>
+                                <a key={tag}
+                                   href={`/ai-tools?category=${encodeURIComponent(tag)}`}
+                                   className="text-xs px-2 py-1 rounded-full bg-surface-alt shadow-sm text-news-muted border border-border-subtle hover:border-news-accent/40 hover:text-news-accent transition-colors">
+                                    {tag}
+                                </a>
                             ))}
+                            {tool.category_tags.length > 0 && (
+                                <a href={`/best-software?category=${encodeURIComponent(tool.category_tags[0])}`}
+                                   className="text-xs px-2 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 hover:bg-news-accent/20 transition-colors font-medium">
+                                    Best {tool.category_tags[0]} Software →
+                                </a>
+                            )}
                         </div>
                         <div className="flex flex-wrap gap-3">
                             {tool.affiliate_url && (
@@ -292,10 +312,10 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         {/* Related Content Modules using internal linking system */}
                         <div className="space-y-8 mt-12 bg-surface-alt/20 p-6 rounded-2xl border border-border-subtle">
                             {alternatives.length > 0 && (
-                                <RelatedContent type="tools" title="Top Alternatives" items={alternatives.slice(0, 5)} className="mt-0 pt-0 border-none" />
+                                <RelatedContent type="tools" title="Top Alternatives" items={alternatives} className="mt-0 pt-0 border-none" />
                             )}
                             {comparisons.length > 0 && (
-                                <RelatedContent type="comparisons" title="Compare With" items={comparisons.slice(0, 5)} className="mt-0 pt-0 border-none" />
+                                <RelatedContent type="comparisons" title="Compare With" items={comparisons.slice(0, 6)} className="mt-0 pt-0 border-none" />
                             )}
                             {stacks.length > 0 && (
                                 <RelatedContent type="stacks" title="Used in Ecosystems" items={stacks.slice(0, 3)} className="mt-0 pt-0 border-none" />

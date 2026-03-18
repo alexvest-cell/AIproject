@@ -34,6 +34,9 @@ const articleSchema = new mongoose.Schema({
     primary_tools: [String],    // Tool slugs featured/reviewed in this article
     comparison_tools: [String], // Tool slugs used in comparison tables
 
+    // Shared fields — power internal linking, recommendations, SEO graph
+    use_cases: [String],        // e.g. ['Content Writing', 'Marketing', 'SEO']
+
     // FAQ section (for FAQ schema markup)
     faq: [{
         question: String,
@@ -73,6 +76,9 @@ const articleSchema = new mongoose.Schema({
         _id: false
     }],
     tools_used: [String], // Tool slugs for guide summary section
+    difficulty_level: { type: String, enum: ['beginner', 'intermediate', 'advanced'] },
+    tips: [String],
+    common_mistakes: [String],
     // Use Case-specific
     workflow_stages: [{
         stage_title: String,

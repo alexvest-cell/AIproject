@@ -23,12 +23,17 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 // Fix DNS resolution issues on Windows
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
+// Content Type Generation System
+import { buildStructuredPrompt, parseStructuredOutput, validateStructuredOutput, mapSectionsToFields } from './contentTypes.js';
+
 // Models
 import Article from './models/Article.js';
 import Subscriber from './models/Subscriber.js';
 import Tool from './models/Tool.js';
 import Comparison from './models/Comparison.js';
 import Stack from './models/Stack.js';
+import Category from './models/Category.js';
+import UseCase from './models/UseCase.js';
 
 const app = express();
 const port = 3000;
@@ -342,29 +347,59 @@ app.get('/api/articles', async (req, res) => {
   }
 });
 
-// GET Related Content for an Article (Tools and Comparisons)
+// GET Related Content for an Article (Tools, Comparisons, Related Articles)
 app.get('/api/articles/:slug/related', async (req, res) => {
   try {
+    const MAX_RELATED_TOOLS = 12;
+    const MAX_RELATED_ARTICLES = 6;
+
     const article = await Article.findOne({ slug: req.params.slug });
     if (!article) return res.status(404).json({ error: 'Article not found' });
 
-    // Fetch related active tools
-    const tools = await Tool.find({
-      slug: { $in: article.primary_tools || [] },
+    const primaryToolSlugs = article.primary_tools || [];
+
+    // Fetch related active tools by primary_tools slugs
+    let tools = await Tool.find({
+      slug: { $in: primaryToolSlugs },
       status: 'Active'
-    }).lean();
+    }).limit(MAX_RELATED_TOOLS).lean();
 
-    // Fetch related comparisons involving those tools
-    const comparisons = await Comparison.find({
-      $or: [
-        { tool_a_slug: { $in: article.primary_tools || [] } },
-        { tool_b_slug: { $in: article.primary_tools || [] } },
-        { tool_c_slug: { $in: article.primary_tools || [] } }
-      ],
-      status: 'published'
-    }).limit(4).lean();
+    // Fallback: if no primary_tools, return popular tools
+    if (tools.length === 0) {
+      tools = await Tool.find({ status: 'Active' })
+        .sort({ rating_score: -1, review_count: -1 })
+        .limit(8)
+        .lean();
+    }
 
-    res.json({ tools, comparisons });
+    // Fetch related comparisons involving any primary tool
+    const comparisonQuery = primaryToolSlugs.length > 0
+      ? { $or: [
+          { tool_a_slug: { $in: primaryToolSlugs } },
+          { tool_b_slug: { $in: primaryToolSlugs } },
+          { tool_c_slug: { $in: primaryToolSlugs } }
+        ], status: 'published' }
+      : null;
+    const comparisons = comparisonQuery
+      ? await Comparison.find(comparisonQuery).limit(4).lean()
+      : [];
+
+    // Fetch related articles (same category or topic, exclude current)
+    const articleCategories = Array.isArray(article.category)
+      ? article.category
+      : (article.category ? [article.category] : []);
+    const relatedOrClauses = [];
+    if (articleCategories.length > 0) relatedOrClauses.push({ category: { $in: articleCategories } });
+    if (article.topic) relatedOrClauses.push({ topic: article.topic });
+    const relatedArticles = relatedOrClauses.length > 0
+      ? await Article.find({ _id: { $ne: article._id }, $or: relatedOrClauses })
+          .sort({ createdAt: -1 })
+          .limit(MAX_RELATED_ARTICLES)
+          .select('id title slug excerpt imageUrl category topic article_type date')
+          .lean()
+      : [];
+
+    res.json({ tools, comparisons, relatedArticles });
   } catch (error) {
     console.error('GET /api/articles/:slug/related error:', error);
     res.status(500).json({ error: 'Failed to fetch related content' });
@@ -854,6 +889,82 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+
+// ─── Structured Content Generation ──────────────────────────────────────────
+app.post('/api/generate/structured', async (req, res) => {
+  try {
+    const { contentType, topic, category, toolSlugs = [], context = '', model: selectedModel } = req.body;
+
+    if (!contentType) return res.status(400).json({ error: 'contentType is required' });
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+
+    // Resolve tool slugs → names and build slug map for reverse lookup
+    const toolDocs = toolSlugs.length > 0
+      ? await Tool.find({ slug: { $in: toolSlugs }, status: 'Active' }, 'slug name').lean()
+      : [];
+    const toolNames = toolDocs.map(t => t.name);
+    const toolSlugMap = Object.fromEntries(toolDocs.map(t => [t.name.toLowerCase(), t.slug]));
+
+    // Build prompt from content type schema
+    const { system, user } = buildStructuredPrompt(contentType, { topic, category, toolNames, context });
+
+    console.log(`\n--- [Structured Gen] Type: ${contentType}, Topic: ${topic} ---`);
+
+    // Call Gemini (structured generation always uses Gemini)
+    const geminiModel = (selectedModel || 'gemini-1.5-pro-latest');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
+
+    const payload = {
+      system_instruction: { parts: [{ text: system }] },
+      contents: [{ parts: [{ text: user }] }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 4096 }
+    };
+
+    const geminiRes = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.json().catch(() => ({}));
+      console.error('[Structured Gen] Gemini error:', errBody);
+      return res.status(geminiRes.status).json({ error: errBody.error?.message || 'Gemini API error' });
+    }
+
+    const geminiData = await geminiRes.json();
+    const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    if (!rawText) return res.status(500).json({ error: 'Empty response from Gemini' });
+
+    // Parse structured output
+    const sections = parseStructuredOutput(rawText);
+
+    // Validate required fields
+    const { valid, errors } = validateStructuredOutput(sections, contentType);
+    if (!valid) {
+      console.warn('[Structured Gen] Validation failed:', errors);
+      return res.json({ valid: false, errors, raw: rawText, sections });
+    }
+
+    // Map to form fields
+    const fields = mapSectionsToFields(sections, contentType, toolSlugMap);
+
+    // Compute read time from content word count
+    const wordCount = (fields.content || []).join(' ').split(/\s+/).length;
+    fields.originalReadTime = `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
+    fields.read_time = Math.max(1, Math.ceil(wordCount / 200));
+
+    console.log(`[Structured Gen] Success — ${Object.keys(sections).length} sections, ${fields.content?.length || 0} content blocks`);
+    res.json({ valid: true, fields, raw: rawText, sections });
+
+  } catch (err) {
+    console.error('[/api/generate/structured error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- SCHEDULER ---
 
@@ -1433,7 +1544,12 @@ app.get('/api/tools', async (req, res) => {
       ];
     }
 
-    const tools = await Tool.find(query).sort({ name: 1 });
+    const { sort, limit } = req.query;
+    const sortOrder = sort === 'popular' ? { rating_score: -1, review_count: -1 } : { name: 1 };
+    const limitNum = limit ? Math.min(parseInt(limit), 100) : 0;
+    const toolsQuery = Tool.find(query).sort(sortOrder);
+    if (limitNum > 0) toolsQuery.limit(limitNum);
+    const tools = await toolsQuery.lean();
     res.json(tools);
   } catch (error) {
     console.error('GET /api/tools error:', error);
@@ -1588,7 +1704,20 @@ app.delete('/api/tools/:id', requireAuth, async (req, res) => {
 app.get('/api/stacks', async (req, res) => {
   try {
     const stacks = await Stack.find({ status: 'Published' }).sort({ createdAt: -1 }).lean();
-    res.json(stacks);
+
+    // Collect first 3 tool slugs per stack for logo previews (single query)
+    const previewSlugs = [...new Set(stacks.flatMap(s => (s.tools || []).slice(0, 3)))];
+    const toolDocs = previewSlugs.length
+      ? await Tool.find({ slug: { $in: previewSlugs } }, 'slug name logo').lean()
+      : [];
+    const toolMap = Object.fromEntries(toolDocs.map(t => [t.slug, { slug: t.slug, name: t.name, logo: t.logo }]));
+
+    const enriched = stacks.map(s => ({
+      ...s,
+      toolPreviews: (s.tools || []).slice(0, 3).map(slug => toolMap[slug] || { slug, name: slug, logo: null })
+    }));
+
+    res.json(enriched);
   } catch (error) {
     console.error('GET /api/stacks error:', error);
     res.status(500).json({ error: 'Failed to fetch stacks' });
@@ -1628,13 +1757,246 @@ app.get('/api/stacks/:slug', async (req, res) => {
       status: 'published'
     }).limit(6).lean();
 
-    res.json({ stack, tools: populatedTools, relatedArticles, comparisons });
+    // Related stacks: same workflow category, excluding current
+    const relatedStacks = await Stack.find({
+      workflow_category: stack.workflow_category,
+      slug: { $ne: stack.slug },
+      status: 'Published'
+    }).limit(4).lean();
+
+    // Alternative tools: for each stack tool, find 2 tools sharing category_tags but not in this stack
+    const allCategoryTags = [...new Set(tools.flatMap(t => t.category_tags || []))];
+    const altCandidates = allCategoryTags.length
+      ? await Tool.find({
+          category_tags: { $in: allCategoryTags },
+          slug: { $nin: stack.tools },
+          status: 'Active'
+        }, 'slug name logo short_description category_tags pricing_model rating_score').limit(40).lean()
+      : [];
+
+    // Build per-tool alternatives map (slug -> [Tool, ...])
+    const alternativeTools = {};
+    for (const t of tools) {
+      const tags = t.category_tags || [];
+      alternativeTools[t.slug] = altCandidates
+        .filter(a => a.category_tags && a.category_tags.some(tag => tags.includes(tag)))
+        .slice(0, 2);
+    }
+
+    res.json({ stack, tools: populatedTools, relatedArticles, comparisons, relatedStacks, alternativeTools });
   } catch (error) {
     console.error('GET /api/stacks/:slug error:', error);
     res.status(500).json({ error: 'Failed to fetch stack' });
   }
 });
 
+
+// ==========================================
+// --- CATEGORIES API ---
+// ==========================================
+
+// GET all categories (public)
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categories = await Category.find({ status: 'active' }).sort({ name: 1 }).lean();
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET single category with enriched data (public)
+app.get('/api/categories/:slug', async (req, res) => {
+  try {
+    const category = await Category.findOne({ slug: req.params.slug }).lean();
+    if (!category) return res.status(404).json({ error: 'Category not found' });
+
+    const MAX_TOOLS = 100;
+    const MAX_ARTICLES = 8;
+
+    // All tools in this category (matched by category_tags containing the category name)
+    const tools = await Tool.find({
+      category_tags: { $regex: new RegExp(category.name, 'i') },
+      status: 'Active'
+    }).sort({ rating_score: -1 }).limit(MAX_TOOLS).lean();
+
+    // Featured tools (pinned by editor)
+    const featuredToolSlugs = category.featured_tools || [];
+    const featuredTools = featuredToolSlugs.length > 0
+      ? tools.filter(t => featuredToolSlugs.includes(t.slug))
+      : tools.slice(0, 4);
+
+    // Best-of articles for this category
+    const bestSoftwareArticles = await Article.find({
+      $or: [{ category: { $in: [category.name] } }, { primary_tools: { $in: tools.map(t => t.slug) } }],
+      article_type: { $in: ['best-of', 'ranking'] },
+      status: 'published'
+    }).sort({ createdAt: -1 }).limit(MAX_ARTICLES).lean();
+
+    // Guides for this category
+    const guides = await Article.find({
+      $or: [{ category: { $in: [category.name] } }, { primary_tools: { $in: tools.map(t => t.slug) } }],
+      article_type: 'guide',
+      status: 'published'
+    }).sort({ createdAt: -1 }).limit(MAX_ARTICLES).lean();
+
+    // Related categories
+    const relatedSlugs = category.related_categories || [];
+    const relatedCategories = relatedSlugs.length > 0
+      ? await Category.find({ slug: { $in: relatedSlugs }, status: 'active' }).lean()
+      : await Category.find({ _id: { $ne: category._id }, status: 'active' }).limit(6).lean();
+
+    // Use cases relevant to this category
+    const useCases = await UseCase.find({
+      $or: [
+        { primary_category: category.slug },
+        { primary_category: category.name }
+      ],
+      status: 'active'
+    }).lean();
+
+    // Comparisons featuring tools in this category (up to 6)
+    const categoryToolSlugs = tools.map(t => t.slug);
+    const comparisons = await Comparison.find({
+      $or: [
+        { tool_a_slug: { $in: categoryToolSlugs } },
+        { tool_b_slug: { $in: categoryToolSlugs } }
+      ],
+      status: 'published'
+    }).limit(6).lean();
+
+    res.json({ category, tools, featuredTools, bestSoftwareArticles, guides, relatedCategories, useCases, comparisons });
+  } catch (err) {
+    console.error('GET /api/categories/:slug error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST create category (protected)
+app.post('/api/categories', requireAuth, async (req, res) => {
+  try {
+    const { name, slug, description, icon, parent_category, featured_tools, related_categories, meta_title, meta_description } = req.body;
+    if (!name || !slug) return res.status(400).json({ error: 'name and slug are required' });
+    const existing = await Category.findOne({ slug });
+    if (existing) return res.status(409).json({ error: `Category slug "${slug}" already exists` });
+    const category = new Category({ name, slug, description, icon, parent_category, featured_tools: featured_tools || [], related_categories: related_categories || [], meta_title, meta_description });
+    await category.save();
+    res.status(201).json(category);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update category (protected)
+app.put('/api/categories/:slug', requireAuth, async (req, res) => {
+  try {
+    const updated = await Category.findOneAndUpdate(
+      { slug: req.params.slug },
+      { ...req.body, updatedAt: new Date() },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: 'Category not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE category (protected)
+app.delete('/api/categories/:slug', requireAuth, async (req, res) => {
+  try {
+    const deleted = await Category.findOneAndDelete({ slug: req.params.slug });
+    if (!deleted) return res.status(404).json({ error: 'Category not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// --- USE CASES API ---
+// ==========================================
+
+// GET all use cases (public)
+app.get('/api/use-cases', async (req, res) => {
+  try {
+    const { category } = req.query;
+    const query = { status: 'active' };
+    if (category) query.$or = [{ primary_category: category }, { primary_category: new RegExp(category, 'i') }];
+    const useCases = await UseCase.find(query).sort({ name: 1 }).lean();
+    res.json(useCases);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET use case with related tools (public)
+app.get('/api/use-cases/:slug', async (req, res) => {
+  try {
+    const useCase = await UseCase.findOne({ slug: req.params.slug }).lean();
+    if (!useCase) return res.status(404).json({ error: 'Use case not found' });
+
+    // Find tools matching this use case tag
+    const tools = await Tool.find({
+      $or: [
+        { use_case_tags: { $regex: new RegExp(useCase.name, 'i') } },
+        { slug: { $in: useCase.related_tools || [] } }
+      ],
+      status: 'Active'
+    }).sort({ rating_score: -1 }).limit(20).lean();
+
+    const guides = await Article.find({
+      $or: [{ use_cases: { $in: [useCase.name, useCase.slug] } }, { topic: { $regex: new RegExp(useCase.name, 'i') } }],
+      article_type: 'guide',
+      status: 'published'
+    }).limit(6).lean();
+
+    res.json({ useCase, tools, guides });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST create use case (protected)
+app.post('/api/use-cases', requireAuth, async (req, res) => {
+  try {
+    const { name, slug } = req.body;
+    if (!name || !slug) return res.status(400).json({ error: 'name and slug are required' });
+    const existing = await UseCase.findOne({ slug });
+    if (existing) return res.status(409).json({ error: `UseCase slug "${slug}" already exists` });
+    const useCase = new UseCase(req.body);
+    await useCase.save();
+    res.status(201).json(useCase);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update use case (protected)
+app.put('/api/use-cases/:slug', requireAuth, async (req, res) => {
+  try {
+    const updated = await UseCase.findOneAndUpdate(
+      { slug: req.params.slug },
+      { ...req.body, updatedAt: new Date() },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ error: 'UseCase not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE use case (protected)
+app.delete('/api/use-cases/:slug', requireAuth, async (req, res) => {
+  try {
+    const deleted = await UseCase.findOneAndDelete({ slug: req.params.slug });
+    if (!deleted) return res.status(404).json({ error: 'UseCase not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ==========================================
 // --- COMPARISONS API ---

@@ -45,11 +45,15 @@ const ArticleDataVisual = ({ article }: { article: Article }) => {
   );
 };
 
+// Max auto-links per article to prevent spam
+const MAX_AUTO_LINKS = 20;
+
 const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSelect, allArticles, onShowAbout, onStackClick }) => {
   const articleType = (article as any).article_type || 'news';
   const { playArticle, pauseAudio, resumeAudio, isPlaying, isLoading, currentArticle } = useAudio();
   const [relatedTools, setRelatedTools] = useState<any[]>([]);
   const [relatedComparisons, setRelatedComparisons] = useState<any[]>([]);
+  const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [reviewData, setReviewData] = useState<{
     tool?: Tool;
     alternatives?: Tool[];
@@ -64,6 +68,7 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
         .then(data => {
           if (data.tools) setRelatedTools(data.tools);
           if (data.comparisons) setRelatedComparisons(data.comparisons);
+          if (data.relatedArticles) setRelatedArticles(data.relatedArticles);
         })
         .catch(console.error);
     }
@@ -128,6 +133,53 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
     let firstParagraphRendered = false;
     const contentArray = Array.isArray(article.content) ? article.content : (typeof article.content === 'string' ? [article.content] : []);
 
+    // Build auto-link map from primary_tools (CMS-driven: editors control which tools get linked)
+    // Sort by name length descending to match longer names first (e.g. "ChatGPT Plus" before "ChatGPT")
+    const autoLinkTools = [...relatedTools]
+      .filter(t => t.name && t.slug)
+      .sort((a, b) => b.name.length - a.name.length);
+    const linkedSlugs = new Set<string>(); // first-occurrence-only tracking
+    let autoLinkCount = 0;
+
+    // Link first occurrence of a tool name in a plain-text string
+    const applyAutoLinks = (text: string, keyPrefix: string): React.ReactNode => {
+      if (autoLinkCount >= MAX_AUTO_LINKS || autoLinkTools.length === 0) return text;
+      const nodes: React.ReactNode[] = [];
+      let remaining = text;
+      let safetyLimit = 0;
+      while (remaining && safetyLimit++ < 500) {
+        let matched = false;
+        for (const tool of autoLinkTools) {
+          if (linkedSlugs.has(tool.slug)) continue;
+          const lowerRemaining = remaining.toLowerCase();
+          const lowerName = tool.name.toLowerCase();
+          const idx = lowerRemaining.indexOf(lowerName);
+          if (idx === -1) continue;
+          // Ensure it's a word boundary (not part of a longer word)
+          const before = remaining[idx - 1];
+          const after = remaining[idx + lowerName.length];
+          const isWordBoundary = (!before || /[\s,.()\-"'!?]/.test(before)) &&
+                                 (!after  || /[\s,.()\-"'!?]/.test(after));
+          if (!isWordBoundary) continue;
+          if (idx > 0) nodes.push(remaining.slice(0, idx));
+          nodes.push(
+            <a key={`${keyPrefix}-al-${tool.slug}`}
+               href={`/tools/${tool.slug}`}
+               className="text-news-accent hover:underline font-medium transition-colors">
+              {remaining.slice(idx, idx + tool.name.length)}
+            </a>
+          );
+          remaining = remaining.slice(idx + tool.name.length);
+          linkedSlugs.add(tool.slug);
+          autoLinkCount++;
+          matched = true;
+          break;
+        }
+        if (!matched) { nodes.push(remaining); break; }
+      }
+      return nodes.length > 0 ? <>{nodes}</> : text;
+    };
+
     return contentArray.map((paragraph, index) => {
       const isSubheader = paragraph.length < 80 && !paragraph.endsWith('.') && !paragraph.endsWith('"') && !paragraph.startsWith('//') && !paragraph.startsWith('[[tool:');
 
@@ -144,7 +196,8 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
             if (slug) return <InlineToolCard key={i} slug={slug} />;
             return null;
           }
-          return part || null;
+          // Auto-link first occurrence of each primary tool name
+          return applyAutoLinks(part, `${index}-${i}`);
         });
       };
 
@@ -195,16 +248,24 @@ const ArticleView: React.FC<ArticleViewProps> = ({ article, onBack, onArticleSel
             {/* Dynamic Article Internal Linking Modules */}
             <div className="mt-16 space-y-8 bg-surface-alt/20 p-6 rounded-2xl border border-border-subtle">
               {['ranking', 'best-of'].includes(articleType) && relatedTools.length > 0 && (
-                <RelatedContent type="tools" title="Tools Mentioned in this Ranking" items={relatedTools} className="mt-0 pt-0 border-none" />
+                <RelatedContent type="tools" title="Tools Mentioned in this Ranking" items={relatedTools.slice(0, 12)} className="mt-0 pt-0 border-none" />
               )}
               {['guide', 'use-case', 'use_case'].includes(articleType) && relatedTools.length > 0 && (
-                <RelatedContent type="tools" title="Related Tools" items={relatedTools} className="mt-0 pt-0 border-none" />
+                <RelatedContent type="tools" title="Related Tools" items={relatedTools.slice(0, 8)} className="mt-0 pt-0 border-none" />
               )}
-              {['guide', 'use-case', 'use_case'].includes(articleType) && (
-                <RelatedContent type="guides" title="Related Guides" items={allArticles.filter(a => article.category && a.category && a.category.some(c => article.category?.includes(c)) && a.id !== article.id).slice(0, 3)} className="mt-0 pt-0 border-none" />
+              {['review'].includes(articleType) && relatedTools.length > 0 && (
+                <RelatedContent type="tools" title="Reviewed in This Article" items={relatedTools.slice(0, 6)} className="mt-0 pt-0 border-none" />
               )}
               {relatedComparisons.length > 0 && (
-                <RelatedContent type="comparisons" title="Compare Mentioned Tools" items={relatedComparisons} className="mt-0 pt-0 border-none" />
+                <RelatedContent type="comparisons" title="Compare Mentioned Tools" items={relatedComparisons.slice(0, 4)} className="mt-0 pt-0 border-none" />
+              )}
+              {relatedArticles.length > 0 && (
+                <RelatedContent
+                  type={['guide', 'use-case', 'use_case'].includes(articleType) ? 'guides' : 'rankings'}
+                  title="Related Articles"
+                  items={relatedArticles.slice(0, 6)}
+                  className="mt-0 pt-0 border-none"
+                />
               )}
             </div>
           </main>

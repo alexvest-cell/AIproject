@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit, Save, Plus, Download, Upload, Calendar, Eye, EyeOff, Sparkles, Image as ImageIcon, Clock, Copy, FileImage, Volume2, Loader2, ArrowLeft, LogOut, Search, Headphones, ExternalLink, ArrowRight } from 'lucide-react';
+import { Trash2, Edit, Save, Plus, Download, Upload, Calendar, Eye, EyeOff, Sparkles, Image as ImageIcon, Clock, Copy, FileImage, Volume2, Loader2, ArrowLeft, LogOut, Search, Headphones, ExternalLink, ArrowRight, Layers, Tag } from 'lucide-react';
 import { generateSlug } from '../utils/slugify';
 import { Article } from '../types';
 import { newsArticles as staticArticles } from '../data/content';
@@ -41,6 +41,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     const [minMinutes, setMinMinutes] = useState(5);
     const [maxMinutes, setMaxMinutes] = useState(10);
 
+    // Structured Content Generation State
+    const [structuredLoading, setStructuredLoading] = useState(false);
+    const [structuredError, setStructuredError] = useState<string | null>(null);
+    const [structuredSuccess, setStructuredSuccess] = useState(false);
+
     // Import Tool State
     const [showImport, setShowImport] = useState(false);
     const [importText, setImportText] = useState('');
@@ -64,7 +69,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     const [dbOnline, setDbOnline] = useState(true);
 
     // CMS tab navigation
-    const [cmsTab, setCmsTab] = useState<'articles' | 'tools' | 'comparisons'>('articles');
+    const [cmsTab, setCmsTab] = useState<'articles' | 'tools' | 'comparisons' | 'categories'>('articles');
+
+    // Category + UseCase state
+    const [categories, setCategories] = useState<any[]>([]);
+    const [catForm, setCatForm] = useState<any>({ name: '', slug: '', description: '', icon: '', parent_category: '', meta_title: '', meta_description: '' });
+    const [editingCatSlug, setEditingCatSlug] = useState<string | null>(null);
+    const [catLoading, setCatLoading] = useState(false);
+    const [useCasesAdmin, setUseCasesAdmin] = useState<any[]>([]);
+    const [ucForm, setUcForm] = useState<any>({ name: '', slug: '', description: '', primary_category: '' });
+    const [editingUcSlug, setEditingUcSlug] = useState<string | null>(null);
+    const [ucLoading, setUcLoading] = useState(false);
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
@@ -88,12 +103,59 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (res.ok) setComparisons(await res.json());
     };
 
+    const loadCategories = async () => {
+        const res = await fetch('/api/categories');
+        if (res.ok) setCategories(await res.json());
+    };
+
+    const loadUseCases = async () => {
+        const res = await fetch('/api/use-cases');
+        if (res.ok) setUseCasesAdmin(await res.json());
+    };
+
     useEffect(() => {
         if (isAuthenticated) {
             if (cmsTab === 'tools') loadTools();
             if (cmsTab === 'comparisons') loadComparisons();
+            if (cmsTab === 'categories') { loadCategories(); loadUseCases(); }
         }
     }, [cmsTab, isAuthenticated]);
+
+    const handleSaveCategory = async () => {
+        setCatLoading(true);
+        try {
+            const method = editingCatSlug ? 'PUT' : 'POST';
+            const url = editingCatSlug ? `/api/categories/${editingCatSlug}` : '/api/categories';
+            await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(catForm) });
+            setCatForm({ name: '', slug: '', description: '', icon: '', parent_category: '', meta_title: '', meta_description: '' });
+            setEditingCatSlug(null);
+            await loadCategories();
+        } finally { setCatLoading(false); }
+    };
+
+    const handleDeleteCategory = async (slug: string) => {
+        if (!confirm(`Delete category "${slug}"?`)) return;
+        await fetch(`/api/categories/${slug}`, { method: 'DELETE', headers: getAuthHeaders() });
+        loadCategories();
+    };
+
+    const handleSaveUseCase = async () => {
+        setUcLoading(true);
+        try {
+            const method = editingUcSlug ? 'PUT' : 'POST';
+            const url = editingUcSlug ? `/api/use-cases/${editingUcSlug}` : '/api/use-cases';
+            await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(ucForm) });
+            setUcForm({ name: '', slug: '', description: '', primary_category: '' });
+            setEditingUcSlug(null);
+            await loadUseCases();
+        } finally { setUcLoading(false); }
+    };
+
+    const handleDeleteUseCase = async (slug: string) => {
+        if (!confirm(`Delete use case "${slug}"?`)) return;
+        await fetch(`/api/use-cases/${slug}`, { method: 'DELETE', headers: getAuthHeaders() });
+        loadUseCases();
+    };
 
     const handleSaveTool = async () => {
         setToolLoading(true);
@@ -494,6 +556,76 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
 
 
+
+    const handleStructuredGenerate = async () => {
+        const contentType = formData.article_type || 'news';
+        const topic = formData.topic || formData.title || '';
+        const category = Array.isArray(formData.category) ? formData.category[0] : formData.category || '';
+        const toolSlugs = Array.isArray(formData.primary_tools) ? formData.primary_tools : [];
+
+        if (!topic && !category) {
+            setStructuredError('Please fill in the Topic or Category field first.');
+            return;
+        }
+
+        setStructuredLoading(true);
+        setStructuredError(null);
+        setStructuredSuccess(false);
+
+        try {
+            const res = await fetch('/api/generate/structured', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contentType, topic, category, toolSlugs, model: aiModel })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Generation failed');
+            }
+
+            if (!data.valid) {
+                setStructuredError(`Validation failed: ${(data.errors || []).join(', ')}`);
+                return;
+            }
+
+            // Apply all generated fields to the form
+            const f = data.fields;
+            setFormData(prev => ({
+                ...prev,
+                ...(f.title ? { title: f.title } : {}),
+                ...(f.excerpt ? { excerpt: f.excerpt } : {}),
+                ...(f.content?.length ? { content: f.content } : {}),
+                ...(f.primary_tools?.length ? { primary_tools: f.primary_tools } : {}),
+                ...(f.comparison_tools?.length ? { comparison_tools: f.comparison_tools } : {}),
+                ...(f.faq?.length ? { faq: f.faq } : {}),
+                ...(f.verdict ? { verdict: f.verdict } : {}),
+                ...(f.pros?.length ? { pros: f.pros } : {}),
+                ...(f.cons?.length ? { cons: f.cons } : {}),
+                ...(f.who_its_for?.length ? { who_its_for: f.who_its_for } : {}),
+                ...(f.pricing_analysis ? { pricing_analysis: f.pricing_analysis } : {}),
+                ...(f.rating_breakdown ? { rating_breakdown: f.rating_breakdown } : {}),
+                ...(f.comparison_rows?.length ? { comparison_rows: f.comparison_rows } : {}),
+                ...(f.choose_tool_a?.length ? { choose_tool_a: f.choose_tool_a } : {}),
+                ...(f.choose_tool_b?.length ? { choose_tool_b: f.choose_tool_b } : {}),
+                ...(f.steps?.length ? { steps: f.steps } : {}),
+                ...(f.workflow_stages?.length ? { workflow_stages: f.workflow_stages } : {}),
+                ...(f.use_cases?.length ? { use_cases: f.use_cases } : {}),
+                ...(f.category ? { category: f.category } : {}),
+                ...(f.contextBox?.title ? { contextBox: f.contextBox } : {}),
+                ...(f.originalReadTime ? { originalReadTime: f.originalReadTime } : {}),
+                ...(f.read_time ? { read_time: f.read_time } : {}),
+            }));
+
+            setStructuredSuccess(true);
+            setTimeout(() => setStructuredSuccess(false), 4000);
+        } catch (err: any) {
+            setStructuredError(err.message || 'Structured generation failed');
+        } finally {
+            setStructuredLoading(false);
+        }
+    };
 
     const handleImagePromptGenerate = async () => {
         if (!formData.title) {
@@ -1143,7 +1275,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
             {/* Tab Bar */}
             <div className="fixed top-16 left-0 w-full bg-zinc-900/90 border-b border-white/5 z-10 flex items-center gap-0 px-8">
-                {(['articles', 'tools', 'comparisons', 'social'] as const).map(tab => (
+                {(['articles', 'tools', 'comparisons', 'categories', 'social'] as const).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setCmsTab(tab as any)}
@@ -1182,6 +1314,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="space-y-8">
+
+                                    {/* ── Structured AI Generation Banner ── */}
+                                    <div className="rounded-xl border border-news-accent/20 bg-news-accent/5 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-0.5">AI Content Generator</p>
+                                            <p className="text-xs text-zinc-400 leading-snug">
+                                                Generates <span className="text-white font-semibold">{
+                                                    formData.article_type === 'best-of' ? 'Best-of List' :
+                                                    formData.article_type === 'review' ? 'Tool Review' :
+                                                    formData.article_type === 'comparison' ? 'Comparison' :
+                                                    formData.article_type === 'guide' ? 'Guide' :
+                                                    formData.article_type === 'use-case' ? 'Use Case' : 'News Article'
+                                                }</span> — all fields at once from Topic + Category{Array.isArray(formData.primary_tools) && formData.primary_tools.length > 0 ? ' + selected tools' : ''}.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3 flex-shrink-0">
+                                            {structuredError && (
+                                                <span className="text-[10px] text-red-400 max-w-[200px] truncate" title={structuredError}>{structuredError}</span>
+                                            )}
+                                            {structuredSuccess && (
+                                                <span className="text-[10px] text-green-400 font-bold">✓ All fields populated!</span>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={handleStructuredGenerate}
+                                                disabled={structuredLoading}
+                                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-news-accent text-black text-xs font-black hover:opacity-90 disabled:opacity-50 transition-all whitespace-nowrap"
+                                            >
+                                                {structuredLoading
+                                                    ? <><Loader2 size={12} className="animate-spin" /> Generating…</>
+                                                    : <><Sparkles size={12} /> Generate All Fields</>
+                                                }
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     {/* Row 1: Title & Meta */}
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                                         <div className="md:col-span-8 space-y-2">
@@ -1230,7 +1398,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                     {tools.length > 0 && (
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                                                Primary Tools <span className="text-zinc-600 normal-case font-normal">(tools featured in this article)</span>
+                                                Primary Tools <span className="text-zinc-600 normal-case font-normal">(tools featured — auto-linked in article text)</span>
                                             </label>
                                             <div className="flex flex-wrap gap-2 bg-zinc-950/30 p-3 rounded-xl border border-white/5 min-h-[56px]">
                                                 {tools.map(t => {
@@ -1248,6 +1416,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                                             }}
                                                             className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wide transition-all border ${isSelected
                                                                 ? 'bg-news-accent text-black border-news-accent'
+                                                                : 'bg-transparent text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
+                                                                }`}
+                                                        >
+                                                            {t.name}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Row 1c: Comparison Tools (shown for comparison article type) */}
+                                    {tools.length > 0 && formData.article_type === 'comparison' && (
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                                                Comparison Tools <span className="text-zinc-600 normal-case font-normal">(tools being compared head-to-head)</span>
+                                            </label>
+                                            <div className="flex flex-wrap gap-2 bg-zinc-950/30 p-3 rounded-xl border border-white/5 min-h-[56px]">
+                                                {tools.map(t => {
+                                                    const isSelected = Array.isArray(formData.comparison_tools) && formData.comparison_tools.includes(t.slug);
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            key={t.slug}
+                                                            onClick={() => {
+                                                                const curr = Array.isArray(formData.comparison_tools) ? formData.comparison_tools : [];
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    comparison_tools: isSelected ? curr.filter((s: string) => s !== t.slug) : [...curr, t.slug]
+                                                                });
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wide transition-all border ${isSelected
+                                                                ? 'bg-blue-500 text-white border-blue-500'
                                                                 : 'bg-transparent text-zinc-500 border-zinc-800 hover:border-zinc-600 hover:text-zinc-300'
                                                                 }`}
                                                         >
@@ -1851,6 +2052,163 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 )}
 
             </div>
+
+            {/* CATEGORIES TAB */}
+            {cmsTab === 'categories' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Category Management */}
+                    <div className="space-y-4">
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-white flex items-center gap-2">
+                            <Layers size={14} className="text-blue-400" /> Categories
+                        </h2>
+
+                        {/* Category Form */}
+                        <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-3">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                                {editingCatSlug ? 'Edit Category' : 'New Category'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Name *</label>
+                                    <input value={catForm.name} onChange={e => setCatForm((p: any) => ({ ...p, name: e.target.value, slug: p.slug || e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') }))}
+                                        placeholder="AI Writing" className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Slug *</label>
+                                    <input value={catForm.slug} onChange={e => setCatForm((p: any) => ({ ...p, slug: e.target.value }))}
+                                        placeholder="ai-writing" className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Description</label>
+                                <textarea value={catForm.description} onChange={e => setCatForm((p: any) => ({ ...p, description: e.target.value }))}
+                                    rows={2} placeholder="Short description of this category..." className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 resize-none" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Icon (emoji/class)</label>
+                                    <input value={catForm.icon} onChange={e => setCatForm((p: any) => ({ ...p, icon: e.target.value }))}
+                                        placeholder="✍️" className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Parent Category</label>
+                                    <input value={catForm.parent_category} onChange={e => setCatForm((p: any) => ({ ...p, parent_category: e.target.value }))}
+                                        placeholder="ai-tools" className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Meta Title</label>
+                                <input value={catForm.meta_title} onChange={e => setCatForm((p: any) => ({ ...p, meta_title: e.target.value }))}
+                                    placeholder="Best AI Writing Tools 2025" className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50" />
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Meta Description</label>
+                                <textarea value={catForm.meta_description} onChange={e => setCatForm((p: any) => ({ ...p, meta_description: e.target.value }))}
+                                    rows={2} placeholder="Discover the best AI writing tools..." className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 resize-none" />
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleSaveCategory} disabled={catLoading || !catForm.name || !catForm.slug}
+                                    className="flex-1 py-1.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-xs font-semibold text-white transition-colors">
+                                    {catLoading ? 'Saving…' : editingCatSlug ? 'Update Category' : 'Create Category'}
+                                </button>
+                                {editingCatSlug && (
+                                    <button onClick={() => { setEditingCatSlug(null); setCatForm({ name: '', slug: '', description: '', icon: '', parent_category: '', meta_title: '', meta_description: '' }); }}
+                                        className="px-3 py-1.5 rounded border border-white/10 text-xs text-gray-400 hover:text-white transition-colors">
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Categories List */}
+                        <div className="rounded-xl border border-white/10 bg-black/30 divide-y divide-white/5 max-h-80 overflow-y-auto">
+                            {categories.map(c => (
+                                <div key={c.slug} className="flex items-center justify-between px-4 py-2.5">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-medium text-white truncate">{c.icon && <span className="mr-1.5">{c.icon}</span>}{c.name}</p>
+                                        <p className="text-xs text-gray-500">{c.slug}</p>
+                                    </div>
+                                    <div className="flex gap-2 flex-shrink-0 ml-3">
+                                        <button onClick={() => { setEditingCatSlug(c.slug); setCatForm({ name: c.name, slug: c.slug, description: c.description || '', icon: c.icon || '', parent_category: c.parent_category || '', meta_title: c.meta_title || '', meta_description: c.meta_description || '' }); }}
+                                            className="p-1.5 text-gray-500 hover:text-blue-400"><Edit size={14} /></button>
+                                        <button onClick={() => handleDeleteCategory(c.slug)} className="p-1.5 text-gray-500 hover:text-red-400"><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                            {categories.length === 0 && <p className="text-gray-600 text-sm text-center py-8">No categories yet.</p>}
+                        </div>
+                    </div>
+
+                    {/* Use Case Management */}
+                    <div className="space-y-4">
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-white flex items-center gap-2">
+                            <Tag size={14} className="text-purple-400" /> Use Cases
+                        </h2>
+
+                        {/* Use Case Form */}
+                        <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-3">
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                                {editingUcSlug ? 'Edit Use Case' : 'New Use Case'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Name *</label>
+                                    <input value={ucForm.name} onChange={e => setUcForm((p: any) => ({ ...p, name: e.target.value, slug: p.slug || e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') }))}
+                                        placeholder="Content Writing" className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Slug *</label>
+                                    <input value={ucForm.slug} onChange={e => setUcForm((p: any) => ({ ...p, slug: e.target.value }))}
+                                        placeholder="content-writing" className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Description</label>
+                                <textarea value={ucForm.description} onChange={e => setUcForm((p: any) => ({ ...p, description: e.target.value }))}
+                                    rows={2} placeholder="What this use case covers..." className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50 resize-none" />
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Primary Category</label>
+                                <select value={ucForm.primary_category} onChange={e => setUcForm((p: any) => ({ ...p, primary_category: e.target.value }))}
+                                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50">
+                                    <option value="">— None —</option>
+                                    {categories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleSaveUseCase} disabled={ucLoading || !ucForm.name || !ucForm.slug}
+                                    className="flex-1 py-1.5 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-xs font-semibold text-white transition-colors">
+                                    {ucLoading ? 'Saving…' : editingUcSlug ? 'Update Use Case' : 'Create Use Case'}
+                                </button>
+                                {editingUcSlug && (
+                                    <button onClick={() => { setEditingUcSlug(null); setUcForm({ name: '', slug: '', description: '', primary_category: '' }); }}
+                                        className="px-3 py-1.5 rounded border border-white/10 text-xs text-gray-400 hover:text-white transition-colors">
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Use Cases List */}
+                        <div className="rounded-xl border border-white/10 bg-black/30 divide-y divide-white/5 max-h-80 overflow-y-auto">
+                            {useCasesAdmin.map(u => (
+                                <div key={u.slug} className="flex items-center justify-between px-4 py-2.5">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-medium text-white truncate">{u.name}</p>
+                                        <p className="text-xs text-gray-500">{u.slug}{u.primary_category && ` · ${u.primary_category}`}</p>
+                                    </div>
+                                    <div className="flex gap-2 flex-shrink-0 ml-3">
+                                        <button onClick={() => { setEditingUcSlug(u.slug); setUcForm({ name: u.name, slug: u.slug, description: u.description || '', primary_category: u.primary_category || '' }); }}
+                                            className="p-1.5 text-gray-500 hover:text-blue-400"><Edit size={14} /></button>
+                                        <button onClick={() => handleDeleteUseCase(u.slug)} className="p-1.5 text-gray-500 hover:text-red-400"><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                            {useCasesAdmin.length === 0 && <p className="text-gray-600 text-sm text-center py-8">No use cases yet.</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* SOCIAL TAB */}
             {(cmsTab as string) === 'social' && (
