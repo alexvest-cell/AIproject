@@ -118,7 +118,8 @@ export interface Tool {
   full_description?: string;
   category_tags: string[];
   use_case_tags: string[];
-  pricing_model: 'Free' | 'Freemium' | 'Paid' | 'Enterprise';
+  category_primary?: 'AI Writing' | 'AI Chatbots' | 'Productivity' | 'Automation' | 'Design' | 'Development' | 'Marketing' | 'Data Analysis' | 'Customer Support' | 'Other';
+  pricing_model: 'Free' | 'Freemium' | 'Paid' | 'Enterprise' | 'Trial';
   starting_price?: string;
   website_url?: string;
   affiliate_url?: string;

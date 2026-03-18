@@ -601,6 +601,7 @@ META_DESCRIPTION: [1–2 sentence search-intent summary — 140–160 chars]`
         slug: sections['SLUG'] || '',
         short_description: sections['SHORT_DESCRIPTION'] || '',
         full_description: longDesc,
+        category_primary: sections['CATEGORY'] || '',
         category_tags: parseCommaList(sections['CATEGORY']),
         use_case_tags: parseCommaList(sections['USE_CASES']),
         key_features: parsePipeList(sections['FEATURES']),

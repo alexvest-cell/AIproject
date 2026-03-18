@@ -17,7 +17,18 @@ const PRICING_COLORS: Record<string, string> = {
     Freemium: 'bg-blue-900/50 text-blue-400 border-blue-700',
     Paid: 'bg-purple-900/50 text-purple-400 border-purple-700',
     Enterprise: 'bg-orange-900/50 text-orange-400 border-orange-700',
+    Trial: 'bg-yellow-900/50 text-yellow-400 border-yellow-700',
 };
+
+const CATEGORY_PRIMARY_VALUES = [
+    'AI Writing', 'AI Chatbots', 'Productivity', 'Automation', 'Design',
+    'Development', 'Marketing', 'Data Analysis', 'Customer Support', 'Other',
+] as const;
+
+const USE_CASE_VALUES = [
+    'Content Creation', 'Research', 'Coding', 'Automation', 'Lead Generation',
+    'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity',
+] as const;
 
 const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick }) => {
     const [tool, setTool] = useState<Tool | null>(null);
@@ -123,12 +134,10 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const sections = [];
     if (tool.full_description) sections.push({ id: 'overview', label: 'Overview' });
     if ((tool as any).screenshots?.length > 0) sections.push({ id: 'screenshots', label: 'Screenshots' });
-    if (alternatives && alternatives.length > 0) sections.push({ id: 'alternatives', label: 'Alternatives' });
     if (tool.key_features?.length > 0) sections.push({ id: 'features', label: 'Features' });
     if (tool.pros?.length > 0 || tool.cons?.length > 0) sections.push({ id: 'proscons', label: 'Pros & Cons' });
-    if (stacks.length > 0) sections.push({ id: 'stacks', label: 'Ecosystems' });
-    if (comparisons.length > 0) sections.push({ id: 'comparisons', label: 'Comparisons' });
-    if (relatedArticles.length > 0) sections.push({ id: 'related', label: 'Related' });
+    if (tool.use_case_tags?.length > 0) sections.push({ id: 'use-cases', label: 'Use Cases' });
+    if (tool.integrations?.length > 0) sections.push({ id: 'integrations', label: 'Integrations' });
 
     const pricingClass = PRICING_COLORS[tool.pricing_model] || 'bg-surface-alt text-news-muted border-border-subtle';
 
@@ -171,6 +180,11 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border ${pricingClass}`}>
                                 {tool.pricing_model}
                             </span>
+                            {tool.category_primary && (
+                                <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-surface-alt text-news-text border border-border-subtle">
+                                    {tool.category_primary}
+                                </span>
+                            )}
                             {tool.ai_enabled && (
                                 <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-blue-500/15 text-blue-400 border border-transparent">
                                     <Zap size={10} /> AI-Powered
@@ -297,9 +311,21 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </section>
                         )}
 
+                        {/* Use Cases */}
+                        {tool.use_case_tags?.length > 0 && (
+                            <section id="use-cases" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Use Cases</h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {tool.use_case_tags.map(uc => (
+                                        <span key={uc} className="text-xs px-3 py-1.5 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/20 font-medium">{uc}</span>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
                         {/* Integrations */}
                         {tool.integrations?.length > 0 && (
-                            <section>
+                            <section id="integrations" className="scroll-mt-24">
                                 <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Integrations</h2>
                                 <div className="flex flex-wrap gap-2">
                                     {tool.integrations.map(int => (
@@ -309,24 +335,12 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </section>
                         )}
 
-                        {/* Related Content Modules using internal linking system */}
-                        <div className="space-y-8 mt-12 bg-surface-alt/20 p-6 rounded-2xl border border-border-subtle">
-                            {alternatives.length > 0 && (
-                                <RelatedContent type="tools" title="Top Alternatives" items={alternatives} className="mt-0 pt-0 border-none" />
-                            )}
-                            {comparisons.length > 0 && (
-                                <RelatedContent type="comparisons" title="Compare With" items={comparisons.slice(0, 6)} className="mt-0 pt-0 border-none" />
-                            )}
-                            {stacks.length > 0 && (
-                                <RelatedContent type="stacks" title="Used in Ecosystems" items={stacks.slice(0, 3)} className="mt-0 pt-0 border-none" />
-                            )}
-                            {relatedArticles.some(a => a.title.toLowerCase().includes('best') || a.title.toLowerCase().includes('top')) && (
-                                <RelatedContent type="rankings" title="Featured in Rankings" items={relatedArticles.filter(a => a.title.toLowerCase().includes('best') || a.title.toLowerCase().includes('top')).slice(0, 4)} className="mt-0 pt-0 border-none" />
-                            )}
-                            {relatedArticles.some(a => !a.title.toLowerCase().includes('best') && !a.title.toLowerCase().includes('top')) && (
-                                <RelatedContent type="guides" title="Implementation Guides" items={relatedArticles.filter(a => !a.title.toLowerCase().includes('best') && !a.title.toLowerCase().includes('top')).slice(0, 3)} className="mt-0 pt-0 border-none" />
-                            )}
-                        </div>
+                        {/* Deferred modules — populated dynamically once data is available */}
+                        <div data-section="alternatives" />
+                        <div data-section="comparisons" />
+                        <div data-section="ecosystems" />
+                        <div data-section="rankings" />
+                        <div data-section="guides" />
                     </div>
 
                     {/* Sidebar */}

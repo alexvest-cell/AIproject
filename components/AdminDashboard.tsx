@@ -83,7 +83,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
-    const [toolForm, setToolForm] = useState<any>({ name: '', slug: '', short_description: '', pricing_model: 'Freemium', category_tags: [], website_url: '', logo: '' });
+    const [toolForm, setToolForm] = useState<any>({ name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', category_tags: '', use_case_tags: '', key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [], website_url: '', affiliate_url: '', logo: '', meta_title: '', meta_description: '' });
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
     const [toolLoading, setToolLoading] = useState(false);
 
@@ -161,8 +161,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         setToolLoading(true);
         const method = editingToolId ? 'PUT' : 'POST';
         const url = editingToolId ? `/api/tools/${editingToolId}` : '/api/tools';
-        await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify({ ...toolForm, category_tags: Array.isArray(toolForm.category_tags) ? toolForm.category_tags : toolForm.category_tags.split(',').map((s: string) => s.trim()) }) });
-        setToolForm({ name: '', slug: '', short_description: '', pricing_model: 'Freemium', category_tags: [], website_url: '', logo: '' });
+        const splitLines = (v: string) => v.split('\n').map((s: string) => s.trim()).filter(Boolean);
+        const splitComma = (v: string) => Array.isArray(v) ? v : v.split(',').map((s: string) => s.trim()).filter(Boolean);
+        const payload = {
+            ...toolForm,
+            category_tags: splitComma(toolForm.category_tags),
+            use_case_tags: Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : splitComma(toolForm.use_case_tags),
+            key_features: splitLines(toolForm.key_features),
+            pros: splitLines(toolForm.pros),
+            cons: splitLines(toolForm.cons),
+            integrations: splitComma(toolForm.integrations),
+            supported_platforms: Array.isArray(toolForm.supported_platforms) ? toolForm.supported_platforms : splitComma(toolForm.supported_platforms),
+        };
+        await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
+        setToolForm({ name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', category_tags: '', use_case_tags: '', key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [], website_url: '', affiliate_url: '', logo: '', meta_title: '', meta_description: '' });
         setEditingToolId(null);
         setToolLoading(false);
         loadTools();
@@ -1932,38 +1944,156 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                             <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Tools Database</h2>
                             <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 space-y-4">
                                 <h3 className="text-xs font-bold uppercase tracking-widest text-news-accent mb-2">{editingToolId ? 'Editing Tool' : 'Add New Tool'}</h3>
-                                {[['name', 'Tool Name *'], ['slug', 'Slug (URL key)'], ['short_description', 'Short Description'], ['website_url', 'Website URL'], ['logo', 'Logo URL'], ['starting_price', 'Starting Price (e.g. $0/mo)']].map(([key, label]) => (
-                                    <div key={key}>
-                                        <label className="block text-xs text-gray-400 mb-1">{label}</label>
-                                        <input
-                                            value={toolForm[key] || ''}
-                                            onChange={e => setToolForm((p: any) => ({ ...p, [key]: e.target.value }))}
-                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent"
-                                            placeholder={label}
-                                        />
+
+                                {/* Identity */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[['name', 'Name *'], ['slug', 'Slug *']].map(([key, label]) => (
+                                        <div key={key}>
+                                            <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                                            <input value={toolForm[key] || ''} onChange={e => setToolForm((p: any) => ({ ...p, [key]: e.target.value }))}
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder={label} />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Short Description */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Short Description <span className="text-gray-600">(15–25 words)</span></label>
+                                    <input value={toolForm.short_description || ''} onChange={e => setToolForm((p: any) => ({ ...p, short_description: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="What it does and who it's for" />
+                                </div>
+
+                                {/* Long Description */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Long Description <span className="text-gray-600">(80–120 words)</span></label>
+                                    <textarea value={toolForm.full_description || ''} onChange={e => setToolForm((p: any) => ({ ...p, full_description: e.target.value }))}
+                                        rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder="Full overview of the tool…" />
+                                </div>
+
+                                {/* Category Primary + Pricing Model */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Category Primary *</label>
+                                        <select value={toolForm.category_primary || ''} onChange={e => setToolForm((p: any) => ({ ...p, category_primary: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                            <option value="">— Select —</option>
+                                            {['AI Writing','AI Chatbots','Productivity','Automation','Design','Development','Marketing','Data Analysis','Customer Support','Other'].map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
                                     </div>
-                                ))}
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Pricing Model *</label>
+                                        <select value={toolForm.pricing_model} onChange={e => setToolForm((p: any) => ({ ...p, pricing_model: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                            {['Free', 'Freemium', 'Paid', 'Trial', 'Enterprise'].map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Starting Price */}
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Pricing Model</label>
-                                    <select value={toolForm.pricing_model} onChange={e => setToolForm((p: any) => ({ ...p, pricing_model: e.target.value }))} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
-                                        {['Free', 'Freemium', 'Paid', 'Enterprise', 'Open Source'].map(m => <option key={m} value={m}>{m}</option>)}
-                                    </select>
+                                    <label className="block text-xs text-gray-400 mb-1">Starting Price</label>
+                                    <input value={toolForm.starting_price || ''} onChange={e => setToolForm((p: any) => ({ ...p, starting_price: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="e.g. $12/mo or Free" />
+                                </div>
+
+                                {/* Use Cases */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Use Cases <span className="text-gray-600">(select from list)</span></label>
+                                    <div className="flex flex-wrap gap-1.5 p-3 bg-black/40 border border-white/10 rounded-lg">
+                                        {['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity'].map(uc => {
+                                            const selected = Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags.includes(uc) : (toolForm.use_case_tags || '').includes(uc);
+                                            return (
+                                                <button key={uc} type="button" onClick={() => setToolForm((p: any) => {
+                                                    const cur: string[] = Array.isArray(p.use_case_tags) ? p.use_case_tags : (p.use_case_tags || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+                                                    return { ...p, use_case_tags: selected ? cur.filter((x: string) => x !== uc) : [...cur, uc] };
+                                                })} className={`text-xs px-2 py-1 rounded-full border transition-colors ${selected ? 'bg-news-accent/20 text-news-accent border-news-accent/40' : 'bg-surface-alt/50 text-gray-400 border-white/10 hover:border-white/20'}`}>
+                                                    {uc}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Key Features */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Key Features <span className="text-gray-600">(4–6, one per line)</span></label>
+                                    <textarea value={Array.isArray(toolForm.key_features) ? toolForm.key_features.join('\n') : toolForm.key_features || ''}
+                                        onChange={e => setToolForm((p: any) => ({ ...p, key_features: e.target.value }))}
+                                        rows={5} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Feature one\nFeature two\nFeature three"} />
+                                </div>
+
+                                {/* Pros & Cons */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Pros <span className="text-gray-600">(3–5, one per line)</span></label>
+                                        <textarea value={Array.isArray(toolForm.pros) ? toolForm.pros.join('\n') : toolForm.pros || ''}
+                                            onChange={e => setToolForm((p: any) => ({ ...p, pros: e.target.value }))}
+                                            rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500/50 resize-none font-mono" placeholder={"Easy to use\nAffordable pricing"} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Cons <span className="text-gray-600">(2–4, one per line)</span></label>
+                                        <textarea value={Array.isArray(toolForm.cons) ? toolForm.cons.join('\n') : toolForm.cons || ''}
+                                            onChange={e => setToolForm((p: any) => ({ ...p, cons: e.target.value }))}
+                                            rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500/50 resize-none font-mono" placeholder={"Limited exports\nNo offline mode"} />
+                                    </div>
+                                </div>
+
+                                {/* Integrations */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Integrations <span className="text-gray-600">(3–6, comma-separated)</span></label>
+                                    <input value={Array.isArray(toolForm.integrations) ? toolForm.integrations.join(', ') : toolForm.integrations || ''}
+                                        onChange={e => setToolForm((p: any) => ({ ...p, integrations: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="Zapier, Slack, Google Docs" />
+                                </div>
+
+                                {/* Platform */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Platforms</label>
+                                    <div className="flex flex-wrap gap-1.5 p-3 bg-black/40 border border-white/10 rounded-lg">
+                                        {['Web','iOS','Android','API','Desktop'].map(p => {
+                                            const sel = Array.isArray(toolForm.supported_platforms) ? toolForm.supported_platforms.includes(p) : false;
+                                            return (
+                                                <button key={p} type="button" onClick={() => setToolForm((prev: any) => {
+                                                    const cur: string[] = Array.isArray(prev.supported_platforms) ? prev.supported_platforms : [];
+                                                    return { ...prev, supported_platforms: sel ? cur.filter((x: string) => x !== p) : [...cur, p] };
+                                                })} className={`text-xs px-2 py-1 rounded-full border transition-colors ${sel ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-surface-alt/50 text-gray-400 border-white/10 hover:border-white/20'}`}>
+                                                    {p}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Links */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[['website_url', 'Website URL'], ['affiliate_url', 'Affiliate URL'], ['logo', 'Logo URL'], ['category_tags', 'Category Tags (comma-sep)']].map(([key, label]) => (
+                                        <div key={key}>
+                                            <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                                            <input value={Array.isArray(toolForm[key]) ? toolForm[key].join(', ') : toolForm[key] || ''}
+                                                onChange={e => setToolForm((p: any) => ({ ...p, [key]: e.target.value }))}
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder={label} />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* SEO */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Meta Title</label>
+                                    <input value={toolForm.meta_title || ''} onChange={e => setToolForm((p: any) => ({ ...p, meta_title: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="Tool Name Review & Pricing (2025)" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Category Tags (comma-separated)</label>
-                                    <input
-                                        value={Array.isArray(toolForm.category_tags) ? toolForm.category_tags.join(', ') : toolForm.category_tags}
-                                        onChange={e => setToolForm((p: any) => ({ ...p, category_tags: e.target.value }))}
-                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent"
-                                        placeholder="e.g. Writing, AI, Productivity"
-                                    />
+                                    <label className="block text-xs text-gray-400 mb-1">Meta Description</label>
+                                    <textarea value={toolForm.meta_description || ''} onChange={e => setToolForm((p: any) => ({ ...p, meta_description: e.target.value }))}
+                                        rows={2} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder="140–160 char search-intent description" />
                                 </div>
+
                                 <div className="flex gap-3 pt-2">
-                                    <button onClick={handleSaveTool} disabled={!toolForm.name || toolLoading} className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
+                                    <button onClick={handleSaveTool} disabled={!toolForm.name || !toolForm.category_primary || toolLoading} className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
                                         {toolLoading ? 'Saving…' : editingToolId ? 'Update Tool' : 'Add Tool'}
                                     </button>
                                     {editingToolId && (
-                                        <button onClick={() => { setEditingToolId(null); setToolForm({ name: '', slug: '', short_description: '', pricing_model: 'Freemium', category_tags: [], website_url: '', logo: '' }); }} className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">
+                                        <button onClick={() => { setEditingToolId(null); setToolForm({ name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', category_tags: '', use_case_tags: '', key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [], website_url: '', affiliate_url: '', logo: '', meta_title: '', meta_description: '' }); }} className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">
                                             Cancel
                                         </button>
                                     )}
@@ -1980,7 +2110,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                             <p className="text-xs text-gray-500">{t.pricing_model} · {t.slug}</p>
                                         </div>
                                         <div className="flex gap-2 flex-shrink-0 ml-3">
-                                            <button onClick={() => { setEditingToolId(t.id || t._id); setToolForm({ ...t, category_tags: Array.isArray(t.category_tags) ? t.category_tags.join(', ') : t.category_tags }); }} className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"><Edit size={14} /></button>
+                                            <button onClick={() => { setEditingToolId(t.id || t._id); setToolForm({ ...t, category_tags: Array.isArray(t.category_tags) ? t.category_tags.join(', ') : (t.category_tags || ''), integrations: Array.isArray(t.integrations) ? t.integrations.join(', ') : (t.integrations || ''), key_features: Array.isArray(t.key_features) ? t.key_features.join('\n') : (t.key_features || ''), pros: Array.isArray(t.pros) ? t.pros.join('\n') : (t.pros || ''), cons: Array.isArray(t.cons) ? t.cons.join('\n') : (t.cons || ''), supported_platforms: Array.isArray(t.supported_platforms) ? t.supported_platforms : [], use_case_tags: Array.isArray(t.use_case_tags) ? t.use_case_tags : [] }); }} className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"><Edit size={14} /></button>
                                             <button onClick={() => handleDeleteTool(t.id || t._id)} className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                         </div>
                                     </div>

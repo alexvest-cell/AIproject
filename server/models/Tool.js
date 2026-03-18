@@ -17,12 +17,17 @@ const toolSchema = new mongoose.Schema({
 
     // Categorisation
     category_tags: [String],  // e.g. ['AI Tools', 'Productivity', 'CRM']
-    use_case_tags: [String],  // e.g. ['Developers', 'Startups', 'Students']
+    use_case_tags: [String],  // predefined use-case list
+    category_primary: {       // single canonical category (enum-controlled)
+        type: String,
+        enum: ['AI Writing', 'AI Chatbots', 'Productivity', 'Automation', 'Design',
+               'Development', 'Marketing', 'Data Analysis', 'Customer Support', 'Other']
+    },
 
     // Pricing
     pricing_model: {
         type: String,
-        enum: ['Free', 'Freemium', 'Paid', 'Enterprise'],
+        enum: ['Free', 'Freemium', 'Paid', 'Enterprise', 'Trial'],
         default: 'Freemium'
     },
     starting_price: String,  // e.g. "$12/mo" or "Free"
