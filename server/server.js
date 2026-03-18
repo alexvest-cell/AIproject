@@ -25,6 +25,7 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 // Content Type Generation System
 import { buildStructuredPrompt, parseStructuredOutput, validateStructuredOutput, mapSectionsToFields } from './contentTypes.js';
+import { parseToolInput } from './toolParser.js';
 
 // Models
 import Article from './models/Article.js';
@@ -1652,6 +1653,16 @@ app.get('/api/tools/:slug/alternatives', async (req, res) => {
   }
 });
 
+
+// Parse raw tagged input → validated CMS fields (does NOT save)
+app.post('/api/tools/parse', requireAuth, async (req, res) => {
+  const { rawText } = req.body;
+  if (!rawText || typeof rawText !== 'string') {
+    return res.status(400).json({ status: 'error', errors: ['rawText is required'] });
+  }
+  const result = parseToolInput(rawText);
+  res.json(result);
+});
 
 app.post('/api/tools', requireAuth, async (req, res) => {
   try {

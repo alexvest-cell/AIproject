@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Edit, Save, Plus, Download, Upload, Calendar, Eye, EyeOff, Sparkles, Image as ImageIcon, Clock, Copy, FileImage, Volume2, Loader2, ArrowLeft, LogOut, Search, Headphones, ExternalLink, ArrowRight, Layers, Tag } from 'lucide-react';
+import { Trash2, Edit, Save, Plus, Download, Upload, Calendar, Eye, EyeOff, Sparkles, Image as ImageIcon, Clock, Copy, FileImage, Volume2, Loader2, ArrowLeft, LogOut, Search, Headphones, ExternalLink, ArrowRight, Layers, Tag, ChevronDown, Code2 } from 'lucide-react';
 import { generateSlug } from '../utils/slugify';
 import { Article } from '../types';
 import { newsArticles as staticArticles } from '../data/content';
@@ -88,6 +88,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
     const [toolLoading, setToolLoading] = useState(false);
+    // Parser panel state
+    const [showParser, setShowParser] = useState(false);
+    const [parseInput, setParseInput] = useState('');
+    const [parseLoading, setParseLoading] = useState(false);
+    const [parseErrors, setParseErrors] = useState<string[]>([]);
+    const [parseSuccess, setParseSuccess] = useState(false);
 
     // Comparisons state
     const [comparisons, setComparisons] = useState<any[]>([]);
@@ -246,6 +252,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (!confirm('Delete this tool?')) return;
         await fetch(`/api/tools/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
         loadTools();
+    };
+
+    const handleParseInput = async () => {
+        setParseLoading(true);
+        setParseErrors([]);
+        setParseSuccess(false);
+        try {
+            const res = await fetch('/api/tools/parse', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ rawText: parseInput }),
+            });
+            const result = await res.json();
+            if (result.status === 'error') {
+                setParseErrors(result.errors);
+            } else {
+                const d = result.data;
+                setToolForm({
+                    ...EMPTY_TOOL_FORM,
+                    name: d.name || '',
+                    slug: d.slug || '',
+                    short_description: d.short_description || '',
+                    full_description: d.full_description || '',
+                    category_primary: d.category_primary || '',
+                    pricing_model: d.pricing_model || 'Freemium',
+                    starting_price: d.starting_price || '',
+                    use_case_tags: d.use_case_tags || [],
+                    key_features: Array.isArray(d.key_features) ? d.key_features.join('\n') : '',
+                    pros: Array.isArray(d.pros) ? d.pros.join('\n') : '',
+                    cons: Array.isArray(d.cons) ? d.cons.join('\n') : '',
+                    integrations: Array.isArray(d.integrations) ? d.integrations.join(', ') : '',
+                    supported_platforms: d.supported_platforms || [],
+                    website_url: d.website_url || '',
+                    affiliate_url: d.affiliate_url || '',
+                    logo: d.logo || '',
+                    secondary_tags: Array.isArray(d.secondary_tags) ? d.secondary_tags.join(', ') : '',
+                    data_confidence: d.data_confidence || 'ai_generated',
+                    meta_title: d.meta_title || '',
+                    meta_description: d.meta_description || '',
+                });
+                setToolErrors({});
+                setEditingToolId(null);
+                setParseSuccess(true);
+                setShowParser(false);
+                setParseInput('');
+            }
+        } catch {
+            setParseErrors(['Parse request failed. Check connection and try again.']);
+        } finally {
+            setParseLoading(false);
+        }
     };
 
     const handleSaveComparison = async () => {
@@ -2013,7 +2070,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                 )}
                             </div>
                             <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 space-y-4">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-accent mb-2">{editingToolId ? 'Editing Tool' : 'Add New Tool'}</h3>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-news-accent">{editingToolId ? 'Editing Tool' : 'Add New Tool'}</h3>
+                                    {parseSuccess && !showParser && (
+                                        <span className="text-xs text-green-400 font-medium">✓ Fields loaded from parsed input</span>
+                                    )}
+                                </div>
+
+                                {/* Raw Input Parser */}
+                                <div className="rounded-lg border border-white/10 overflow-hidden">
+                                    <button type="button" onClick={() => { setShowParser(p => !p); setParseErrors([]); }}
+                                        className="w-full flex items-center justify-between px-4 py-2.5 bg-black/20 hover:bg-black/30 transition-colors">
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                            <Code2 size={12} /> Paste Raw Tagged Input
+                                        </span>
+                                        <ChevronDown size={14} className={`text-gray-500 transition-transform duration-200 ${showParser ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {showParser && (
+                                        <div className="p-4 space-y-3 bg-black/10 border-t border-white/5">
+                                            <p className="text-xs text-gray-500">Paste AI-generated tagged content. All fields will be parsed, validated, and loaded into the form below.</p>
+                                            <textarea
+                                                value={parseInput}
+                                                onChange={e => { setParseInput(e.target.value); setParseErrors([]); }}
+                                                rows={12}
+                                                spellCheck={false}
+                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-green-400 font-mono focus:outline-none focus:border-green-500/40 resize-y"
+                                                placeholder={"<<<NAME>>>\nChatGPT\n<<<END_NAME>>>\n\n<<<SHORT_DESCRIPTION>>>\nThe industry-leading AI chatbot by OpenAI...\n<<<END_SHORT_DESCRIPTION>>>\n\n<<<KEY_FEATURES>>>\nGPT-4o Access\nDALL·E Image Generation\nCustom GPTs Marketplace\nData Analysis Mode\n<<<END_KEY_FEATURES>>>"}
+                                            />
+                                            {parseErrors.length > 0 && (
+                                                <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 space-y-1">
+                                                    <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Parse failed — {parseErrors.length} error{parseErrors.length !== 1 ? 's' : ''}</p>
+                                                    {parseErrors.map((e, i) => (
+                                                        <p key={i} className="text-xs text-red-300">· {e}</p>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={handleParseInput}
+                                                disabled={!parseInput.trim() || parseLoading}
+                                                className="w-full py-2 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-xs font-bold text-white transition-colors flex items-center justify-center gap-2">
+                                                {parseLoading ? <><Loader2 size={12} className="animate-spin" /> Parsing…</> : 'Parse & Load Fields'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
 
                                 {/* Identity */}
                                 <div className="grid grid-cols-2 gap-3">
