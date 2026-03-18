@@ -16,9 +16,10 @@ const toolSchema = new mongoose.Schema({
     full_description: String,
 
     // Categorisation
-    category_tags: [String],  // e.g. ['AI Tools', 'Productivity', 'CRM']
-    use_case_tags: [String],  // predefined use-case list
-    category_primary: {       // single canonical category (enum-controlled)
+    category_tags: [String],      // legacy — kept for backward compat
+    secondary_tags: [String],     // SEO-only free tags (replaces category_tags in CMS)
+    use_case_tags: [String],      // predefined use-case list (1–5 items)
+    category_primary: {           // single canonical category (enum-controlled)
         type: String,
         enum: ['AI Writing', 'AI Chatbots', 'Productivity', 'Automation', 'Design',
                'Development', 'Marketing', 'Data Analysis', 'Customer Support', 'Other']
@@ -51,6 +52,18 @@ const toolSchema = new mongoose.Schema({
     ai_enabled: { type: Boolean, default: false },
     rating_score: { type: Number, min: 0, max: 10, default: 0 },
     review_count: { type: Number, default: 0 },
+
+    // Data quality
+    data_confidence: {
+        type: String,
+        enum: ['verified', 'inferred', 'ai_generated'],
+        default: 'ai_generated',
+        required: true
+    },
+
+    // Internal linking hooks
+    related_tools: [String],   // tool IDs
+    competitors: [String],     // tool IDs
 
     // SEO
     meta_title: String,

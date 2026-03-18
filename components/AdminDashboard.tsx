@@ -83,7 +83,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
-    const [toolForm, setToolForm] = useState<any>({ name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', category_tags: '', use_case_tags: '', key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [], website_url: '', affiliate_url: '', logo: '', meta_title: '', meta_description: '' });
+    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], meta_title: '', meta_description: '' };
+    const [toolForm, setToolForm] = useState<any>({ ...EMPTY_TOOL_FORM });
+    const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
     const [toolLoading, setToolLoading] = useState(false);
 
@@ -157,24 +159,84 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         loadUseCases();
     };
 
+    const validateToolForm = (form: any): Record<string, string> => {
+        const errors: Record<string, string> = {};
+        const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+        const splitLines = (v: string | string[]) => Array.isArray(v) ? v : v.split('\n').map((s: string) => s.trim()).filter(Boolean);
+        const splitComma = (v: string | string[]) => Array.isArray(v) ? v : v.split(',').map((s: string) => s.trim()).filter(Boolean);
+
+        // Short description: 15–25 words
+        const sdWords = countWords(form.short_description || '');
+        if (sdWords < 15 || sdWords > 25) errors.short_description = `Must be 15–25 words (currently ${sdWords})`;
+
+        // Long description: 80–120 words
+        const ldWords = countWords(form.full_description || '');
+        if (ldWords < 80 || ldWords > 120) errors.full_description = `Must be 80–120 words (currently ${ldWords})`;
+
+        // Key features: 4–6 items, each 3–10 words
+        const kf = splitLines(form.key_features);
+        if (kf.length < 4 || kf.length > 6) errors.key_features = `Must have 4–6 items (currently ${kf.length})`;
+        else {
+            const badKf = kf.filter((f: string) => { const w = countWords(f); return w < 3 || w > 10; });
+            if (badKf.length) errors.key_features = `Each feature must be 3–10 words. Check: "${badKf[0]}"`;
+        }
+
+        // Pros: 3–5
+        const pros = splitLines(form.pros);
+        if (pros.length < 3 || pros.length > 5) errors.pros = `Must have 3–5 items (currently ${pros.length})`;
+
+        // Cons: 2–4
+        const cons = splitLines(form.cons);
+        if (cons.length < 2 || cons.length > 4) errors.cons = `Must have 2–4 items (currently ${cons.length})`;
+
+        // Integrations: 3–6
+        const ints = splitComma(form.integrations);
+        if (ints.length < 3 || ints.length > 6) errors.integrations = `Must have 3–6 items (currently ${ints.length})`;
+
+        // Use cases: 1–5, from enum only
+        const ucs: string[] = Array.isArray(form.use_case_tags) ? form.use_case_tags : splitComma(form.use_case_tags);
+        const VALID_USE_CASES = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity'];
+        if (ucs.length < 1 || ucs.length > 5) errors.use_case_tags = `Must select 1–5 use cases (currently ${ucs.length})`;
+        else {
+            const invalid = ucs.filter((u: string) => !VALID_USE_CASES.includes(u));
+            if (invalid.length) errors.use_case_tags = `Invalid use case(s): ${invalid.join(', ')}`;
+        }
+
+        return errors;
+    };
+
+    const normalizeIntegrations = (v: string | string[]): string[] => {
+        const raw = Array.isArray(v) ? v.join(',') : v;
+        const toTitleCase = (s: string) => s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        return [...new Set(
+            raw.split(',').map((s: string) => toTitleCase(s.trim())).filter(Boolean)
+        )];
+    };
+
     const handleSaveTool = async () => {
+        const errors = validateToolForm(toolForm);
+        if (Object.keys(errors).length > 0) { setToolErrors(errors); return; }
+        setToolErrors({});
         setToolLoading(true);
         const method = editingToolId ? 'PUT' : 'POST';
         const url = editingToolId ? `/api/tools/${editingToolId}` : '/api/tools';
-        const splitLines = (v: string) => v.split('\n').map((s: string) => s.trim()).filter(Boolean);
-        const splitComma = (v: string) => Array.isArray(v) ? v : v.split(',').map((s: string) => s.trim()).filter(Boolean);
+        const splitLines = (v: string | string[]) => Array.isArray(v) ? v : v.split('\n').map((s: string) => s.trim()).filter(Boolean);
+        const splitComma = (v: string | string[]) => Array.isArray(v) ? v : v.split(',').map((s: string) => s.trim()).filter(Boolean);
         const payload = {
             ...toolForm,
-            category_tags: splitComma(toolForm.category_tags),
+            secondary_tags: splitComma(toolForm.secondary_tags),
+            category_tags: splitComma(toolForm.secondary_tags), // keep legacy field in sync
             use_case_tags: Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : splitComma(toolForm.use_case_tags),
             key_features: splitLines(toolForm.key_features),
             pros: splitLines(toolForm.pros),
             cons: splitLines(toolForm.cons),
-            integrations: splitComma(toolForm.integrations),
+            integrations: normalizeIntegrations(toolForm.integrations),
             supported_platforms: Array.isArray(toolForm.supported_platforms) ? toolForm.supported_platforms : splitComma(toolForm.supported_platforms),
+            related_tools: Array.isArray(toolForm.related_tools) ? toolForm.related_tools : [],
+            competitors: Array.isArray(toolForm.competitors) ? toolForm.competitors : [],
         };
         await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
-        setToolForm({ name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', category_tags: '', use_case_tags: '', key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [], website_url: '', affiliate_url: '', logo: '', meta_title: '', meta_description: '' });
+        setToolForm({ ...EMPTY_TOOL_FORM });
         setEditingToolId(null);
         setToolLoading(false);
         loadTools();
@@ -1959,19 +2021,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                 {/* Short Description */}
                                 <div>
                                     <label className="block text-xs text-gray-400 mb-1">Short Description <span className="text-gray-600">(15–25 words)</span></label>
-                                    <input value={toolForm.short_description || ''} onChange={e => setToolForm((p: any) => ({ ...p, short_description: e.target.value }))}
-                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="What it does and who it's for" />
+                                    <input value={toolForm.short_description || ''} onChange={e => { setToolForm((p: any) => ({ ...p, short_description: e.target.value })); setToolErrors((e: any) => ({ ...e, short_description: undefined })); }}
+                                        className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none ${toolErrors.short_description ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-news-accent'}`} placeholder="What it does and who it's for" />
+                                    {toolErrors.short_description && <p className="text-red-400 text-xs mt-1">{toolErrors.short_description}</p>}
                                 </div>
 
                                 {/* Long Description */}
                                 <div>
                                     <label className="block text-xs text-gray-400 mb-1">Long Description <span className="text-gray-600">(80–120 words)</span></label>
-                                    <textarea value={toolForm.full_description || ''} onChange={e => setToolForm((p: any) => ({ ...p, full_description: e.target.value }))}
-                                        rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder="Full overview of the tool…" />
+                                    <textarea value={toolForm.full_description || ''} onChange={e => { setToolForm((p: any) => ({ ...p, full_description: e.target.value })); setToolErrors((e: any) => ({ ...e, full_description: undefined })); }}
+                                        rows={4} className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none ${toolErrors.full_description ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-news-accent'}`} placeholder="Full overview of the tool…" />
+                                    {toolErrors.full_description && <p className="text-red-400 text-xs mt-1">{toolErrors.full_description}</p>}
                                 </div>
 
-                                {/* Category Primary + Pricing Model */}
-                                <div className="grid grid-cols-2 gap-3">
+                                {/* Category Primary + Pricing Model + Data Confidence */}
+                                <div className="grid grid-cols-3 gap-3">
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">Category Primary *</label>
                                         <select value={toolForm.category_primary || ''} onChange={e => setToolForm((p: any) => ({ ...p, category_primary: e.target.value }))}
@@ -1987,6 +2051,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                             {['Free', 'Freemium', 'Paid', 'Trial', 'Enterprise'].map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Data Confidence *</label>
+                                        <select value={toolForm.data_confidence || 'ai_generated'} onChange={e => setToolForm((p: any) => ({ ...p, data_confidence: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                            <option value="ai_generated">AI Generated</option>
+                                            <option value="inferred">Inferred</option>
+                                            <option value="verified">Verified</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {/* Starting Price */}
@@ -1998,28 +2071,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                                 {/* Use Cases */}
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Use Cases <span className="text-gray-600">(select from list)</span></label>
-                                    <div className="flex flex-wrap gap-1.5 p-3 bg-black/40 border border-white/10 rounded-lg">
+                                    <label className="block text-xs text-gray-400 mb-1 flex justify-between">
+                                        <span>Use Cases * <span className="text-gray-600">(1–5 from list only)</span></span>
+                                        <span className={`font-mono ${(toolForm.use_case_tags?.length || 0) > 5 ? 'text-red-400' : 'text-gray-500'}`}>{toolForm.use_case_tags?.length || 0}/5</span>
+                                    </label>
+                                    <div className={`flex flex-wrap gap-1.5 p-3 bg-black/40 border rounded-lg ${toolErrors.use_case_tags ? 'border-red-500/60' : 'border-white/10'}`}>
                                         {['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity'].map(uc => {
-                                            const selected = Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags.includes(uc) : (toolForm.use_case_tags || '').includes(uc);
+                                            const ucArr: string[] = Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : [];
+                                            const selected = ucArr.includes(uc);
+                                            const atMax = ucArr.length >= 5 && !selected;
                                             return (
-                                                <button key={uc} type="button" onClick={() => setToolForm((p: any) => {
-                                                    const cur: string[] = Array.isArray(p.use_case_tags) ? p.use_case_tags : (p.use_case_tags || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+                                                <button key={uc} type="button" disabled={atMax} onClick={() => { setToolForm((p: any) => {
+                                                    const cur: string[] = Array.isArray(p.use_case_tags) ? p.use_case_tags : [];
                                                     return { ...p, use_case_tags: selected ? cur.filter((x: string) => x !== uc) : [...cur, uc] };
-                                                })} className={`text-xs px-2 py-1 rounded-full border transition-colors ${selected ? 'bg-news-accent/20 text-news-accent border-news-accent/40' : 'bg-surface-alt/50 text-gray-400 border-white/10 hover:border-white/20'}`}>
+                                                }); setToolErrors((e: any) => ({ ...e, use_case_tags: undefined })); }}
+                                                className={`text-xs px-2 py-1 rounded-full border transition-colors ${selected ? 'bg-news-accent/20 text-news-accent border-news-accent/40' : atMax ? 'opacity-30 cursor-not-allowed bg-surface-alt/50 text-gray-500 border-white/5' : 'bg-surface-alt/50 text-gray-400 border-white/10 hover:border-white/20'}`}>
                                                     {uc}
                                                 </button>
                                             );
                                         })}
                                     </div>
+                                    {toolErrors.use_case_tags && <p className="text-red-400 text-xs mt-1">{toolErrors.use_case_tags}</p>}
                                 </div>
 
                                 {/* Key Features */}
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Key Features <span className="text-gray-600">(4–6, one per line)</span></label>
+                                    <label className="block text-xs text-gray-400 mb-1">Key Features <span className="text-gray-600">(4–6, one per line, 3–10 words each)</span></label>
                                     <textarea value={Array.isArray(toolForm.key_features) ? toolForm.key_features.join('\n') : toolForm.key_features || ''}
-                                        onChange={e => setToolForm((p: any) => ({ ...p, key_features: e.target.value }))}
-                                        rows={5} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Feature one\nFeature two\nFeature three"} />
+                                        onChange={e => { setToolForm((p: any) => ({ ...p, key_features: e.target.value })); setToolErrors((e: any) => ({ ...e, key_features: undefined })); }}
+                                        rows={5} className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none font-mono ${toolErrors.key_features ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-news-accent'}`} placeholder={"Feature one\nFeature two\nFeature three"} />
+                                    {toolErrors.key_features && <p className="text-red-400 text-xs mt-1">{toolErrors.key_features}</p>}
                                 </div>
 
                                 {/* Pros & Cons */}
@@ -2027,23 +2108,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">Pros <span className="text-gray-600">(3–5, one per line)</span></label>
                                         <textarea value={Array.isArray(toolForm.pros) ? toolForm.pros.join('\n') : toolForm.pros || ''}
-                                            onChange={e => setToolForm((p: any) => ({ ...p, pros: e.target.value }))}
-                                            rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500/50 resize-none font-mono" placeholder={"Easy to use\nAffordable pricing"} />
+                                            onChange={e => { setToolForm((p: any) => ({ ...p, pros: e.target.value })); setToolErrors((e: any) => ({ ...e, pros: undefined })); }}
+                                            rows={4} className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none font-mono ${toolErrors.pros ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-green-500/50'}`} placeholder={"Easy to use\nAffordable pricing"} />
+                                        {toolErrors.pros && <p className="text-red-400 text-xs mt-1">{toolErrors.pros}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">Cons <span className="text-gray-600">(2–4, one per line)</span></label>
                                         <textarea value={Array.isArray(toolForm.cons) ? toolForm.cons.join('\n') : toolForm.cons || ''}
-                                            onChange={e => setToolForm((p: any) => ({ ...p, cons: e.target.value }))}
-                                            rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500/50 resize-none font-mono" placeholder={"Limited exports\nNo offline mode"} />
+                                            onChange={e => { setToolForm((p: any) => ({ ...p, cons: e.target.value })); setToolErrors((e: any) => ({ ...e, cons: undefined })); }}
+                                            rows={4} className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none font-mono ${toolErrors.cons ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-red-500/50'}`} placeholder={"Limited exports\nNo offline mode"} />
+                                        {toolErrors.cons && <p className="text-red-400 text-xs mt-1">{toolErrors.cons}</p>}
                                     </div>
                                 </div>
 
                                 {/* Integrations */}
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Integrations <span className="text-gray-600">(3–6, comma-separated)</span></label>
+                                    <label className="block text-xs text-gray-400 mb-1">Integrations <span className="text-gray-600">(3–6, comma-separated — auto-normalized on save)</span></label>
                                     <input value={Array.isArray(toolForm.integrations) ? toolForm.integrations.join(', ') : toolForm.integrations || ''}
-                                        onChange={e => setToolForm((p: any) => ({ ...p, integrations: e.target.value }))}
-                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="Zapier, Slack, Google Docs" />
+                                        onChange={e => { setToolForm((p: any) => ({ ...p, integrations: e.target.value })); setToolErrors((e: any) => ({ ...e, integrations: undefined })); }}
+                                        className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none ${toolErrors.integrations ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-news-accent'}`} placeholder="microsoft 365, zapier, Slack" />
+                                    {toolErrors.integrations && <p className="text-red-400 text-xs mt-1">{toolErrors.integrations}</p>}
                                 </div>
 
                                 {/* Platform */}
@@ -2066,14 +2150,63 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                                 {/* Links */}
                                 <div className="grid grid-cols-2 gap-3">
-                                    {[['website_url', 'Website URL'], ['affiliate_url', 'Affiliate URL'], ['logo', 'Logo URL'], ['category_tags', 'Category Tags (comma-sep)']].map(([key, label]) => (
+                                    {[['website_url', 'Website URL'], ['affiliate_url', 'Affiliate URL'], ['logo', 'Logo URL']].map(([key, label]) => (
                                         <div key={key}>
                                             <label className="block text-xs text-gray-400 mb-1">{label}</label>
-                                            <input value={Array.isArray(toolForm[key]) ? toolForm[key].join(', ') : toolForm[key] || ''}
-                                                onChange={e => setToolForm((p: any) => ({ ...p, [key]: e.target.value }))}
+                                            <input value={toolForm[key] || ''} onChange={e => setToolForm((p: any) => ({ ...p, [key]: e.target.value }))}
                                                 className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder={label} />
                                         </div>
                                     ))}
+                                </div>
+
+                                {/* Secondary Tags (SEO only — replaces legacy Category Tags) */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Secondary Tags <span className="text-gray-600">(SEO only — comma-separated, optional)</span></label>
+                                    <input value={Array.isArray(toolForm.secondary_tags) ? toolForm.secondary_tags.join(', ') : toolForm.secondary_tags || ''}
+                                        onChange={e => setToolForm((p: any) => ({ ...p, secondary_tags: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="AI writing, long-form, blogging" />
+                                </div>
+
+                                {/* Internal Linking Hooks */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Related Tools</label>
+                                        <div className="bg-black/40 border border-white/10 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
+                                            {tools.filter(t => (t.id || t._id) !== editingToolId).map((t: any) => {
+                                                const tid = t.id || t._id;
+                                                const sel = Array.isArray(toolForm.related_tools) && toolForm.related_tools.includes(tid);
+                                                return (
+                                                    <label key={tid} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 px-1 py-0.5 rounded">
+                                                        <input type="checkbox" checked={sel} onChange={() => setToolForm((p: any) => {
+                                                            const cur: string[] = Array.isArray(p.related_tools) ? p.related_tools : [];
+                                                            return { ...p, related_tools: sel ? cur.filter((x: string) => x !== tid) : [...cur, tid] };
+                                                        })} className="accent-news-accent" />
+                                                        <span className="text-xs text-gray-300 truncate">{t.name}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                            {tools.length <= 1 && <p className="text-xs text-gray-600 px-1">No other tools yet.</p>}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Competitors</label>
+                                        <div className="bg-black/40 border border-white/10 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
+                                            {tools.filter(t => (t.id || t._id) !== editingToolId).map((t: any) => {
+                                                const tid = t.id || t._id;
+                                                const sel = Array.isArray(toolForm.competitors) && toolForm.competitors.includes(tid);
+                                                return (
+                                                    <label key={tid} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 px-1 py-0.5 rounded">
+                                                        <input type="checkbox" checked={sel} onChange={() => setToolForm((p: any) => {
+                                                            const cur: string[] = Array.isArray(p.competitors) ? p.competitors : [];
+                                                            return { ...p, competitors: sel ? cur.filter((x: string) => x !== tid) : [...cur, tid] };
+                                                        })} className="accent-red-400" />
+                                                        <span className="text-xs text-gray-300 truncate">{t.name}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                            {tools.length <= 1 && <p className="text-xs text-gray-600 px-1">No other tools yet.</p>}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* SEO */}
@@ -2088,12 +2221,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         rows={2} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder="140–160 char search-intent description" />
                                 </div>
 
+                                {Object.keys(toolErrors).length > 0 && (
+                                    <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 space-y-1">
+                                        <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Fix {Object.keys(toolErrors).length} validation error{Object.keys(toolErrors).length > 1 ? 's' : ''} before saving</p>
+                                        {Object.values(toolErrors).map((msg, i) => <p key={i} className="text-xs text-red-300">· {msg as string}</p>)}
+                                    </div>
+                                )}
                                 <div className="flex gap-3 pt-2">
                                     <button onClick={handleSaveTool} disabled={!toolForm.name || !toolForm.category_primary || toolLoading} className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
                                         {toolLoading ? 'Saving…' : editingToolId ? 'Update Tool' : 'Add Tool'}
                                     </button>
                                     {editingToolId && (
-                                        <button onClick={() => { setEditingToolId(null); setToolForm({ name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', category_tags: '', use_case_tags: '', key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [], website_url: '', affiliate_url: '', logo: '', meta_title: '', meta_description: '' }); }} className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">
+                                        <button onClick={() => { setEditingToolId(null); setToolForm({ ...EMPTY_TOOL_FORM }); setToolErrors({}); }} className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">
                                             Cancel
                                         </button>
                                     )}
@@ -2110,7 +2249,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                             <p className="text-xs text-gray-500">{t.pricing_model} · {t.slug}</p>
                                         </div>
                                         <div className="flex gap-2 flex-shrink-0 ml-3">
-                                            <button onClick={() => { setEditingToolId(t.id || t._id); setToolForm({ ...t, category_tags: Array.isArray(t.category_tags) ? t.category_tags.join(', ') : (t.category_tags || ''), integrations: Array.isArray(t.integrations) ? t.integrations.join(', ') : (t.integrations || ''), key_features: Array.isArray(t.key_features) ? t.key_features.join('\n') : (t.key_features || ''), pros: Array.isArray(t.pros) ? t.pros.join('\n') : (t.pros || ''), cons: Array.isArray(t.cons) ? t.cons.join('\n') : (t.cons || ''), supported_platforms: Array.isArray(t.supported_platforms) ? t.supported_platforms : [], use_case_tags: Array.isArray(t.use_case_tags) ? t.use_case_tags : [] }); }} className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"><Edit size={14} /></button>
+                                            <button onClick={() => { setEditingToolId(t.id || t._id); setToolErrors({}); setToolForm({ ...EMPTY_TOOL_FORM, ...t, secondary_tags: Array.isArray(t.secondary_tags) ? t.secondary_tags.join(', ') : (t.secondary_tags || ''), integrations: Array.isArray(t.integrations) ? t.integrations.join(', ') : (t.integrations || ''), key_features: Array.isArray(t.key_features) ? t.key_features.join('\n') : (t.key_features || ''), pros: Array.isArray(t.pros) ? t.pros.join('\n') : (t.pros || ''), cons: Array.isArray(t.cons) ? t.cons.join('\n') : (t.cons || ''), supported_platforms: Array.isArray(t.supported_platforms) ? t.supported_platforms : [], use_case_tags: Array.isArray(t.use_case_tags) ? t.use_case_tags : [], related_tools: Array.isArray(t.related_tools) ? t.related_tools : [], competitors: Array.isArray(t.competitors) ? t.competitors : [], data_confidence: t.data_confidence || 'ai_generated' }); }} className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"><Edit size={14} /></button>
                                             <button onClick={() => handleDeleteTool(t.id || t._id)} className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                         </div>
                                     </div>

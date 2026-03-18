@@ -117,9 +117,13 @@ export interface Tool {
   short_description?: string;
   full_description?: string;
   category_tags: string[];
+  secondary_tags?: string[];
   use_case_tags: string[];
   category_primary?: 'AI Writing' | 'AI Chatbots' | 'Productivity' | 'Automation' | 'Design' | 'Development' | 'Marketing' | 'Data Analysis' | 'Customer Support' | 'Other';
   pricing_model: 'Free' | 'Freemium' | 'Paid' | 'Enterprise' | 'Trial';
+  data_confidence?: 'verified' | 'inferred' | 'ai_generated';
+  related_tools?: string[];
+  competitors?: string[];
   starting_price?: string;
   website_url?: string;
   affiliate_url?: string;
