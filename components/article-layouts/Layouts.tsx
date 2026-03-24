@@ -71,6 +71,11 @@ export const RankingLayout: React.FC<LayoutProps> = ({ article, parsedContent })
 export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent, tool, alternatives, comparisons, rankings }) => {
     const mainToolSlug = (article.primary_tools?.[0] || article.comparison_tools?.[0] || '').toLowerCase().replace(/\s+/g, '-');
 
+    const hasScore = !!(article.rating_breakdown && Object.keys(article.rating_breakdown).length > 0);
+    const hasAlts = !!(tool && alternatives && alternatives.length > 0);
+    const hasVerdict = !!article.verdict;
+    const hasFaqs = !!(article.faq && article.faq.length > 0);
+
     return (
         <div className="flex flex-col gap-0 w-full">
 
@@ -91,6 +96,16 @@ export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent, to
                 </div>
             </header>
 
+            {/* Quick-jump nav */}
+            {(hasScore || hasAlts || hasVerdict || hasFaqs) && (
+                <nav className="flex flex-wrap gap-2 mb-8 -mt-2">
+                    {hasScore && <a href="#score" className="text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full bg-surface-alt border border-border-subtle text-news-muted hover:text-news-accent hover:border-news-accent/40 transition-colors">Score</a>}
+                    {hasAlts && <a href="#alternatives" className="text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full bg-surface-alt border border-border-subtle text-news-muted hover:text-news-accent hover:border-news-accent/40 transition-colors">Alternatives</a>}
+                    {hasVerdict && <a href="#verdict" className="text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full bg-surface-alt border border-border-subtle text-news-muted hover:text-news-accent hover:border-news-accent/40 transition-colors">Verdict</a>}
+                    {hasFaqs && <a href="#faqs" className="text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full bg-surface-alt border border-border-subtle text-news-muted hover:text-news-accent hover:border-news-accent/40 transition-colors">FAQs</a>}
+                </nav>
+            )}
+
             {/* 3. Short intro */}
             {article.excerpt && (
                 <div className="mb-8">
@@ -101,12 +116,16 @@ export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent, to
             )}
 
             {/* 4. Rating Breakdown */}
-            <RatingBreakdown breakdown={article.rating_breakdown} />
+            <div id="score" className="scroll-mt-28">
+                <RatingBreakdown breakdown={article.rating_breakdown} />
+            </div>
 
-            {/* NEW: Top Alternatives */}
-            {tool && alternatives && <TopAlternativesModule tool={tool} alternatives={alternatives} />}
+            {/* Top Alternatives */}
+            <div id="alternatives" className="scroll-mt-28">
+                {tool && alternatives && <TopAlternativesModule tool={tool} alternatives={alternatives} />}
+            </div>
 
-            {/* NEW: Compare With */}
+            {/* Compare With */}
             {tool && comparisons && <CompareWithModule tool={tool} comparisons={comparisons} />}
 
             {/* 5. Feature deep dive (parsed CMS content) */}
@@ -114,7 +133,7 @@ export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent, to
                 {parsedContent}
             </div>
 
-            {/* NEW: Product Screenshots */}
+            {/* Product Screenshots */}
             {tool && <ProductScreenshotModule tool={tool} />}
 
             {/* 6. Pricing Analysis */}
@@ -145,13 +164,45 @@ export const ReviewLayout: React.FC<LayoutProps> = ({ article, parsedContent, to
             )}
 
             {/* 9. Verdict */}
-            <VerdictBox article={article} />
+            <div id="verdict" className="scroll-mt-28">
+                <VerdictBox article={article} />
+            </div>
 
-            {/* NEW: Featured in Rankings */}
+            {/* Featured in Rankings */}
             {rankings && rankings.length > 0 && <FeaturedInRankingsModule rankings={rankings} />}
 
             {/* 10. FAQ */}
-            {article.faq && <ArticleFAQ faq={article.faq} />}
+            <div id="faqs" className="scroll-mt-28">
+                {article.faq && <ArticleFAQ faq={article.faq} />}
+            </div>
+
+            {/* Bottom linkback block */}
+            {(mainToolSlug || (rankings && rankings.length > 0)) && (
+                <div className="mt-12 pt-10 border-t border-border-divider space-y-4">
+                    {mainToolSlug && (
+                        <div className="flex items-center justify-between gap-4 bg-surface-card border border-border-subtle rounded-xl px-5 py-4 hover:border-news-accent/30 transition-colors">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-0.5">About This Tool</p>
+                                <p className="text-sm font-semibold text-white">{tool?.name || mainToolSlug} — Pricing, Features & Alternatives</p>
+                            </div>
+                            <a href={`/tools/${mainToolSlug}`} className="text-xs font-bold text-news-accent hover:underline whitespace-nowrap flex items-center gap-1">
+                                View Tool Profile <ArrowRight size={12} />
+                            </a>
+                        </div>
+                    )}
+                    {rankings && rankings.length > 0 && (
+                        <div className="flex items-center justify-between gap-4 bg-surface-card border border-border-subtle rounded-xl px-5 py-4 hover:border-news-accent/30 transition-colors">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-0.5">Related Rankings</p>
+                                <p className="text-sm font-semibold text-white">{rankings[0].title}</p>
+                            </div>
+                            <a href={`/articles/${rankings[0].slug}`} className="text-xs font-bold text-news-accent hover:underline whitespace-nowrap flex items-center gap-1">
+                                Read Now <ArrowRight size={12} />
+                            </a>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

@@ -15,7 +15,7 @@ export const RelatedContent: React.FC<RelatedContentProps> = ({ type, title, ite
     const renderToolCard = (tool: Tool) => (
         <a key={tool.id} href={`/tools/${tool.slug}`} className="flex-shrink-0 w-64 snap-start p-4 bg-surface-card hover:bg-surface-hover border border-border-subtle rounded-xl transition-all group hover:-translate-y-0.5 flex flex-col justify-between">
             <div className="flex items-center gap-4 mb-3">
-                <div className="w-12 h-12 rounded-lg bg-surface-alt border border-border-subtle flex-shrink-0 flex items-center justify-center p-1.5 overflow-hidden">
+                <div className="w-12 h-12 rounded-lg bg-white border border-border-subtle flex-shrink-0 flex items-center justify-center p-1.5 overflow-hidden">
                     {tool.logo ? <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain" /> : <Zap size={20} className="text-news-accent" />}
                 </div>
                 <div>
@@ -41,11 +41,11 @@ export const RelatedContent: React.FC<RelatedContentProps> = ({ type, title, ite
                 <div>
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-lg bg-surface-base border border-border-subtle p-1.5 z-10 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-lg bg-white border border-border-subtle p-1.5 z-10 flex items-center justify-center">
                                 {toolA.logo ? <img src={toolA.logo} alt={toolA.name} className="w-full h-full object-contain" /> : <LayoutGrid size={16} className="text-news-muted" />}
                             </div>
                             <div className="w-8 h-8 rounded-full bg-surface-hover border border-border-subtle flex items-center justify-center z-20 -mx-2 text-[9px] font-black text-white italic">VS</div>
-                            <div className="w-10 h-10 rounded-lg bg-surface-base border border-border-subtle p-1.5 z-10 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-lg bg-white border border-border-subtle p-1.5 z-10 flex items-center justify-center">
                                 {toolB.logo ? <img src={toolB.logo} alt={toolB.name} className="w-full h-full object-contain" /> : <LayoutGrid size={16} className="text-news-muted" />}
                             </div>
                         </div>

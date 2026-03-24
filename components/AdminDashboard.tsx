@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Edit, Save, Plus, Download, Upload, Calendar, Eye, EyeOff, Sparkles, Image as ImageIcon, Clock, Copy, FileImage, Volume2, Loader2, ArrowLeft, LogOut, Search, Headphones, ExternalLink, ArrowRight, Layers, Tag, ChevronDown, Code2 } from 'lucide-react';
 import { generateSlug } from '../utils/slugify';
+import { generateComparison, GeneratedComparison, CompareTool } from '../utils/compareEngine';
 import { Article } from '../types';
 import { newsArticles as staticArticles } from '../data/content';
 import AdminLogin from './AdminLogin';
@@ -69,7 +70,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     const [dbOnline, setDbOnline] = useState(true);
 
     // CMS tab navigation
-    const [cmsTab, setCmsTab] = useState<'articles' | 'tools' | 'comparisons' | 'categories'>('articles');
+    const [cmsTab, setCmsTab] = useState<'articles' | 'tools' | 'comparisons' | 'stacks' | 'categories' | 'social'>('articles');
+    // Article sub-tab (type filter + per-type parser)
+    const [articleSubTab, setArticleSubTab] = useState<'all' | 'review' | 'guide' | 'news' | 'use_case' | 'best-of'>('all');
+    const [showArticleParser, setShowArticleParser] = useState(false);
+    const [articleParseInput, setArticleParseInput] = useState('');
+    const [articleParseErrors, setArticleParseErrors] = useState<string[]>([]);
+    const [articleParseSuccess, setArticleParseSuccess] = useState(false);
 
     // Category + UseCase state
     const [categories, setCategories] = useState<any[]>([]);
@@ -83,7 +90,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
-    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], meta_title: '', meta_description: '' };
+    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', use_case_breakdown: '', rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
     const [toolForm, setToolForm] = useState<any>({ ...EMPTY_TOOL_FORM });
     const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
@@ -93,12 +100,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     const [parseInput, setParseInput] = useState('');
     const [parseErrors, setParseErrors] = useState<string[]>([]);
     const [parseSuccess, setParseSuccess] = useState(false);
+    // Linking hooks search state
+    const [relatedSearch, setRelatedSearch] = useState('');
+    const [competitorSearch, setCompetitorSearch] = useState('');
+    const [stubLoading, setStubLoading] = useState<'related_tools' | 'competitors' | null>(null);
+    const [unresolvedRelated, setUnresolvedRelated] = useState<string[]>([]);
+    const [unresolvedCompetitors, setUnresolvedCompetitors] = useState<string[]>([]);
+    const [assetBrowserOpen, setAssetBrowserOpen] = useState(false);
+    const [assetBrowserAssets, setAssetBrowserAssets] = useState<{ url: string; public_id: string }[]>([]);
+    const [assetBrowserLoading, setAssetBrowserLoading] = useState(false);
+    const logoFileInputRef = useRef<HTMLInputElement>(null);
 
     // Comparisons state
+    const COMP_USE_CASES = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'];
+    const EMPTY_COMP_FORM = { title: '', slug: '', tool_a: '', tool_b: '', tool_c: '', comparison_type: '1v1', primary_use_cases: [] as string[], generation_mode: 'dynamic', meta_title: '', meta_description: '', status: 'published' };
     const [comparisons, setComparisons] = useState<any[]>([]);
-    const [compForm, setCompForm] = useState<any>({ title: '', slug: '', tool_a: '', tool_b: '', verdict: '' });
+    const [compForm, setCompForm] = useState<any>({ ...EMPTY_COMP_FORM });
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
     const [compLoading, setCompLoading] = useState(false);
+    const [showCompParser, setShowCompParser] = useState(false);
+    const [compParseInput, setCompParseInput] = useState('');
+    const [compParseErrors, setCompParseErrors] = useState<string[]>([]);
+    const [compParseSuccess, setCompParseSuccess] = useState(false);
+    const [compPreview, setCompPreview] = useState<GeneratedComparison | null>(null);
+    const [compPreviewLoading, setCompPreviewLoading] = useState(false);
+    const [compPreviewError, setCompPreviewError] = useState<string>('');
+
+    // Linked content state (shown in Tool CMS when editing)
+    const [linkedContent, setLinkedContent] = useState<{ comparisons: any[]; reviews: any[]; guides: any[]; news: any[]; stacks: any[]; useCases: any[]; bestOf: any[] } | null>(null);
+    const [linkedContentLoading, setLinkedContentLoading] = useState(false);
+
+    // Stacks state
+    const EMPTY_STACK_FORM = { name: '', slug: '', short_description: '', full_description: '', workflow_category: '', tools: '', workflow_steps: '', why_it_works: '', who_its_for: '', not_for: '', setup_time_hours: '', meta_title: '', meta_description: '', status: 'Published', featured: false };
+    const [stacks, setStacks] = useState<any[]>([]);
+    const [stackForm, setStackForm] = useState<any>({ ...EMPTY_STACK_FORM });
+    const [editingStackId, setEditingStackId] = useState<string | null>(null);
+    const [stackLoading, setStackLoading] = useState(false);
+    const [showStackParser, setShowStackParser] = useState(false);
+    const [stackParseInput, setStackParseInput] = useState('');
+    const [stackParseErrors, setStackParseErrors] = useState<string[]>([]);
+    const [stackParseSuccess, setStackParseSuccess] = useState(false);
 
     const loadTools = async () => {
         const res = await fetch('/api/tools', { headers: getAuthHeaders() });
@@ -108,6 +149,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     const loadComparisons = async () => {
         const res = await fetch('/api/comparisons', { headers: getAuthHeaders() });
         if (res.ok) setComparisons(await res.json());
+    };
+
+    const loadStacks = async () => {
+        const res = await fetch('/api/stacks', { headers: getAuthHeaders() });
+        if (res.ok) setStacks(await res.json());
     };
 
     const loadCategories = async () => {
@@ -123,10 +169,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
     useEffect(() => {
         if (isAuthenticated) {
             if (cmsTab === 'tools') loadTools();
-            if (cmsTab === 'comparisons') loadComparisons();
+            if (cmsTab === 'comparisons') { loadComparisons(); loadTools(); }
+            if (cmsTab === 'stacks') { loadStacks(); loadTools(); }
             if (cmsTab === 'categories') { loadCategories(); loadUseCases(); }
         }
     }, [cmsTab, isAuthenticated]);
+
+    // Fetch linked content whenever a tool is opened for editing
+    useEffect(() => {
+        if (!editingToolId || !toolForm.slug) { setLinkedContent(null); return; }
+        setLinkedContentLoading(true);
+        fetch(`/api/tools/${toolForm.slug}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                setLinkedContent({
+                    comparisons: data.comparisons  || [],
+                    reviews:     data.reviews      || [],
+                    guides:      data.guides       || [],
+                    news:        data.news         || [],
+                    bestOf:      data.bestOf       || [],
+                    stacks:      data.stacks       || [],
+                    useCases:    data.useCases     || [],
+                });
+            })
+            .finally(() => setLinkedContentLoading(false));
+    }, [editingToolId]);
 
     const handleSaveCategory = async () => {
         setCatLoading(true);
@@ -174,16 +242,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const sdWords = countWords(form.short_description || '');
         if (sdWords < 15 || sdWords > 25) errors.short_description = `Must be 15–25 words (currently ${sdWords})`;
 
-        // Long description: 80–120 words
+        // Long description: 80–150 words
         const ldWords = countWords(form.full_description || '');
-        if (ldWords < 80 || ldWords > 120) errors.full_description = `Must be 80–120 words (currently ${ldWords})`;
+        if (ldWords < 80 || ldWords > 150) errors.full_description = `Must be 80–150 words (currently ${ldWords})`;
 
-        // Key features: 4–6 items, each 3–10 words
+        // Key features: 4–6 items, each 3–20 words
         const kf = splitLines(form.key_features);
         if (kf.length < 4 || kf.length > 6) errors.key_features = `Must have 4–6 items (currently ${kf.length})`;
         else {
-            const badKf = kf.filter((f: string) => { const w = countWords(f); return w < 3 || w > 10; });
-            if (badKf.length) errors.key_features = `Each feature must be 3–10 words. Check: "${badKf[0]}"`;
+            const badKf = kf.filter((f: string) => { const w = countWords(f); return w < 3 || w > 20; });
+            if (badKf.length) errors.key_features = `Each feature must be 3–20 words. Check: "${badKf[0]}"`;
         }
 
         // Pros: 3–5
@@ -200,7 +268,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         // Use cases: 1–5, from enum only
         const ucs: string[] = Array.isArray(form.use_case_tags) ? form.use_case_tags : splitComma(form.use_case_tags);
-        const VALID_USE_CASES = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity'];
+        const VALID_USE_CASES = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'];
         if (ucs.length < 1 || ucs.length > 5) errors.use_case_tags = `Must select 1–5 use cases (currently ${ucs.length})`;
         else {
             const invalid = ucs.filter((u: string) => !VALID_USE_CASES.includes(u));
@@ -218,33 +286,131 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         )];
     };
 
+    const handleCreateStub = async (name: string, field: 'related_tools' | 'competitors', clearSearch: () => void) => {
+        setStubLoading(field);
+        const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        try {
+            const res = await fetch('/api/tools', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ name, slug, id: slug, pricing_model: 'Freemium', data_confidence: 'ai_generated' }) });
+            const newTool = await res.json();
+            const newId = newTool.id || newTool._id;
+            if (newId) {
+                setToolForm((p: any) => ({ ...p, [field]: [...(Array.isArray(p[field]) ? p[field] : []), newId] }));
+                await loadTools();
+                clearSearch();
+            }
+        } finally {
+            setStubLoading(null);
+        }
+    };
+
     const handleSaveTool = async () => {
         const errors = validateToolForm(toolForm);
         if (Object.keys(errors).length > 0) { setToolErrors(errors); return; }
         setToolErrors({});
         setToolLoading(true);
-        const method = editingToolId ? 'PUT' : 'POST';
-        const url = editingToolId ? `/api/tools/${editingToolId}` : '/api/tools';
-        const splitLines = (v: string | string[]) => Array.isArray(v) ? v : v.split('\n').map((s: string) => s.trim()).filter(Boolean);
-        const splitComma = (v: string | string[]) => Array.isArray(v) ? v : v.split(',').map((s: string) => s.trim()).filter(Boolean);
-        const payload = {
-            ...toolForm,
-            secondary_tags: splitComma(toolForm.secondary_tags),
-            category_tags: splitComma(toolForm.secondary_tags), // keep legacy field in sync
-            use_case_tags: Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : splitComma(toolForm.use_case_tags),
-            key_features: splitLines(toolForm.key_features),
-            pros: splitLines(toolForm.pros),
-            cons: splitLines(toolForm.cons),
-            integrations: normalizeIntegrations(toolForm.integrations),
-            supported_platforms: Array.isArray(toolForm.supported_platforms) ? toolForm.supported_platforms : splitComma(toolForm.supported_platforms),
-            related_tools: Array.isArray(toolForm.related_tools) ? toolForm.related_tools : [],
-            competitors: Array.isArray(toolForm.competitors) ? toolForm.competitors : [],
-        };
-        await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
-        setToolForm({ ...EMPTY_TOOL_FORM });
-        setEditingToolId(null);
-        setToolLoading(false);
-        loadTools();
+        try {
+            const method = editingToolId ? 'PUT' : 'POST';
+            const url = editingToolId ? `/api/tools/${editingToolId}` : '/api/tools';
+            const splitLines = (v: string | string[]) => Array.isArray(v) ? v : v.split('\n').map((s: string) => s.trim()).filter(Boolean);
+            const splitComma = (v: string | string[]) => Array.isArray(v) ? v : v.split(',').map((s: string) => s.trim()).filter(Boolean);
+            const payload = {
+                ...toolForm,
+                secondary_tags: splitComma(toolForm.secondary_tags),
+                category_tags: splitComma(toolForm.secondary_tags), // keep legacy field in sync
+                use_case_tags: Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : splitComma(toolForm.use_case_tags),
+                key_features: splitLines(toolForm.key_features),
+                pros: splitLines(toolForm.pros),
+                cons: splitLines(toolForm.cons),
+                integrations: normalizeIntegrations(toolForm.integrations),
+                supported_platforms: Array.isArray(toolForm.supported_platforms) ? toolForm.supported_platforms : splitComma(toolForm.supported_platforms),
+                related_tools: Array.isArray(toolForm.related_tools) ? toolForm.related_tools : [],
+                competitors: Array.isArray(toolForm.competitors) ? toolForm.competitors : [],
+                _unresolved_related: unresolvedRelated,
+                _unresolved_competitors: unresolvedCompetitors,
+                rating_score: parseFloat(toolForm.rating_score) || 0,
+                screenshots: Array.isArray(toolForm.screenshots) ? toolForm.screenshots.filter((s: any) => s.url?.trim()) : [],
+                // Don't send empty strings for enum fields — Mongoose rejects them
+                category_primary: toolForm.category_primary || undefined,
+                // New fields — convert textarea strings back to arrays/objects
+                best_for: splitLines(toolForm.best_for),
+                not_ideal_for: splitLines(toolForm.not_ideal_for),
+                limitations: splitComma(toolForm.limitations),
+                alternative_keywords: splitComma(toolForm.alternative_keywords),
+                use_case_breakdown: (() => {
+                    const obj: Record<string, string> = {};
+                    (toolForm.use_case_breakdown || '').split('\n').forEach((line: string) => { const idx = line.indexOf(':'); if (idx > 0) { obj[line.slice(0, idx).trim()] = line.slice(idx + 1).trim(); } });
+                    return obj;
+                })(),
+                rating_breakdown: (() => {
+                    const obj: Record<string, number> = {};
+                    (toolForm.rating_breakdown || '').split('\n').forEach((line: string) => { const idx = line.indexOf(':'); if (idx > 0) { const v = parseFloat(line.slice(idx + 1).trim()); if (!isNaN(v)) obj[line.slice(0, idx).trim()] = v; } });
+                    return obj;
+                })(),
+                // Resolve tool-name-keyed differentiator/note strings into tool-ID-keyed objects
+                competitor_differentiator: (() => {
+                    const obj: Record<string, string> = {};
+                    (toolForm.competitor_differentiator || '').split('\n').forEach((line: string) => {
+                        const idx = line.indexOf(':');
+                        if (idx <= 0) return;
+                        const toolName = line.slice(0, idx).trim();
+                        const text = line.slice(idx + 1).trim();
+                        if (!text) return;
+                        const found = tools.find((t: any) => t.name.toLowerCase() === toolName.toLowerCase());
+                        const key = found ? (found.id || found._id) : toolName;
+                        obj[key] = text;
+                    });
+                    return obj;
+                })(),
+                related_tool_note: (() => {
+                    const obj: Record<string, string> = {};
+                    (toolForm.related_tool_note || '').split('\n').forEach((line: string) => {
+                        const idx = line.indexOf(':');
+                        if (idx <= 0) return;
+                        const toolName = line.slice(0, idx).trim();
+                        const text = line.slice(idx + 1).trim();
+                        if (!text) return;
+                        const found = tools.find((t: any) => t.name.toLowerCase() === toolName.toLowerCase());
+                        const key = found ? (found.id || found._id) : toolName;
+                        obj[key] = text;
+                    });
+                    return obj;
+                })(),
+                last_updated: new Date().toISOString(),
+            };
+            const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: 'Server error' }));
+                setToolErrors({ _server: err.error || `Save failed (${res.status})` });
+                return;
+            }
+            const savedTool = await res.json();
+            if (editingToolId) {
+                // Re-fetch by slug to confirm the write actually persisted to the DB
+                // (the PUT response may reflect in-memory state, not the committed DB state)
+                const slug = savedTool.slug || toolForm.slug;
+                let verifiedTool = savedTool;
+                if (slug) {
+                    try {
+                        const vRes = await fetch(`/api/tools/${slug}`);
+                        if (vRes.ok) {
+                            const data = await vRes.json();
+                            verifiedTool = data.tool ?? verifiedTool;
+                        }
+                    } catch { /* fall back to savedTool */ }
+                }
+                setToolForm(buildToolFormValues(verifiedTool));
+                setToolErrors({ _success: 'Tool updated.' });
+                loadTools();
+            } else {
+                setToolForm({ ...EMPTY_TOOL_FORM });
+                setEditingToolId(null);
+                loadTools();
+            }
+        } catch (err: any) {
+            setToolErrors({ _server: 'Save error: ' + (err?.message || String(err)) });
+        } finally {
+            setToolLoading(false);
+        }
     };
 
     const handleDeleteTool = async (id: string) => {
@@ -253,10 +419,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         loadTools();
     };
 
+    const buildToolFormValues = (t: any) => {
+        const mapToStr = (v: any) => { if (!v) return ''; if (v instanceof Map) return [...v.entries()].map(([k,val]) => `${k}: ${val}`).join('\n'); if (typeof v === 'object' && !Array.isArray(v)) return Object.entries(v).map(([k,val]) => `${k}: ${val}`).join('\n'); return ''; };
+        return { ...EMPTY_TOOL_FORM, ...t,
+            secondary_tags: Array.isArray(t.secondary_tags) ? t.secondary_tags.join(', ') : (t.secondary_tags || ''),
+            integrations: Array.isArray(t.integrations) ? t.integrations.join(', ') : (t.integrations || ''),
+            key_features: Array.isArray(t.key_features) ? t.key_features.join('\n') : (t.key_features || ''),
+            pros: Array.isArray(t.pros) ? t.pros.join('\n') : (t.pros || ''),
+            cons: Array.isArray(t.cons) ? t.cons.join('\n') : (t.cons || ''),
+            supported_platforms: Array.isArray(t.supported_platforms) ? t.supported_platforms : [],
+            use_case_tags: Array.isArray(t.use_case_tags) ? t.use_case_tags : [],
+            related_tools: Array.isArray(t.related_tools) ? t.related_tools : [],
+            competitors: Array.isArray(t.competitors) ? t.competitors : [],
+            data_confidence: t.data_confidence || 'ai_generated',
+            rating_score: t.rating_score ?? 0,
+            screenshots: Array.isArray(t.screenshots) ? t.screenshots : [],
+            best_for: Array.isArray(t.best_for) ? t.best_for.join('\n') : (t.best_for || ''),
+            not_ideal_for: Array.isArray(t.not_ideal_for) ? t.not_ideal_for.join('\n') : (t.not_ideal_for || ''),
+            limitations: Array.isArray(t.limitations) ? t.limitations.join(', ') : (t.limitations || ''),
+            alternative_keywords: Array.isArray(t.alternative_keywords) ? t.alternative_keywords.join(', ') : (t.alternative_keywords || ''),
+            use_case_breakdown: mapToStr(t.use_case_breakdown),
+            rating_breakdown: mapToStr(t.rating_breakdown),
+            alternative_selection: t.alternative_selection || '',
+            model_version: t.model_version || '',
+            primary_keyword: t.primary_keyword || '',
+            review_slug: t.review_slug || '',
+            last_updated: t.last_updated || '',
+            competitor_differentiator: mapToStr(t.competitor_differentiator),
+            related_tool_note: mapToStr(t.related_tool_note),
+        };
+    };
+
     // ── Client-side parser (no server call needed) ──────────────────────────
     const clientParseToolInput = (rawText: string) => {
         const CATEGORY_PRIMARY_OPTS = ['AI Writing','AI Chatbots','Productivity','Automation','Design','Development','Marketing','Data Analysis','Customer Support','Other'];
-        const USE_CASE_OPTS = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity'];
+        const USE_CASE_OPTS = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'];
         const PLATFORM_OPTS = ['Web','iOS','Android','API','Desktop'];
         const PRICING_MAP: Record<string, string> = { free:'Free', freemium:'Freemium', paid:'Paid', trial:'Trial', enterprise:'Enterprise' };
         const DC_OPTS = ['verified','inferred','ai_generated'];
@@ -319,10 +516,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         const secondary_tags = parseArr(extracted['SECONDARY_TAGS']);
 
+        const related_tool_names = parseArr(extracted['RELATED_TOOLS']);
+        const competitor_names = parseArr(extracted['COMPETITORS']);
+        const rating_score = extracted['RATING_SCORE'] ? parseFloat(extracted['RATING_SCORE']) : 0;
+
+        // Parse key:value blocks into objects
+        const parseKeyValueStr = (v?: string): string => {
+            if (!v) return '';
+            return v.split('\n').map(s => s.trim()).filter(Boolean).join('\n');
+        };
+        const parseRatingBreakdown = (v?: string): Record<string, number> => {
+            if (!v) return {};
+            const result: Record<string, number> = {};
+            v.split('\n').forEach(line => {
+                const idx = line.indexOf(':');
+                if (idx > 0) { const k = line.slice(0, idx).trim(); const val = parseFloat(line.slice(idx + 1).trim()); if (k && !isNaN(val)) result[k] = val; }
+            });
+            return result;
+        };
+
+        const best_for = parseArr(extracted['BEST_FOR']);
+        const not_ideal_for = parseArr(extracted['NOT_IDEAL_FOR']);
+        const use_case_breakdown_raw = parseKeyValueStr(extracted['USE_CASE_BREAKDOWN']);
+        const alternative_selection = extracted['ALTERNATIVE_SELECTION'] || null;
+        const limitations = parseArr(extracted['LIMITATIONS']);
+        const rating_breakdown = parseRatingBreakdown(extracted['RATING_BREAKDOWN']);
+        const model_version = extracted['MODEL_VERSION'] || null;
+        const primary_keyword = extracted['PRIMARY_KEYWORD'] || null;
+        const alternative_keywords = parseArr(extracted['ALTERNATIVE_KEYWORDS']);
+        const review_slug = extracted['REVIEW_SLUG'] || null;
+        const competitor_differentiator_raw = parseKeyValueStr(extracted['COMPETITOR_DIFFERENTIATORS']);
+        const related_tool_note_raw = parseKeyValueStr(extracted['RELATED_TOOL_NOTES']);
+        // Parse "Month Year" (e.g. "March 2026") into ISO date string; fall back to now
+        const last_updated_raw = extracted['LAST_UPDATED'] || null;
+        const last_updated = (() => {
+            if (!last_updated_raw) return null;
+            const d = new Date(last_updated_raw);
+            if (!isNaN(d.getTime())) return d.toISOString();
+            const d2 = new Date('1 ' + last_updated_raw);
+            return !isNaN(d2.getTime()) ? d2.toISOString() : null;
+        })();
+
         // Validate
         const errors: string[] = [];
         if (short_description) { const w = wordCount(short_description); if (w < 15 || w > 25) errors.push(`SHORT_DESCRIPTION must be 15–25 words (got ${w})`); }
-        if (full_description) { const w = wordCount(full_description); if (w < 80 || w > 120) errors.push(`LONG_DESCRIPTION must be 80–120 words (got ${w})`); }
+        if (full_description) { const w = wordCount(full_description); if (w < 80 || w > 150) errors.push(`LONG_DESCRIPTION must be 80–150 words (got ${w})`); }
         if (key_features.length < 4 || key_features.length > 6) errors.push(`KEY_FEATURES must have 4–6 items (got ${key_features.length})`);
         if (pros.length < 3 || pros.length > 5) errors.push(`PROS must have 3–5 items (got ${pros.length})`);
         if (cons.length < 2 || cons.length > 4) errors.push(`CONS must have 2–4 items (got ${cons.length})`);
@@ -333,7 +571,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         if (errors.length) return { status: 'error' as const, errors };
 
-        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description } };
+        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated } };
     };
 
     const handleParseInput = () => {
@@ -344,52 +582,458 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
             setParseErrors(result.errors);
         } else {
             const d = result.data;
-            setToolForm({
-                ...EMPTY_TOOL_FORM,
-                name: d.name || '',
-                slug: d.slug || '',
-                short_description: d.short_description || '',
-                full_description: d.full_description || '',
-                category_primary: d.category_primary || '',
-                pricing_model: d.pricing_model || 'Freemium',
-                starting_price: d.starting_price || '',
-                use_case_tags: d.use_case_tags || [],
-                key_features: Array.isArray(d.key_features) ? d.key_features.join('\n') : '',
-                pros: Array.isArray(d.pros) ? d.pros.join('\n') : '',
-                cons: Array.isArray(d.cons) ? d.cons.join('\n') : '',
-                integrations: Array.isArray(d.integrations) ? d.integrations.join(', ') : '',
-                supported_platforms: d.supported_platforms || [],
-                website_url: d.website_url || '',
-                affiliate_url: d.affiliate_url || '',
-                logo: d.logo || '',
-                secondary_tags: Array.isArray(d.secondary_tags) ? d.secondary_tags.join(', ') : '',
-                data_confidence: d.data_confidence || 'ai_generated',
-                meta_title: d.meta_title || '',
-                meta_description: d.meta_description || '',
-            });
+            // If we're editing a tool but parsing data for a different slug → auto-switch to new tool mode
+            // so the parser output doesn't silently overwrite the wrong tool on Save
+            let isEditing = !!editingToolId;
+            if (isEditing && d.slug && toolForm.slug && d.slug !== toolForm.slug) {
+                setEditingToolId(null);
+                setUnresolvedRelated([]);
+                setUnresolvedCompetitors([]);
+                isEditing = false;
+            }
+            setToolForm((prev: any) => ({
+                ...(isEditing ? prev : EMPTY_TOOL_FORM),
+                ...(isEditing ? {} : { name: d.name || '', slug: d.slug || '' }),
+                short_description: d.short_description || (isEditing ? prev.short_description : ''),
+                full_description: d.full_description || (isEditing ? prev.full_description : ''),
+                category_primary: d.category_primary || (isEditing ? prev.category_primary : ''),
+                pricing_model: d.pricing_model || (isEditing ? prev.pricing_model : 'Freemium'),
+                starting_price: d.starting_price || (isEditing ? prev.starting_price : ''),
+                use_case_tags: d.use_case_tags?.length ? d.use_case_tags : (isEditing ? prev.use_case_tags : []),
+                key_features: Array.isArray(d.key_features) && d.key_features.length ? d.key_features.join('\n') : (isEditing ? prev.key_features : ''),
+                pros: Array.isArray(d.pros) && d.pros.length ? d.pros.join('\n') : (isEditing ? prev.pros : ''),
+                cons: Array.isArray(d.cons) && d.cons.length ? d.cons.join('\n') : (isEditing ? prev.cons : ''),
+                integrations: Array.isArray(d.integrations) && d.integrations.length ? d.integrations.join(', ') : (isEditing ? prev.integrations : ''),
+                supported_platforms: d.supported_platforms?.length ? d.supported_platforms : (isEditing ? prev.supported_platforms : []),
+                website_url: d.website_url || (isEditing ? prev.website_url : ''),
+                affiliate_url: d.affiliate_url || (isEditing ? prev.affiliate_url : ''),
+                logo: d.logo || (isEditing ? prev.logo : ''),
+                secondary_tags: Array.isArray(d.secondary_tags) && d.secondary_tags.length ? d.secondary_tags.join(', ') : (isEditing ? prev.secondary_tags : ''),
+                data_confidence: d.data_confidence || (isEditing ? prev.data_confidence : 'ai_generated'),
+                meta_title: d.meta_title || (isEditing ? prev.meta_title : ''),
+                meta_description: d.meta_description || (isEditing ? prev.meta_description : ''),
+                rating_score: d.rating_score ?? (isEditing ? prev.rating_score : 0),
+                related_tools: (d.related_tool_names || []).map((n: string) => { const t = tools.find((t: any) => t.name.toLowerCase() === n.toLowerCase()); return t ? (t.id || t._id) : null; }).filter(Boolean),
+                competitors: (d.competitor_names || []).map((n: string) => { const t = tools.find((t: any) => t.name.toLowerCase() === n.toLowerCase()); return t ? (t.id || t._id) : null; }).filter(Boolean),
+                // New fields
+                best_for: d.best_for?.length ? d.best_for.join('\n') : (isEditing ? prev.best_for : ''),
+                not_ideal_for: d.not_ideal_for?.length ? d.not_ideal_for.join('\n') : (isEditing ? prev.not_ideal_for : ''),
+                use_case_breakdown: d.use_case_breakdown_raw || (isEditing ? prev.use_case_breakdown : ''),
+                alternative_selection: d.alternative_selection || (isEditing ? prev.alternative_selection : ''),
+                limitations: d.limitations?.length ? d.limitations.join(', ') : (isEditing ? prev.limitations : ''),
+                rating_breakdown: Object.keys(d.rating_breakdown || {}).length ? Object.entries(d.rating_breakdown).map(([k, v]) => `${k}: ${v}`).join('\n') : (isEditing ? prev.rating_breakdown : ''),
+                model_version: d.model_version || (isEditing ? prev.model_version : ''),
+                primary_keyword: d.primary_keyword || (isEditing ? prev.primary_keyword : ''),
+                alternative_keywords: d.alternative_keywords?.length ? d.alternative_keywords.join(', ') : (isEditing ? prev.alternative_keywords : ''),
+                review_slug: d.review_slug || (isEditing ? prev.review_slug : ''),
+                last_updated: d.last_updated || (isEditing ? prev.last_updated : ''),
+                competitor_differentiator: d.competitor_differentiator_raw || (isEditing ? prev.competitor_differentiator : ''),
+                related_tool_note: d.related_tool_note_raw || (isEditing ? prev.related_tool_note : ''),
+            }));
+            setUnresolvedRelated((d.related_tool_names || []).filter((n: string) => !tools.some((t: any) => t.name.toLowerCase() === n.toLowerCase())));
+            setUnresolvedCompetitors((d.competitor_names || []).filter((n: string) => !tools.some((t: any) => t.name.toLowerCase() === n.toLowerCase())));
             setToolErrors({});
-            setEditingToolId(null);
+            // Don't reset editingToolId — if editing, stay in edit mode
             setParseSuccess(true);
             setShowParser(false);
             setParseInput('');
         }
     };
 
+    // ── Comparison parser (inline — config fields only) ─────────────────────
+    const clientParseComparisonInput = (rawText: string) => {
+        const extracted: Record<string, string> = {};
+        const rx = /<<<([A-Z0-9_]+)>>>([\s\S]*?)<<<END_\1>>>/g;
+        let m: RegExpExecArray | null;
+        while ((m = rx.exec(rawText)) !== null) {
+            if (!(m[1] in extracted)) extracted[m[1]] = m[2].trim();
+        }
+        if (Object.keys(extracted).length === 0) return { status: 'error' as const, errors: ['No valid <<<FIELD>>>…<<<END_FIELD>>> blocks found'] };
+
+        const toSlug = (s: string) => (s || '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+        const title  = extracted['TITLE']  || null;
+        const tool_a = toSlug(extracted['TOOL_A'] || '');
+        const tool_b = toSlug(extracted['TOOL_B'] || '');
+        const tool_c = extracted['TOOL_C'] ? toSlug(extracted['TOOL_C']) : '';
+        const slugRaw = extracted['SLUG'] ? extracted['SLUG'].trim() : [tool_a, tool_b].filter(Boolean).join('-vs-');
+        const slug = slugRaw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const primary_use_case = extracted['PRIMARY_USE_CASE'] || '';
+        const meta_title       = extracted['META_TITLE']       || null;
+        const meta_description = extracted['META_DESCRIPTION'] || null;
+
+        const errors: string[] = [];
+        if (!title)  errors.push('TITLE is required');
+        if (!tool_a) errors.push('TOOL_A is required');
+        if (!tool_b) errors.push('TOOL_B is required');
+        if (errors.length > 0) return { status: 'error' as const, errors };
+
+        return { status: 'success' as const, data: { title, slug, tool_a, tool_b, tool_c, primary_use_case, meta_title, meta_description } };
+    };
+
+    const handleParseComparisonInput = () => {
+        setCompParseErrors([]);
+        setCompParseSuccess(false);
+        const result = clientParseComparisonInput(compParseInput);
+        if (result.status === 'error') {
+            setCompParseErrors(result.errors);
+        } else {
+            const d = result.data;
+            const isEditing = !!editingCompId;
+            setCompForm((prev: any) => ({
+                ...(isEditing ? prev : EMPTY_COMP_FORM),
+                title:             d.title             || (isEditing ? prev.title             : ''),
+                slug:              d.slug              || (isEditing ? prev.slug              : ''),
+                tool_a:            d.tool_a            || (isEditing ? prev.tool_a            : ''),
+                tool_b:            d.tool_b            || (isEditing ? prev.tool_b            : ''),
+                tool_c:            d.tool_c            || (isEditing ? prev.tool_c            : ''),
+                primary_use_cases: d.primary_use_case ? [d.primary_use_case] : (isEditing ? prev.primary_use_cases : []),
+                meta_title:        d.meta_title        || (isEditing ? prev.meta_title        : ''),
+                meta_description:  d.meta_description  || (isEditing ? prev.meta_description  : ''),
+            }));
+            setCompParseSuccess(true);
+            setShowCompParser(false);
+            setCompParseInput('');
+        }
+    };
+
+    // ── Generate comparison preview from tool data ────────────────────────────
+    const handleGenerateComparisonPreview = async () => {
+        setCompPreviewError('');
+        const slugs = [compForm.tool_a, compForm.tool_b, compForm.tool_c].filter(Boolean);
+        if (slugs.length < 2) { setCompPreviewError('Select at least Tool A and Tool B first.'); return; }
+        setCompPreviewLoading(true);
+        try {
+            const toolObjs: CompareTool[] = slugs.map(slug => {
+                const t = tools.find((x: any) => x.slug === slug);
+                if (!t) throw new Error(`Tool "${slug}" not found in loaded tools`);
+                return t as CompareTool;
+            });
+            const ucArr: string[] = Array.isArray(compForm.primary_use_cases) ? compForm.primary_use_cases : [];
+        const result = generateComparison(toolObjs, { primary_use_case: ucArr[0] || undefined, comparison_type: compForm.comparison_type || '1v1' });
+            setCompPreview(result);
+            // Auto-fill title/slug if blank
+            setCompForm((prev: any) => ({
+                ...prev,
+                title: prev.title || result.header.title,
+                slug:  prev.slug  || slugs.join('-vs-'),
+            }));
+        } catch (err: any) {
+            setCompPreviewError(err.message || 'Generation failed');
+        } finally {
+            setCompPreviewLoading(false);
+        }
+    };
+
     const handleSaveComparison = async () => {
         setCompLoading(true);
-        const method = editingCompId ? 'PUT' : 'POST';
-        const url = editingCompId ? `/api/comparisons/${editingCompId}` : '/api/comparisons';
-        await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(compForm) });
-        setCompForm({ title: '', slug: '', tool_a: '', tool_b: '', verdict: '' });
-        setEditingCompId(null);
-        setCompLoading(false);
-        loadComparisons();
+        try {
+            const payload = {
+                title:            compForm.title,
+                slug:             compForm.slug,
+                tool_a_slug:      compForm.tool_a,
+                tool_b_slug:      compForm.tool_b,
+                tool_c_slug:      compForm.tool_c || undefined,
+                comparison_type:  compForm.comparison_type || '1v1',
+                primary_use_cases: Array.isArray(compForm.primary_use_cases) ? compForm.primary_use_cases : [],
+                generation_mode:  compForm.generation_mode || 'dynamic',
+                meta_title:       compForm.meta_title       || undefined,
+                meta_description: compForm.meta_description || undefined,
+                status:           compForm.status || 'published',
+                needs_update:     false,
+                last_generated:   compPreview ? new Date().toISOString() : undefined,
+                generated_output: compPreview ?? undefined,
+                id: compForm.slug || editingCompId,
+            };
+
+            const method = editingCompId ? 'PUT' : 'POST';
+            const url = editingCompId ? `/api/comparisons/${editingCompId}` : '/api/comparisons';
+            await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
+            if (!editingCompId) setCompForm({ ...EMPTY_COMP_FORM });
+            setEditingCompId(null);
+            setCompPreview(null);
+            loadComparisons();
+        } finally {
+            setCompLoading(false);
+        }
     };
 
     const handleDeleteComparison = async (id: string) => {
         if (!confirm('Delete this comparison?')) return;
         await fetch(`/api/comparisons/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
         loadComparisons();
+    };
+
+    // ── Stack parser (inline, mirrors stackParser.js logic) ──────────────────
+    const clientParseStackInput = (rawText: string) => {
+        const WORKFLOW_CATS = ['Marketing','Development','Startup Operations','Content Creation','Sales','Design','Data & Analytics','Customer Support','Education','Finance','HR & Recruiting','Research','Productivity','Other'];
+        const extracted: Record<string, string> = {};
+        const rx = /<<<([A-Z0-9_]+)>>>([\s\S]*?)<<<END_\1>>>/g;
+        let m: RegExpExecArray | null;
+        while ((m = rx.exec(rawText)) !== null) {
+            if (!(m[1] in extracted)) extracted[m[1]] = m[2].trim();
+        }
+        if (Object.keys(extracted).length === 0) return { status: 'error' as const, errors: ['No valid <<<FIELD>>>…<<<END_FIELD>>> blocks found'] };
+
+        const parseArr = (v?: string): string[] => {
+            if (!v) return [];
+            const items = v.includes('\n') ? v.split('\n') : v.split(',');
+            const seen = new Set<string>();
+            return items.map(s => s.trim()).filter(s => { if (!s || seen.has(s.toLowerCase())) return false; seen.add(s.toLowerCase()); return true; });
+        };
+        const wordCount = (s: string) => (s || '').trim().split(/\s+/).filter(Boolean).length;
+
+        const name = extracted['NAME'] || null;
+        const slugRaw = extracted['SLUG'] || (name || '');
+        const slug = slugRaw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const short_description = extracted['SHORT_DESCRIPTION'] || null;
+        const full_description  = extracted['FULL_DESCRIPTION']  || null;
+        const hero_image        = extracted['HERO_IMAGE']        || null;
+        const meta_title        = extracted['META_TITLE']        || null;
+        const meta_description  = extracted['META_DESCRIPTION']  || null;
+        const setup_time_hours  = extracted['SETUP_TIME_HOURS']  ? parseFloat(extracted['SETUP_TIME_HOURS']) || null : null;
+
+        const catRaw = (extracted['WORKFLOW_CATEGORY'] || '').trim();
+        const workflow_category = WORKFLOW_CATS.find(c => c.toLowerCase() === catRaw.toLowerCase()) || catRaw || null;
+
+        // Tools: comma or newline list of tool slugs/names
+        const toolsRaw = parseArr(extracted['TOOLS']).map(s => s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+
+        const why_it_works = parseArr(extracted['WHY_IT_WORKS']);
+        const who_its_for  = parseArr(extracted['WHO_ITS_FOR']);
+        const not_for      = parseArr(extracted['NOT_FOR']);
+
+        // workflow_steps: keep raw text, display in textarea
+        const workflow_steps_raw = extracted['WORKFLOW_STEPS'] || '';
+
+        const errors: string[] = [];
+        if (!name)  errors.push('NAME is required');
+        if (!workflow_category) errors.push('WORKFLOW_CATEGORY is required');
+        if (short_description !== null) {
+            const w = wordCount(short_description);
+            if (w < 10 || w > 40) errors.push(`SHORT_DESCRIPTION must be 10–40 words (got ${w})`);
+        }
+        if (toolsRaw.length === 0) errors.push('TOOLS must list at least one tool slug');
+        if (errors.length > 0) return { status: 'error' as const, errors };
+
+        return { status: 'success' as const, data: { name, slug, short_description, full_description, hero_image, workflow_category, tools: toolsRaw.join('\n'), workflow_steps: workflow_steps_raw, why_it_works: why_it_works.join('\n'), who_its_for: who_its_for.join('\n'), not_for: not_for.join('\n'), setup_time_hours: setup_time_hours?.toString() || '', meta_title, meta_description } };
+    };
+
+    const handleParseStackInput = () => {
+        setStackParseErrors([]);
+        setStackParseSuccess(false);
+        const result = clientParseStackInput(stackParseInput);
+        if (result.status === 'error') {
+            setStackParseErrors(result.errors);
+        } else {
+            const d = result.data;
+            const isEditing = !!editingStackId;
+            setStackForm((prev: any) => ({
+                ...(isEditing ? prev : EMPTY_STACK_FORM),
+                ...(isEditing ? {} : { name: d.name || '', slug: d.slug || '' }),
+                short_description:  d.short_description  || (isEditing ? prev.short_description  : ''),
+                full_description:   d.full_description   || (isEditing ? prev.full_description   : ''),
+                hero_image:         d.hero_image         || (isEditing ? prev.hero_image         : ''),
+                workflow_category:  d.workflow_category  || (isEditing ? prev.workflow_category  : ''),
+                tools:              d.tools              || (isEditing ? prev.tools              : ''),
+                workflow_steps:     d.workflow_steps     || (isEditing ? prev.workflow_steps     : ''),
+                why_it_works:       d.why_it_works       || (isEditing ? prev.why_it_works       : ''),
+                who_its_for:        d.who_its_for        || (isEditing ? prev.who_its_for        : ''),
+                not_for:            d.not_for            || (isEditing ? prev.not_for            : ''),
+                setup_time_hours:   d.setup_time_hours   || (isEditing ? prev.setup_time_hours   : ''),
+                meta_title:         d.meta_title         || (isEditing ? prev.meta_title         : ''),
+                meta_description:   d.meta_description   || (isEditing ? prev.meta_description   : ''),
+            }));
+            setStackParseSuccess(true);
+            setShowStackParser(false);
+            setStackParseInput('');
+        }
+    };
+
+    const handleSaveStack = async () => {
+        setStackLoading(true);
+        try {
+            const splitLines = (v: string) => (v || '').split('\n').map((s: string) => s.trim()).filter(Boolean);
+            const toolSlugs = splitLines(stackForm.tools);
+
+            // Parse workflow steps from textarea (Step N: Title\nDescription\nTools: a, b)
+            const stepsRaw = (stackForm.workflow_steps || '').trim();
+            const steps: { title: string; description: string; tool_slugs: string[] }[] = [];
+            if (stepsRaw) {
+                const blocks = stepsRaw.split(/\n{2,}/);
+                for (const block of blocks) {
+                    const lines = block.trim().split('\n').map((l: string) => l.trim()).filter(Boolean);
+                    if (!lines.length) continue;
+                    const title = lines[0].replace(/^step\s*\d+[:.]\s*/i, '').trim();
+                    const descLines: string[] = [];
+                    let tool_slugs: string[] = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const tMatch = lines[i].match(/^tools?:\s*(.+)/i);
+                        if (tMatch) tool_slugs = tMatch[1].split(',').map((s: string) => s.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')).filter(Boolean);
+                        else descLines.push(lines[i]);
+                    }
+                    if (title) steps.push({ title, description: descLines.join(' '), tool_slugs });
+                }
+            }
+
+            const payload = {
+                ...stackForm,
+                tools: toolSlugs,
+                workflow_steps: steps,
+                why_it_works: splitLines(stackForm.why_it_works),
+                who_its_for:  splitLines(stackForm.who_its_for),
+                not_for:      splitLines(stackForm.not_for),
+                setup_time_hours: stackForm.setup_time_hours ? parseFloat(stackForm.setup_time_hours) : undefined,
+                id: stackForm.slug || editingStackId,
+            };
+
+            const method = editingStackId ? 'PUT' : 'POST';
+            const url = editingStackId ? `/api/stacks/${editingStackId}` : '/api/stacks';
+            const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
+            if (!res.ok) {
+                const err = await res.json();
+                setStackParseErrors([err.error || 'Save failed']);
+                return;
+            }
+            if (!editingStackId) { setStackForm({ ...EMPTY_STACK_FORM }); }
+            loadStacks();
+        } finally {
+            setStackLoading(false);
+        }
+    };
+
+    const handleDeleteStack = async (id: string) => {
+        if (!confirm('Delete this stack?')) return;
+        await fetch(`/api/stacks/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+        loadStacks();
+    };
+
+    // ── Article parser (inline, per-type) ────────────────────────────────────
+    const ARTICLE_PARSER_TAGS: Record<string, string[]> = {
+        review:   ['TITLE','SLUG','EXCERPT','PRIMARY_TOOLS','VERDICT','PROS','CONS','WHO_ITS_FOR','RATING_BREAKDOWN','CONTENT','META_TITLE','META_DESCRIPTION'],
+        guide:    ['TITLE','SLUG','EXCERPT','PRIMARY_TOOLS','DIFFICULTY','TOOLS_USED','STEPS','TIPS','COMMON_MISTAKES','CONTENT','META_TITLE','META_DESCRIPTION'],
+        news:     ['TITLE','SLUG','EXCERPT','PRIMARY_TOOLS','CONTENT','SOURCES','META_TITLE','META_DESCRIPTION'],
+        use_case: ['TITLE','SLUG','EXCERPT','PRIMARY_TOOLS','USE_CASES','WORKFLOW_STAGES','CONTENT','META_TITLE','META_DESCRIPTION'],
+        'best-of':['TITLE','SLUG','EXCERPT','PRIMARY_TOOLS','CONTENT','META_TITLE','META_DESCRIPTION'],
+        all:      ['TITLE','SLUG','EXCERPT','PRIMARY_TOOLS','CONTENT','META_TITLE','META_DESCRIPTION'],
+    };
+
+    const clientParseArticleInput = (rawText: string, articleType: string) => {
+        const extracted: Record<string, string> = {};
+        const rx = /<<<([A-Z0-9_]+)>>>([\s\S]*?)<<<END_\1>>>/g;
+        let m: RegExpExecArray | null;
+        while ((m = rx.exec(rawText)) !== null) {
+            if (!(m[1] in extracted)) extracted[m[1]] = m[2].trim();
+        }
+        if (Object.keys(extracted).length === 0) return { status: 'error' as const, errors: ['No valid <<<FIELD>>>…<<<END_FIELD>>> blocks found'] };
+
+        const parseArr = (v?: string): string[] => {
+            if (!v) return [];
+            const items = v.includes('\n') ? v.split('\n') : v.split(',');
+            const seen = new Set<string>();
+            return items.map(s => s.trim()).filter(s => { if (!s || seen.has(s.toLowerCase())) return false; seen.add(s.toLowerCase()); return true; });
+        };
+        const toSlug = (s: string) => s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+        const title   = extracted['TITLE']   || '';
+        const excerpt = extracted['EXCERPT'] || '';
+        const slugRaw = extracted['SLUG']    || title;
+        const slug    = toSlug(slugRaw);
+        const meta_title       = extracted['META_TITLE']       || null;
+        const meta_description = extracted['META_DESCRIPTION'] || null;
+        const primaryToolsRaw  = parseArr(extracted['PRIMARY_TOOLS']).map(s => toSlug(s));
+
+        // Content: split into paragraphs on double-newlines
+        const contentRaw = extracted['CONTENT'] || '';
+        const content = contentRaw.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+
+        const mapped: any = {
+            title, slug, excerpt, article_type: articleType === 'all' ? 'news' : articleType,
+            primary_tools: primaryToolsRaw,
+            content,
+            meta_title, meta_description,
+            date: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            originalReadTime: '5 min read',
+        };
+
+        if (articleType === 'review') {
+            mapped.verdict = extracted['VERDICT'] || '';
+            mapped.pros    = parseArr(extracted['PROS']);
+            mapped.cons    = parseArr(extracted['CONS']);
+            mapped.who_its_for = parseArr(extracted['WHO_ITS_FOR']);
+            // rating_breakdown: "Ease of Use: 8.5\nFeatures: 9" → object
+            const rbRaw = extracted['RATING_BREAKDOWN'] || '';
+            const rb: Record<string, number> = {};
+            for (const line of rbRaw.split('\n')) {
+                const match = line.match(/^(.+?):\s*([\d.]+)/);
+                if (match) rb[match[1].trim().toLowerCase().replace(/\s+/g, '_')] = parseFloat(match[2]);
+            }
+            if (Object.keys(rb).length) mapped.rating_breakdown = rb;
+        }
+
+        if (articleType === 'guide') {
+            mapped.difficulty_level = (extracted['DIFFICULTY'] || '').toLowerCase() || 'beginner';
+            mapped.tools_used = parseArr(extracted['TOOLS_USED']).map(toSlug);
+            mapped.tips = parseArr(extracted['TIPS']);
+            mapped.common_mistakes = parseArr(extracted['COMMON_MISTAKES']);
+            // Steps: "Step N: Title\nContent\nTool: slug" blocks
+            const stepsRaw = extracted['STEPS'] || '';
+            const steps: any[] = [];
+            for (const block of stepsRaw.split(/\n{2,}/)) {
+                const lines = block.trim().split('\n').map((l: string) => l.trim()).filter(Boolean);
+                if (!lines.length) continue;
+                const stepTitle = lines[0].replace(/^step\s*\d+[:.]\s*/i, '').trim();
+                let stepContent = '', stepTool = '';
+                for (let i = 1; i < lines.length; i++) {
+                    const tm = lines[i].match(/^tool:\s*(.+)/i);
+                    if (tm) stepTool = toSlug(tm[1]);
+                    else stepContent += (stepContent ? ' ' : '') + lines[i];
+                }
+                if (stepTitle) steps.push({ title: stepTitle, content: stepContent, tool_slug: stepTool });
+            }
+            mapped.steps = steps;
+        }
+
+        if (articleType === 'news') {
+            mapped.sources = parseArr(extracted['SOURCES']);
+        }
+
+        if (articleType === 'use_case') {
+            mapped.use_cases = parseArr(extracted['USE_CASES']);
+            // Workflow stages
+            const wsRaw = extracted['WORKFLOW_STAGES'] || '';
+            const stages: any[] = [];
+            for (const block of wsRaw.split(/\n{2,}/)) {
+                const lines = block.trim().split('\n').map((l: string) => l.trim()).filter(Boolean);
+                if (!lines.length) continue;
+                const stageTitle = lines[0].replace(/^stage\s*\d+[:.]\s*/i, '').trim();
+                let desc = '', toolSlugs: string[] = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const tm = lines[i].match(/^tools?:\s*(.+)/i);
+                    if (tm) toolSlugs = tm[1].split(',').map((s: string) => toSlug(s.trim())).filter(Boolean);
+                    else desc += (desc ? ' ' : '') + lines[i];
+                }
+                if (stageTitle) stages.push({ stage_title: stageTitle, description: desc, tool_slugs: toolSlugs });
+            }
+            mapped.workflow_stages = stages;
+        }
+
+        if (!title) return { status: 'error' as const, errors: ['TITLE is required'] };
+        return { status: 'success' as const, data: mapped };
+    };
+
+    const handleParseArticleInput = () => {
+        setArticleParseErrors([]);
+        setArticleParseSuccess(false);
+        const result = clientParseArticleInput(articleParseInput, articleSubTab);
+        if (result.status === 'error') {
+            setArticleParseErrors(result.errors);
+        } else {
+            setFormData((prev: any) => ({ ...prev, ...result.data }));
+            setArticleParseSuccess(true);
+            setShowArticleParser(false);
+            setArticleParseInput('');
+        }
     };
 
     // Auth helper to get token
@@ -1476,7 +2120,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
             {/* Tab Bar */}
             <div className="fixed top-16 left-0 w-full bg-zinc-900/90 border-b border-white/5 z-10 flex items-center gap-0 px-8">
-                {(['articles', 'tools', 'comparisons', 'categories', 'social'] as const).map(tab => (
+                {(['articles', 'tools', 'comparisons', 'stacks', 'categories', 'social'] as const).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setCmsTab(tab as any)}
@@ -1492,14 +2136,54 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
             <div className="w-full max-w-[1800px] mx-auto h-full pt-14">
                 {cmsTab === 'articles' && (
-                    <div className="grid grid-cols-12 gap-6 h-full">
+                    <div className="space-y-4">
 
-                        {/* LEFT COLUMN: LIST (3/12 columns on large screens) -- MOVED TO RIGHT? No, usually Editor is Main.
-                        User had Editor Left, List Right. I will keep that.
-                        Actually, standard CMS has sidebar left.
-                        But code had Editor (col-span-2) and List (col-span-1).
-                        I'll keep Editor as the MAIN focus (Left/Center) and List as sidebar (Right).
-                    */}
+                    {/* Article type sub-tabs + parser toggle */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-1 bg-zinc-900 border border-white/5 rounded-xl p-1">
+                            {(['all','review','guide','news','use_case','best-of'] as const).map(tab => (
+                                <button key={tab} onClick={() => { setArticleSubTab(tab); if (tab !== 'all') setFormData((p: any) => ({ ...p, article_type: tab === 'use_case' ? 'use-case' : tab })); }}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${articleSubTab === tab ? 'bg-news-accent text-black' : 'text-gray-500 hover:text-white'}`}>
+                                    {tab === 'use_case' ? 'Use Cases' : tab === 'best-of' ? 'Best-of' : tab}
+                                </button>
+                            ))}
+                        </div>
+                        <button onClick={() => setShowArticleParser(p => !p)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-news-accent/10 border border-news-accent/30 text-news-accent rounded-lg text-xs font-bold hover:bg-news-accent/20 transition-colors">
+                            <Code2 size={12} /> {showArticleParser ? 'Hide Parser' : 'Paste Tagged Input'}
+                        </button>
+                    </div>
+
+                    {/* Parser Panel */}
+                    {showArticleParser && (
+                        <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-400 font-mono">Paste <span className="text-news-accent">{'<<<FIELD>>>…<<<END_FIELD>>>'}</span> tagged <span className="text-white font-bold">{articleSubTab === 'all' ? 'article' : articleSubTab.replace('_', ' ')}</span> input</p>
+                            </div>
+                            <div className="text-[10px] text-gray-600 font-mono space-y-0.5">
+                                {(ARTICLE_PARSER_TAGS[articleSubTab] || ARTICLE_PARSER_TAGS['all']).map(tag => (
+                                    <div key={tag}>{'<<<'}{tag}{'>>>'} … {'<<<END_'}{tag}{'>>>'}</div>
+                                ))}
+                            </div>
+                            {articleSubTab === 'review' && <p className="text-[10px] text-gray-600 font-mono">RATING_BREAKDOWN: Ease of Use: 8.5\nFeatures: 9\nValue: 8</p>}
+                            {articleSubTab === 'guide' && <p className="text-[10px] text-gray-600 font-mono">STEPS: Step 1: Title\nDescription\nTool: slug (blank line between steps)</p>}
+                            {articleSubTab === 'use_case' && <p className="text-[10px] text-gray-600 font-mono">WORKFLOW_STAGES: Stage 1: Title\nDescription\nTools: slug1, slug2</p>}
+                            <textarea value={articleParseInput} onChange={e => setArticleParseInput(e.target.value)} rows={10}
+                                className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-news-accent resize-none"
+                                placeholder={`Paste AI-generated tagged ${articleSubTab === 'all' ? 'article' : articleSubTab.replace('_', ' ')} content here…`} />
+                            {articleParseErrors.length > 0 && (
+                                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 space-y-1">
+                                    {articleParseErrors.map((e, i) => <p key={i} className="text-xs text-red-400">· {e}</p>)}
+                                </div>
+                            )}
+                            {articleParseSuccess && <p className="text-xs text-green-400">✓ Fields loaded from parsed input</p>}
+                            <button onClick={handleParseArticleInput} className="w-full bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm transition-colors">
+                                Parse & Load into Editor
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-12 gap-6 h-full">
 
                         {/* MAIN EDITOR AREA */}
                         <div className="col-span-12 lg:col-span-8 xl:col-span-9 space-y-6">
@@ -2058,7 +2742,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <Upload size={14} /> Create New
                                     </button>
 
-                                    {articles.map(article => {
+                                    {articles.filter((article: any) => {
+                                        if (articleSubTab === 'all') return true;
+                                        const t = article.article_type;
+                                        if (articleSubTab === 'use_case') return t === 'use_case' || t === 'use-case';
+                                        return t === articleSubTab;
+                                    }).map(article => {
                                         // Debug: log all article statuses
                                         console.log(`Article: "${article.title.substring(0, 30)}..." - Status: ${article.status || 'undefined'}`);
 
@@ -2124,10 +2813,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                             </div>
                         </div>
                     </div>
+                    </div>
                 )}
 
                 {/* TOOLS TAB */}
                 {cmsTab === 'tools' && (
+                    <>
                     <div className="grid grid-cols-12 gap-6">
                         <div className="col-span-12 lg:col-span-7 xl:col-span-8 space-y-4">
                             <div className="flex items-center justify-between mb-4">
@@ -2255,7 +2946,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <span className={`font-mono ${(toolForm.use_case_tags?.length || 0) > 5 ? 'text-red-400' : 'text-gray-500'}`}>{toolForm.use_case_tags?.length || 0}/5</span>
                                     </label>
                                     <div className={`flex flex-wrap gap-1.5 p-3 bg-black/40 border rounded-lg ${toolErrors.use_case_tags ? 'border-red-500/60' : 'border-white/10'}`}>
-                                        {['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity'].map(uc => {
+                                        {['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'].map(uc => {
                                             const ucArr: string[] = Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : [];
                                             const selected = ucArr.includes(uc);
                                             const atMax = ucArr.length >= 5 && !selected;
@@ -2275,7 +2966,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                                 {/* Key Features */}
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Key Features <span className="text-gray-600">(4–6, one per line, 3–10 words each)</span></label>
+                                    <label className="block text-xs text-gray-400 mb-1">Key Features <span className="text-gray-600">(4–6, one per line, 3–20 words each)</span></label>
                                     <textarea value={Array.isArray(toolForm.key_features) ? toolForm.key_features.join('\n') : toolForm.key_features || ''}
                                         onChange={e => { setToolForm((p: any) => ({ ...p, key_features: e.target.value })); setToolErrors((e: any) => ({ ...e, key_features: undefined })); }}
                                         rows={5} className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none font-mono ${toolErrors.key_features ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-news-accent'}`} placeholder={"Feature one\nFeature two\nFeature three"} />
@@ -2329,13 +3020,167 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                                 {/* Links */}
                                 <div className="grid grid-cols-2 gap-3">
-                                    {[['website_url', 'Website URL'], ['affiliate_url', 'Affiliate URL'], ['logo', 'Logo URL']].map(([key, label]) => (
+                                    {[['website_url', 'Website URL'], ['affiliate_url', 'Affiliate URL']].map(([key, label]) => (
                                         <div key={key}>
                                             <label className="block text-xs text-gray-400 mb-1">{label}</label>
                                             <input value={toolForm[key] || ''} onChange={e => setToolForm((p: any) => ({ ...p, [key]: e.target.value }))}
                                                 className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder={label} />
                                         </div>
                                     ))}
+                                </div>
+                                {/* Logo URL + Cloudinary upload */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Logo URL</label>
+                                    <div className="flex gap-2 items-center mb-2">
+                                        <input value={toolForm.logo || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setToolForm((p: any) => ({ ...p, logo: e.target.value }))}
+                                            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="https://..." />
+                                        {toolForm.logo && !toolForm.logo.includes('cloudinary') && (
+                                            <button type="button" onClick={async () => {
+                                                try {
+                                                    const res = await fetch('/api/tools/upload-logo', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ url: toolForm.logo }) });
+                                                    const data = await res.json();
+                                                    if (!res.ok) { alert('Upload failed: ' + data.error); return; }
+                                                    setToolForm((p: any) => ({ ...p, logo: data.url }));
+                                                } catch (e: any) { alert('Upload error: ' + e.message); }
+                                            }} className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg whitespace-nowrap flex-shrink-0">
+                                                Upload URL
+                                            </button>
+                                        )}
+                                        {toolForm.logo && (
+                                            <img src={toolForm.logo} alt="" className="h-8 w-8 object-contain rounded bg-white/5 flex-shrink-0" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = 'none'; }} />
+                                        )}
+                                    </div>
+                                    {/* File upload + Browse */}
+                                    <div className="flex gap-2">
+                                        <input ref={logoFileInputRef} type="file" accept="image/*" className="hidden" onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            try {
+                                                const fd = new FormData();
+                                                fd.append('file', file);
+                                                const res = await fetch('/api/tools/upload-logo-file', { method: 'POST', headers: { Authorization: getAuthHeaders().Authorization }, body: fd });
+                                                const data = await res.json();
+                                                if (!res.ok) { alert('Upload failed: ' + data.error); return; }
+                                                setToolForm((p: any) => ({ ...p, logo: data.url }));
+                                            } catch (err: any) { alert('Upload error: ' + err.message); }
+                                            e.target.value = '';
+                                        }} />
+                                        <button type="button" onClick={() => logoFileInputRef.current?.click()}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-gray-300 text-xs rounded-lg border border-white/10 transition-colors">
+                                            <Upload size={12} /> Upload file
+                                        </button>
+                                        <button type="button" onClick={async () => {
+                                            setAssetBrowserOpen(true);
+                                            if (assetBrowserAssets.length > 0) return;
+                                            setAssetBrowserLoading(true);
+                                            try {
+                                                const res = await fetch('/api/tools/cloudinary-assets', { headers: getAuthHeaders() });
+                                                const data = await res.json();
+                                                if (res.ok) setAssetBrowserAssets(data);
+                                                else alert('Failed to load assets: ' + data.error);
+                                            } catch (err: any) { alert('Error: ' + err.message); }
+                                            finally { setAssetBrowserLoading(false); }
+                                        }} className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-gray-300 text-xs rounded-lg border border-white/10 transition-colors">
+                                            <FileImage size={12} /> Browse Cloudinary
+                                        </button>
+                                    </div>
+                                    {/* Asset browser modal */}
+                                    {assetBrowserOpen && (
+                                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setAssetBrowserOpen(false)}>
+                                            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <p className="text-sm font-bold text-white">toolcurrent/assets</p>
+                                                    <button onClick={() => setAssetBrowserOpen(false)} className="text-gray-500 hover:text-white text-xs">✕ Close</button>
+                                                </div>
+                                                {assetBrowserLoading ? (
+                                                    <div className="flex items-center justify-center py-12 text-gray-500 text-sm gap-2"><Loader2 size={16} className="animate-spin" /> Loading…</div>
+                                                ) : assetBrowserAssets.length === 0 ? (
+                                                    <p className="text-gray-500 text-sm text-center py-8">No images found in toolcurrent/assets.</p>
+                                                ) : (
+                                                    <div className="overflow-y-auto grid grid-cols-4 sm:grid-cols-6 gap-2">
+                                                        {assetBrowserAssets.map((asset: { url: string; public_id: string }) => (
+                                                            <div key={asset.public_id} className="relative aspect-square group">
+                                                                <button type="button" onClick={() => { setToolForm((p: any) => ({ ...p, logo: asset.url })); setAssetBrowserOpen(false); }}
+                                                                    className="w-full h-full rounded-lg overflow-hidden bg-black/40 border border-white/10 hover:border-news-accent transition-colors p-1">
+                                                                    <img src={asset.url} alt="" className="w-full h-full object-contain group-hover:scale-110 transition-transform" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    title="Delete image"
+                                                                    onClick={async (e: React.MouseEvent) => {
+                                                                        e.stopPropagation();
+                                                                        if (!confirm(`Delete ${asset.public_id}?`)) return;
+                                                                        const res = await fetch('/api/tools/cloudinary-assets', { method: 'DELETE', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ public_id: asset.public_id }) });
+                                                                        if (res.ok) setAssetBrowserAssets((prev: { url: string; public_id: string }[]) => prev.filter((a: { url: string; public_id: string }) => a.public_id !== asset.public_id));
+                                                                        else alert('Delete failed');
+                                                                    }}
+                                                                    className="absolute top-0.5 right-0.5 bg-red-600/80 hover:bg-red-600 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                                >
+                                                                    <Trash2 size={10} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Rating Score */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Our Score <span className="text-gray-600">(0–10)</span></label>
+                                    <input
+                                        type="number" min="0" max="10" step="0.1"
+                                        value={toolForm.rating_score ?? 0}
+                                        onChange={e => setToolForm((p: any) => ({ ...p, rating_score: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent"
+                                        placeholder="e.g. 8.5"
+                                    />
+                                </div>
+
+                                {/* Screenshots */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-xs text-gray-400">Product Screenshots</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setToolForm((p: any) => ({ ...p, screenshots: [...(Array.isArray(p.screenshots) ? p.screenshots : []), { url: '', caption: '' }] }))}
+                                            className="text-xs text-news-accent hover:text-white flex items-center gap-1 transition-colors"
+                                        >
+                                            <Plus size={11} /> Add Screenshot
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {(Array.isArray(toolForm.screenshots) ? toolForm.screenshots : []).map((sc: any, i: number) => (
+                                            <div key={i} className="flex gap-2 items-start">
+                                                <div className="flex-1 grid grid-cols-2 gap-2">
+                                                    <input
+                                                        value={sc.url || ''}
+                                                        onChange={e => setToolForm((p: any) => { const s = [...p.screenshots]; s[i] = { ...s[i], url: e.target.value }; return { ...p, screenshots: s }; })}
+                                                        className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent"
+                                                        placeholder="Image URL"
+                                                    />
+                                                    <input
+                                                        value={sc.caption || ''}
+                                                        onChange={e => setToolForm((p: any) => { const s = [...p.screenshots]; s[i] = { ...s[i], caption: e.target.value }; return { ...p, screenshots: s }; })}
+                                                        className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent"
+                                                        placeholder="Caption (optional)"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setToolForm((p: any) => ({ ...p, screenshots: p.screenshots.filter((_: any, j: number) => j !== i) }))}
+                                                    className="p-2 text-gray-600 hover:text-red-400 transition-colors mt-0.5"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {(!toolForm.screenshots || toolForm.screenshots.length === 0) && (
+                                            <p className="text-xs text-gray-600">No screenshots added.</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Secondary Tags (SEO only — replaces legacy Category Tags) */}
@@ -2348,47 +3193,155 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                                 {/* Internal Linking Hooks */}
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Related Tools</label>
-                                        <div className="bg-black/40 border border-white/10 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
-                                            {tools.filter(t => (t.id || t._id) !== editingToolId).map((t: any) => {
-                                                const tid = t.id || t._id;
-                                                const sel = Array.isArray(toolForm.related_tools) && toolForm.related_tools.includes(tid);
-                                                return (
-                                                    <label key={tid} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 px-1 py-0.5 rounded">
-                                                        <input type="checkbox" checked={sel} onChange={() => setToolForm((p: any) => {
-                                                            const cur: string[] = Array.isArray(p.related_tools) ? p.related_tools : [];
-                                                            return { ...p, related_tools: sel ? cur.filter((x: string) => x !== tid) : [...cur, tid] };
-                                                        })} className="accent-news-accent" />
-                                                        <span className="text-xs text-gray-300 truncate">{t.name}</span>
-                                                    </label>
-                                                );
-                                            })}
-                                            {tools.length <= 1 && <p className="text-xs text-gray-600 px-1">No other tools yet.</p>}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Competitors</label>
-                                        <div className="bg-black/40 border border-white/10 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1">
-                                            {tools.filter(t => (t.id || t._id) !== editingToolId).map((t: any) => {
-                                                const tid = t.id || t._id;
-                                                const sel = Array.isArray(toolForm.competitors) && toolForm.competitors.includes(tid);
-                                                return (
-                                                    <label key={tid} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 px-1 py-0.5 rounded">
-                                                        <input type="checkbox" checked={sel} onChange={() => setToolForm((p: any) => {
-                                                            const cur: string[] = Array.isArray(p.competitors) ? p.competitors : [];
-                                                            return { ...p, competitors: sel ? cur.filter((x: string) => x !== tid) : [...cur, tid] };
-                                                        })} className="accent-red-400" />
-                                                        <span className="text-xs text-gray-300 truncate">{t.name}</span>
-                                                    </label>
-                                                );
-                                            })}
-                                            {tools.length <= 1 && <p className="text-xs text-gray-600 px-1">No other tools yet.</p>}
-                                        </div>
-                                    </div>
+                                    {([
+                                        { field: 'related_tools' as const, label: 'Related Tools', accent: 'accent-news-accent', search: relatedSearch, setSearch: setRelatedSearch, unresolved: unresolvedRelated, setUnresolved: setUnresolvedRelated },
+                                        { field: 'competitors' as const, label: 'Competitors', accent: 'accent-red-400', search: competitorSearch, setSearch: setCompetitorSearch, unresolved: unresolvedCompetitors, setUnresolved: setUnresolvedCompetitors },
+                                    ]).map(({ field, label, accent, search, setSearch, unresolved, setUnresolved }) => {
+                                        const otherTools = tools.filter((t: any) => (t.id || t._id) !== editingToolId);
+                                        const filtered = search.trim()
+                                            ? otherTools.filter((t: any) => t.name.toLowerCase().includes(search.toLowerCase()))
+                                            : otherTools;
+                                        const exactMatch = otherTools.some((t: any) => t.name.toLowerCase() === search.trim().toLowerCase());
+                                        return (
+                                            <div key={field}>
+                                                <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                                                {/* Selected chips */}
+                                                {(Array.isArray(toolForm[field]) && toolForm[field].length > 0) && (
+                                                    <div className="flex flex-wrap gap-1 mb-2">
+                                                        {toolForm[field].map((tid: string) => {
+                                                            const t = tools.find((t: any) => (t.id || t._id) === tid);
+                                                            return t ? (
+                                                                <span key={tid} className="flex items-center gap-1 bg-white/10 text-xs text-white rounded-full px-2 py-0.5">
+                                                                    {t.name}
+                                                                    <button type="button" onClick={() => setToolForm((p: any) => ({ ...p, [field]: p[field].filter((x: string) => x !== tid) }))} className="text-gray-500 hover:text-red-400 leading-none">×</button>
+                                                                </span>
+                                                            ) : null;
+                                                        })}
+                                                    </div>
+                                                )}
+                                                {/* Search input */}
+                                                <input
+                                                    value={search}
+                                                    onChange={e => setSearch(e.target.value)}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-white/30 mb-1"
+                                                    placeholder="Search or create…"
+                                                />
+                                                {/* Suggestion list */}
+                                                <div className="bg-black/40 border border-white/10 rounded-lg p-2 max-h-32 overflow-y-auto space-y-0.5">
+                                                    {filtered.map((t: any) => {
+                                                        const tid = t.id || t._id;
+                                                        const sel = Array.isArray(toolForm[field]) && toolForm[field].includes(tid);
+                                                        return (
+                                                            <label key={tid} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 px-1 py-0.5 rounded">
+                                                                <input type="checkbox" checked={sel} className={accent} onChange={() => setToolForm((p: any) => {
+                                                                    const cur: string[] = Array.isArray(p[field]) ? p[field] : [];
+                                                                    return { ...p, [field]: sel ? cur.filter((x: string) => x !== tid) : [...cur, tid] };
+                                                                })} />
+                                                                <span className="text-xs text-gray-300 truncate">{t.name}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                    {search.trim() && !exactMatch && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={stubLoading === field}
+                                                            onClick={() => handleCreateStub(search.trim(), field, () => setSearch(''))}
+                                                            className="w-full text-left px-1 py-0.5 text-xs text-news-accent hover:text-white disabled:opacity-40 transition-colors"
+                                                        >
+                                                            {stubLoading === field ? 'Creating…' : `+ Create stub "${search.trim()}"`}
+                                                        </button>
+                                                    )}
+                                                    {filtered.length === 0 && !search.trim() && <p className="text-xs text-gray-600 px-1">No other tools yet.</p>}
+                                                </div>
+                                                {/* Unresolved names from parse */}
+                                                {unresolved.length > 0 && (
+                                                    <div className="mt-2 space-y-1">
+                                                        <p className="text-[10px] text-yellow-500/60 uppercase tracking-widest font-bold">Not yet in CMS</p>
+                                                        {unresolved.map((name: string) => (
+                                                            <div key={name} className="flex items-center justify-between bg-yellow-500/5 border border-yellow-500/20 rounded px-2 py-1">
+                                                                <span className="text-xs text-yellow-400/80 truncate">{name}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={stubLoading === field}
+                                                                    onClick={() => handleCreateStub(name, field, () => setUnresolved(prev => prev.filter((n: string) => n !== name)))}
+                                                                    className="text-[10px] text-news-accent hover:text-white disabled:opacity-40 transition-colors ml-2 flex-shrink-0"
+                                                                >
+                                                                    {stubLoading === field ? '…' : 'Create & link'}
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Editorial Content */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Model Version</label>
+                                    <input value={toolForm.model_version || ''} onChange={e => setToolForm((p: any) => ({ ...p, model_version: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="e.g. Grok 4 (Grok 4.1 Fast for API)" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Best For <span className="text-gray-600">(one per line)</span></label>
+                                    <textarea value={toolForm.best_for || ''} onChange={e => setToolForm((p: any) => ({ ...p, best_for: e.target.value }))}
+                                        rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Developers running high-volume API workloads\nResearchers who need live X data"} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Not Ideal For <span className="text-gray-600">(one per line)</span></label>
+                                    <textarea value={toolForm.not_ideal_for || ''} onChange={e => setToolForm((p: any) => ({ ...p, not_ideal_for: e.target.value }))}
+                                        rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Enterprise teams in regulated industries\nTeams needing deep third-party integrations"} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Alternative Selection <span className="text-gray-600">(when to choose alternatives)</span></label>
+                                    <textarea value={toolForm.alternative_selection || ''} onChange={e => setToolForm((p: any) => ({ ...p, alternative_selection: e.target.value }))}
+                                        rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder="Choose ChatGPT when you need 500+ integrations…" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Use Case Breakdown <span className="text-gray-600">(UseCase: explanation, one per line)</span></label>
+                                    <textarea value={toolForm.use_case_breakdown || ''} onChange={e => setToolForm((p: any) => ({ ...p, use_case_breakdown: e.target.value }))}
+                                        rows={5} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Research: Real-time X search gives it a live data advantage...\nCoding: Scores 75% on SWE-bench..."} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Limitations <span className="text-gray-600">(comma-separated tags)</span></label>
+                                    <input value={toolForm.limitations || ''} onChange={e => setToolForm((p: any) => ({ ...p, limitations: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="bias_risk, reliability_risk, ecosystem_weakness" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Rating Breakdown <span className="text-gray-600">(Dimension: score, one per line)</span></label>
+                                    <textarea value={toolForm.rating_breakdown || ''} onChange={e => setToolForm((p: any) => ({ ...p, rating_breakdown: e.target.value }))}
+                                        rows={5} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Value: 8.5\nFeatures: 7.5\nReliability: 6.5\nEase of Use: 7.0\nEcosystem: 6.0"} />
+                                </div>
+
+                                {/* Cross-linking */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Review Article Slug <span className="text-gray-600">(links tool page → full review)</span></label>
+                                    <input value={toolForm.review_slug || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setToolForm((p: any) => ({ ...p, review_slug: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="grammarly-review-2026" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Competitor Differentiators <span className="text-gray-600">(ToolName: one-line differentiator, one per line)</span></label>
+                                    <textarea value={toolForm.competitor_differentiator || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setToolForm((p: any) => ({ ...p, competitor_differentiator: e.target.value }))}
+                                        rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"ProWritingAid: lower price with fiction-focused reports\nQuillBot: paraphrasing modes, no inline overlay"} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Related Tool Notes <span className="text-gray-600">(ToolName: complementary role note, one per line)</span></label>
+                                    <textarea value={toolForm.related_tool_note || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setToolForm((p: any) => ({ ...p, related_tool_note: e.target.value }))}
+                                        rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Notion: draft writing before Grammarly corrects inline\nJasper: generates content, Grammarly polishes it"} />
                                 </div>
 
                                 {/* SEO */}
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Primary Keyword</label>
+                                    <input value={toolForm.primary_keyword || ''} onChange={e => setToolForm((p: any) => ({ ...p, primary_keyword: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="Grok AI review 2026" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Alternative Keywords <span className="text-gray-600">(comma-separated)</span></label>
+                                    <input value={toolForm.alternative_keywords || ''} onChange={e => setToolForm((p: any) => ({ ...p, alternative_keywords: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="Grok vs ChatGPT 2026, xAI Grok pricing" />
+                                </div>
                                 <div>
                                     <label className="block text-xs text-gray-400 mb-1">Meta Title</label>
                                     <input value={toolForm.meta_title || ''} onChange={e => setToolForm((p: any) => ({ ...p, meta_title: e.target.value }))}
@@ -2400,22 +3353,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         rows={2} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder="140–160 char search-intent description" />
                                 </div>
 
-                                {Object.keys(toolErrors).length > 0 && (
-                                    <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 space-y-1">
-                                        <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Fix {Object.keys(toolErrors).length} validation error{Object.keys(toolErrors).length > 1 ? 's' : ''} before saving</p>
-                                        {Object.values(toolErrors).map((msg, i) => <p key={i} className="text-xs text-red-300">· {msg as string}</p>)}
+                                {/* Linked Content — auto-discovered from other content types */}
+                                {editingToolId && (
+                                    <div className="border border-white/5 rounded-xl p-4 space-y-3 bg-black/20">
+                                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                            <Layers size={12} /> Linked Content {linkedContentLoading && <span className="text-gray-600">(loading…)</span>}
+                                        </p>
+                                        {linkedContent && (() => {
+                                            const sections: { label: string; items: any[]; href: (i: any) => string; emptyMsg: string }[] = [
+                                                { label: 'Reviews',       items: linkedContent.reviews,     href: (i: any) => `/articles/${i.slug}`,     emptyMsg: 'No review article tagged with this tool.' },
+                                                { label: 'Comparisons',   items: linkedContent.comparisons, href: (i: any) => `/compare/${i.slug}`,      emptyMsg: 'No comparisons include this tool.' },
+                                                { label: 'Guides',        items: linkedContent.guides,      href: (i: any) => `/articles/${i.slug}`,     emptyMsg: 'No guide articles tagged with this tool.' },
+                                                { label: 'Stacks',        items: linkedContent.stacks,      href: (i: any) => `/stacks/${i.slug}`,       emptyMsg: 'No stacks feature this tool.' },
+                                                { label: 'News',          items: linkedContent.news,        href: (i: any) => `/articles/${i.slug}`,     emptyMsg: 'No news articles tagged with this tool.' },
+                                                { label: 'Best-of',       items: linkedContent.bestOf,      href: (i: any) => `/articles/${i.slug}`,     emptyMsg: 'No best-of rankings include this tool.' },
+                                                { label: 'Use Cases',     items: linkedContent.useCases,    href: (i: any) => `/use-cases/${i.slug}`,    emptyMsg: 'No use cases link to this tool.' },
+                                            ];
+                                            return sections.map(sec => (
+                                                <div key={sec.label}>
+                                                    <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">{sec.label}</p>
+                                                    {sec.items.length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {sec.items.map((item: any) => (
+                                                                <a key={item.id || item._id || item.slug} href={sec.href(item)} target="_blank" rel="noopener noreferrer"
+                                                                    className="flex items-center gap-2 text-xs text-news-accent hover:underline truncate">
+                                                                    <ExternalLink size={10} className="flex-shrink-0" />{item.title || item.name}
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[10px] text-yellow-500/50 bg-yellow-500/5 border border-yellow-500/15 rounded px-2 py-1">{sec.emptyMsg}</p>
+                                                    )}
+                                                </div>
+                                            ));
+                                        })()}
                                     </div>
                                 )}
-                                <div className="flex gap-3 pt-2">
-                                    <button onClick={handleSaveTool} disabled={!toolForm.name || !toolForm.category_primary || toolLoading} className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
-                                        {toolLoading ? 'Saving…' : editingToolId ? 'Update Tool' : 'Add Tool'}
-                                    </button>
-                                    {editingToolId && (
-                                        <button onClick={() => { setEditingToolId(null); setToolForm({ ...EMPTY_TOOL_FORM }); setToolErrors({}); }} className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">
-                                            Cancel
-                                        </button>
-                                    )}
-                                </div>
+
+                                {/* bottom padding so content isn't hidden behind sticky bar */}
+                                <div className="pb-20" />
                             </div>
                         </div>
                         <div className="col-span-12 lg:col-span-5 xl:col-span-4">
@@ -2428,7 +3404,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                             <p className="text-xs text-gray-500">{t.pricing_model} · {t.slug}</p>
                                         </div>
                                         <div className="flex gap-2 flex-shrink-0 ml-3">
-                                            <button onClick={() => { setEditingToolId(t.id || t._id); setToolErrors({}); setToolForm({ ...EMPTY_TOOL_FORM, ...t, secondary_tags: Array.isArray(t.secondary_tags) ? t.secondary_tags.join(', ') : (t.secondary_tags || ''), integrations: Array.isArray(t.integrations) ? t.integrations.join(', ') : (t.integrations || ''), key_features: Array.isArray(t.key_features) ? t.key_features.join('\n') : (t.key_features || ''), pros: Array.isArray(t.pros) ? t.pros.join('\n') : (t.pros || ''), cons: Array.isArray(t.cons) ? t.cons.join('\n') : (t.cons || ''), supported_platforms: Array.isArray(t.supported_platforms) ? t.supported_platforms : [], use_case_tags: Array.isArray(t.use_case_tags) ? t.use_case_tags : [], related_tools: Array.isArray(t.related_tools) ? t.related_tools : [], competitors: Array.isArray(t.competitors) ? t.competitors : [], data_confidence: t.data_confidence || 'ai_generated' }); }} className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"><Edit size={14} /></button>
+                                            <button onClick={() => {
+                                                setEditingToolId(t.id || t._id); setToolErrors({});
+                                                const formVals = buildToolFormValues(t);
+                                                // Auto-resolve unresolved names that now exist in the DB
+                                                const rawUnresolvedRel: string[] = Array.isArray(t._unresolved_related) ? t._unresolved_related : [];
+                                                const rawUnresolvedComp: string[] = Array.isArray(t._unresolved_competitors) ? t._unresolved_competitors : [];
+                                                const resolvedRelIds: string[] = Array.isArray(formVals.related_tools) ? [...formVals.related_tools] : [];
+                                                const resolvedCompIds: string[] = Array.isArray(formVals.competitors) ? [...formVals.competitors] : [];
+                                                const stillUnresolvedRel: string[] = [];
+                                                const stillUnresolvedComp: string[] = [];
+                                                rawUnresolvedRel.forEach((name: string) => {
+                                                    const match = tools.find((x: any) => x.name.toLowerCase() === name.toLowerCase());
+                                                    if (match && !resolvedRelIds.includes(match.id || match._id)) resolvedRelIds.push(match.id || match._id);
+                                                    else if (!match) stillUnresolvedRel.push(name);
+                                                });
+                                                rawUnresolvedComp.forEach((name: string) => {
+                                                    const match = tools.find((x: any) => x.name.toLowerCase() === name.toLowerCase());
+                                                    if (match && !resolvedCompIds.includes(match.id || match._id)) resolvedCompIds.push(match.id || match._id);
+                                                    else if (!match) stillUnresolvedComp.push(name);
+                                                });
+                                                setToolForm({ ...formVals, related_tools: resolvedRelIds, competitors: resolvedCompIds });
+                                                setUnresolvedRelated(stillUnresolvedRel);
+                                                setUnresolvedCompetitors(stillUnresolvedComp);
+                                                }} className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"><Edit size={14} /></button>
                                             <button onClick={() => handleDeleteTool(t.id || t._id)} className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                         </div>
                                     </div>
@@ -2437,58 +3436,331 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Sticky save bar */}
+                    <div className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur border-t border-white/10 px-6 py-3 flex items-center gap-3">
+                        <button onClick={handleSaveTool} disabled={!toolForm.name || toolLoading}
+                            className="bg-news-accent hover:bg-news-accentHover text-black font-bold px-6 py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
+                            {toolLoading ? 'Saving…' : editingToolId ? 'Update Tool' : 'Add Tool'}
+                        </button>
+                        {editingToolId && (
+                            <button onClick={() => { setEditingToolId(null); setToolForm({ ...EMPTY_TOOL_FORM }); setToolErrors({}); }}
+                                className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700 transition-colors">
+                                Cancel
+                            </button>
+                        )}
+                        {toolErrors._success && (
+                            <span className="text-xs font-bold text-green-400">{toolErrors._success}</span>
+                        )}
+                        {!toolErrors._success && Object.keys(toolErrors).length > 0 && (
+                            <span className="text-xs font-bold text-red-400">
+                                Fix {Object.keys(toolErrors).length} error{Object.keys(toolErrors).length > 1 ? 's' : ''} before saving
+                            </span>
+                        )}
+                    </div>
+                    </>
                 )}
 
                 {/* COMPARISONS TAB */}
                 {cmsTab === 'comparisons' && (
                     <div className="grid grid-cols-12 gap-6">
                         <div className="col-span-12 lg:col-span-7 xl:col-span-8 space-y-4">
-                            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Comparisons Database</h2>
-                            <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 space-y-4">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-accent mb-2">{editingCompId ? 'Editing Comparison' : 'New Comparison'}</h3>
-                                {[['title', 'Title (e.g. ChatGPT vs Claude)'], ['slug', 'Slug (e.g. chatgpt-vs-claude)'], ['verdict', 'Verdict / Summary']].map(([key, label]) => (
-                                    <div key={key}>
-                                        <label className="block text-xs text-gray-400 mb-1">{label}</label>
-                                        <input
-                                            value={compForm[key] || ''}
-                                            onChange={e => setCompForm((p: any) => ({ ...p, [key]: e.target.value }))}
-                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent"
-                                            placeholder={label}
-                                        />
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Comparisons Database</h2>
+                                <button onClick={() => setShowCompParser(p => !p)} className="flex items-center gap-2 px-3 py-1.5 bg-news-accent/10 border border-news-accent/30 text-news-accent rounded-lg text-xs font-bold hover:bg-news-accent/20 transition-colors">
+                                    <Code2 size={12} /> {showCompParser ? 'Hide Parser' : 'Paste Tagged Input'}
+                                </button>
+                            </div>
+
+                            {/* Parser Panel */}
+                            {showCompParser && (
+                                <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 space-y-3">
+                                    <p className="text-xs text-gray-400 font-mono">Paste <span className="text-news-accent">{'<<<FIELD>>>…<<<END_FIELD>>>'}</span> tagged input — config fields only, content is generated</p>
+                                    <div className="text-[10px] text-gray-600 font-mono space-y-0.5">
+                                        {['TITLE','SLUG','TOOL_A','TOOL_B','TOOL_C (optional)','PRIMARY_USE_CASE (optional)','META_TITLE','META_DESCRIPTION'].map(tag => (
+                                            <div key={tag}>{'<<<'}{tag}{'>>>'} … {'<<<END_'}{tag.replace(' (optional)','').replace(/\s/g,'_')}{'>>>'}</div>
+                                        ))}
                                     </div>
-                                ))}
+                                    <textarea value={compParseInput} onChange={e => setCompParseInput(e.target.value)} rows={8}
+                                        className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-news-accent resize-none"
+                                        placeholder="Paste tagged comparison config here…" />
+                                    {compParseErrors.length > 0 && (
+                                        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 space-y-1">
+                                            {compParseErrors.map((e, i) => <p key={i} className="text-xs text-red-400">· {e}</p>)}
+                                        </div>
+                                    )}
+                                    {compParseSuccess && <p className="text-xs text-green-400">✓ Fields loaded</p>}
+                                    <button onClick={handleParseComparisonInput} className="w-full bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm transition-colors">Parse Input</button>
+                                </div>
+                            )}
+
+                            {/* Config Form */}
+                            <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-news-accent">{editingCompId ? 'Editing Comparison' : 'New Comparison'}</h3>
+                                    <span className="text-[10px] text-gray-600 uppercase tracking-widest">Configure → Generate → Publish</span>
+                                </div>
+
+                                {/* Stale warning */}
+                                {editingCompId && comparisons.find(c => (c.id || c._id) === editingCompId)?.needs_update && (
+                                    <div className="flex items-center gap-2 bg-amber-950/30 border border-amber-700/40 rounded-lg px-3 py-2">
+                                        <span className="text-amber-400 text-xs font-bold">⚠ Stale</span>
+                                        <span className="text-xs text-amber-300/80">A linked tool was updated. Regenerate to reflect latest data.</span>
+                                    </div>
+                                )}
+
                                 <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Title <span className="text-gray-600">(auto-filled on generate)</span></label>
+                                        <input value={compForm.title || ''} onChange={e => setCompForm((p: any) => ({ ...p, title: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="ChatGPT vs Claude" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Slug <span className="text-gray-600">(auto-filled on generate)</span></label>
+                                        <input value={compForm.slug || ''} onChange={e => setCompForm((p: any) => ({ ...p, slug: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-news-accent" placeholder="chatgpt-vs-claude" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-3">
                                     {(['tool_a', 'tool_b', 'tool_c'] as const).map((key, i) => (
                                         <div key={key}>
-                                            <label className="block text-xs text-gray-400 mb-1">Tool {String.fromCharCode(65 + i)} Slug {i < 2 ? '*' : '(optional)'}</label>
-                                            <select value={compForm[key] || ''} onChange={e => setCompForm((p: any) => ({ ...p, [key]: e.target.value }))} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
-                                                <option value="">— Select tool —</option>
-                                                {tools.map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
+                                            <label className="block text-xs text-gray-400 mb-1">Tool {String.fromCharCode(65 + i)} {i < 2 ? '*' : '(optional)'}</label>
+                                            <select value={compForm[key] || ''} onChange={e => {
+                                                setCompForm((p: any) => ({ ...p, [key]: e.target.value }));
+                                                setCompPreview(null);
+                                            }}
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                                <option value="">— Select —</option>
+                                                {tools.map((t: any) => <option key={t.slug} value={t.slug}>{t.name}</option>)}
                                             </select>
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex gap-3 pt-2">
-                                    <button onClick={handleSaveComparison} disabled={!compForm.title || !compForm.tool_a || !compForm.tool_b || compLoading} className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
-                                        {compLoading ? 'Saving…' : editingCompId ? 'Update Comparison' : 'Add Comparison'}
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Comparison Type</label>
+                                        <select value={compForm.comparison_type || '1v1'} onChange={e => setCompForm((p: any) => ({ ...p, comparison_type: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                            <option value="1v1">1v1</option>
+                                            <option value="multi">Multi (3 tools)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Generation Mode</label>
+                                        <select value={compForm.generation_mode || 'dynamic'} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCompForm((p: any) => ({ ...p, generation_mode: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                            <option value="dynamic">Dynamic (live tool data)</option>
+                                            <option value="cached">Cached (manual regen only)</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-xs text-gray-400 mb-1">Use Cases <span className="text-gray-600">(select all that apply — boosts scoring)</span></label>
+                                        <div className="flex flex-wrap gap-1.5 p-3 bg-black/40 border border-white/10 rounded-lg">
+                                            {COMP_USE_CASES.map(uc => {
+                                                const ucArr: string[] = Array.isArray(compForm.primary_use_cases) ? compForm.primary_use_cases : [];
+                                                const selected = ucArr.includes(uc);
+                                                return (
+                                                    <button key={uc} type="button" onClick={() => setCompForm((p: any) => {
+                                                        const cur: string[] = Array.isArray(p.primary_use_cases) ? p.primary_use_cases : [];
+                                                        return { ...p, primary_use_cases: selected ? cur.filter((x: string) => x !== uc) : [...cur, uc] };
+                                                    })}
+                                                    className={`text-xs px-2 py-1 rounded-full border transition-colors ${selected ? 'bg-news-accent/20 text-news-accent border-news-accent/40' : 'bg-zinc-800 text-gray-400 border-white/10 hover:border-white/20'}`}>
+                                                        {uc}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Meta Title</label>
+                                        <input value={compForm.meta_title || ''} onChange={e => setCompForm((p: any) => ({ ...p, meta_title: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Status</label>
+                                        <select value={compForm.status || 'published'} onChange={e => setCompForm((p: any) => ({ ...p, status: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                            <option value="published">Published</option>
+                                            <option value="draft">Draft</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Meta Description</label>
+                                    <textarea value={compForm.meta_description || ''} onChange={e => setCompForm((p: any) => ({ ...p, meta_description: e.target.value }))} rows={2}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" />
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-3 pt-2 flex-wrap">
+                                    <button
+                                        onClick={handleGenerateComparisonPreview}
+                                        disabled={!compForm.tool_a || !compForm.tool_b || compPreviewLoading}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-sm disabled:opacity-40 transition-colors">
+                                        <Sparkles size={13} /> {compPreviewLoading ? 'Generating…' : compPreview ? 'Regenerate' : 'Generate Comparison'}
                                     </button>
+                                    <button onClick={handleSaveComparison} disabled={!compForm.title || !compForm.tool_a || !compForm.tool_b || compLoading}
+                                        className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
+                                        {compLoading ? 'Saving…' : editingCompId ? 'Update' : 'Save Comparison'}
+                                    </button>
+                                    {compForm.slug && (
+                                        <button onClick={() => window.open(`/comparisons/${compForm.slug}`, '_blank')}
+                                            className="px-3 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700 flex items-center gap-1.5">
+                                            <ExternalLink size={12} />
+                                        </button>
+                                    )}
                                     {editingCompId && (
-                                        <button onClick={() => { setEditingCompId(null); setCompForm({ title: '', slug: '', tool_a: '', tool_b: '', verdict: '' }); }} className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">Cancel</button>
+                                        <button onClick={() => { setEditingCompId(null); setCompForm({ ...EMPTY_COMP_FORM }); setCompParseErrors([]); setCompPreview(null); }}
+                                            className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">Cancel</button>
                                     )}
                                 </div>
+                                {compPreviewError && <p className="text-xs text-red-400">⚠ {compPreviewError}</p>}
                             </div>
+
+                            {/* Generated Preview Panel */}
+                            {compPreview && (
+                                <div className="bg-zinc-900 border border-blue-500/20 rounded-2xl p-6 space-y-5">
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles size={13} className="text-blue-400" />
+                                        <h3 className="text-xs font-bold uppercase tracking-widest text-blue-400">Generated Preview</h3>
+                                        <span className="text-[10px] text-gray-600 ml-auto">read-only — save to publish</span>
+                                    </div>
+
+                                    {/* Quick Verdict */}
+                                    <div className="bg-black/30 rounded-xl p-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Quick Verdict</p>
+                                        <p className="text-sm text-white font-medium">{compPreview.quick_verdict.summary}</p>
+                                        <div className="flex gap-3 mt-3 flex-wrap">
+                                            {Object.entries(compPreview.quick_verdict.scores_display).map(([slug, score]) => {
+                                                const t = tools.find((x: any) => x.slug === slug);
+                                                const isWinner = slug === compPreview.quick_verdict.winner_slug;
+                                                return (
+                                                    <div key={slug} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold ${isWinner ? 'bg-green-900/30 border-green-600/40 text-green-300' : 'bg-zinc-800 border-white/10 text-gray-300'}`}>
+                                                        {isWinner && <span className="text-green-400">★</span>}
+                                                        {t?.name || slug}: {score}/10
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Comparison Table */}
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Comparison Table</p>
+                                        <div className="overflow-x-auto rounded-xl border border-white/5">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="bg-zinc-800">
+                                                        <th className="text-left px-3 py-2 text-gray-400 font-bold">Feature</th>
+                                                        {[compForm.tool_a, compForm.tool_b, compForm.tool_c].filter(Boolean).map((slug: string) => (
+                                                            <th key={slug} className="text-left px-3 py-2 text-gray-300 font-bold">{tools.find((x: any) => x.slug === slug)?.name || slug}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {compPreview.table.map((row, i) => (
+                                                        <tr key={i} className="border-t border-white/5">
+                                                            <td className="px-3 py-2 text-gray-400">{row.feature}</td>
+                                                            {[compForm.tool_a, compForm.tool_b, compForm.tool_c].filter(Boolean).map((slug: string) => (
+                                                                <td key={slug} className={`px-3 py-2 ${row.winner_slug === slug ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
+                                                                    {row.values[slug] || '—'}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Strengths / Weaknesses */}
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Strengths & Weaknesses</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[compForm.tool_a, compForm.tool_b, compForm.tool_c].filter(Boolean).map((slug: string) => {
+                                                const sw = compPreview.strengths_weaknesses[slug];
+                                                const t = tools.find((x: any) => x.slug === slug);
+                                                return (
+                                                    <div key={slug} className="bg-black/30 rounded-xl p-3 space-y-2">
+                                                        <p className="text-xs font-bold text-white">{t?.name || slug}</p>
+                                                        <div>
+                                                            <p className="text-[10px] text-green-400 font-bold mb-1">Strengths</p>
+                                                            {(sw?.strengths || []).slice(0, 3).map((s, i) => <p key={i} className="text-[10px] text-gray-400">+ {s}</p>)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] text-red-400 font-bold mb-1">Weaknesses</p>
+                                                            {(sw?.weaknesses || []).slice(0, 3).map((s, i) => <p key={i} className="text-[10px] text-gray-400">− {s}</p>)}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Decision */}
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Decision Block</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[compForm.tool_a, compForm.tool_b, compForm.tool_c].filter(Boolean).map((slug: string) => {
+                                                const reasons = compPreview.decision.choose[slug] || [];
+                                                const t = tools.find((x: any) => x.slug === slug);
+                                                return (
+                                                    <div key={slug} className="bg-black/30 rounded-xl p-3">
+                                                        <p className="text-xs font-bold text-white mb-2">Choose {t?.name || slug} if…</p>
+                                                        {reasons.slice(0, 3).map((r, i) => <p key={i} className="text-[10px] text-gray-400">· {r}</p>)}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
+                        {/* List sidebar */}
                         <div className="col-span-12 lg:col-span-5 xl:col-span-4">
                             <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">{comparisons.length} Comparisons</h3>
-                            <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-[80vh] overflow-y-auto pr-1">
                                 {comparisons.map(c => (
-                                    <div key={c.id || c._id} className="flex items-center justify-between bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 hover:border-white/10 transition-colors">
+                                    <div key={c.id || c._id} className={`flex items-center justify-between rounded-xl px-4 py-3 hover:border-white/10 transition-colors border ${c.needs_update ? 'bg-amber-950/20 border-amber-700/30' : 'bg-zinc-900 border-white/5'}`}>
                                         <div className="min-w-0">
-                                            <p className="font-bold text-sm text-white truncate">{c.title}</p>
-                                            <p className="text-xs text-gray-500">{c.slug}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold text-sm text-white truncate">{c.title}</p>
+                                                {c.needs_update && (
+                                                    <span className="text-xs bg-amber-900/60 text-amber-400 border border-amber-700/50 px-1.5 py-0.5 rounded font-bold flex-shrink-0">Stale</span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                {c.slug}
+                                                {c.generation_mode === 'cached' && <span className="ml-1 text-zinc-600">· cached</span>}
+                                                {c.last_generated && <span className="ml-1 text-zinc-600">· gen {new Date(c.last_generated).toLocaleDateString()}</span>}
+                                            </p>
                                         </div>
                                         <div className="flex gap-2 flex-shrink-0 ml-3">
-                                            <button onClick={() => { setEditingCompId(c.id || c._id); setCompForm({ title: c.title, slug: c.slug, tool_a: c.tool_a?.slug || c.tool_a, tool_b: c.tool_b?.slug || c.tool_b, tool_c: c.tool_c?.slug || c.tool_c || '', verdict: c.verdict || '' }); }} className="p-1.5 text-gray-500 hover:text-blue-400"><Edit size={14} /></button>
+                                            <button onClick={() => {
+                                                setEditingCompId(c.id || c._id);
+                                                setCompPreview(null);
+                                                setCompForm({
+                                                    ...EMPTY_COMP_FORM,
+                                                    title:            c.title            || '',
+                                                    slug:             c.slug             || '',
+                                                    tool_a:           c.tool_a_slug      || c.tool_a || '',
+                                                    tool_b:           c.tool_b_slug      || c.tool_b || '',
+                                                    tool_c:           c.tool_c_slug      || c.tool_c || '',
+                                                    comparison_type:  c.comparison_type  || '1v1',
+                                                    primary_use_cases: Array.isArray(c.primary_use_cases) ? c.primary_use_cases : (c.primary_use_case ? [c.primary_use_case] : []),
+                                                    generation_mode:  c.generation_mode  || 'dynamic',
+                                                    meta_title:       c.meta_title       || '',
+                                                    meta_description: c.meta_description || '',
+                                                    status:           c.status           || 'published',
+                                                });
+                                                setCompParseErrors([]);
+                                            }} className="p-1.5 text-gray-500 hover:text-blue-400"><Edit size={14} /></button>
                                             <button onClick={() => handleDeleteComparison(c.id || c._id)} className="p-1.5 text-gray-500 hover:text-red-400"><Trash2 size={14} /></button>
                                         </div>
                                     </div>
@@ -2500,6 +3772,223 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 )}
 
             </div>
+
+            {/* STACKS TAB */}
+            {cmsTab === 'stacks' && (
+                <div className="grid grid-cols-12 gap-6">
+                    {/* Editor */}
+                    <div className="col-span-12 lg:col-span-7 xl:col-span-8 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Stacks Database</h2>
+                            <button onClick={() => setShowStackParser(p => !p)} className="flex items-center gap-2 px-3 py-1.5 bg-news-accent/10 border border-news-accent/30 text-news-accent rounded-lg text-xs font-bold hover:bg-news-accent/20 transition-colors">
+                                <Code2 size={12} /> {showStackParser ? 'Hide Parser' : 'Paste Tagged Input'}
+                            </button>
+                        </div>
+
+                        {/* Parser Panel */}
+                        {showStackParser && (
+                            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 space-y-3">
+                                <p className="text-xs text-gray-400 font-mono">Paste <span className="text-news-accent">{'<<<FIELD>>>…<<<END_FIELD>>>'}</span> tagged stack input</p>
+                                <div className="text-[10px] text-gray-600 font-mono space-y-0.5">
+                                    {['NAME','SLUG','WORKFLOW_CATEGORY','SHORT_DESCRIPTION','FULL_DESCRIPTION','TOOLS','WORKFLOW_STEPS','WHY_IT_WORKS','WHO_ITS_FOR','NOT_FOR','SETUP_TIME_HOURS','HERO_IMAGE','META_TITLE','META_DESCRIPTION'].map(tag => (
+                                        <div key={tag} className="text-gray-600">{'<<<'}{tag}{'>>>'} … {'<<<END_'}{tag}{'>>>'}</div>
+                                    ))}
+                                </div>
+                                <textarea value={stackParseInput} onChange={e => setStackParseInput(e.target.value)} rows={10}
+                                    className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-news-accent resize-none"
+                                    placeholder="Paste AI-generated tagged stack content here…" />
+                                {stackParseErrors.length > 0 && (
+                                    <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 space-y-1">
+                                        {stackParseErrors.map((e, i) => <p key={i} className="text-xs text-red-400">· {e}</p>)}
+                                    </div>
+                                )}
+                                {stackParseSuccess && <p className="text-xs text-green-400">✓ Fields loaded from parsed input</p>}
+                                <button onClick={handleParseStackInput} className="w-full bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm transition-colors">Parse Input</button>
+                            </div>
+                        )}
+
+                        {/* Form */}
+                        <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 space-y-4">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-accent">{editingStackId ? 'Editing Stack' : 'New Stack'}</h3>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Name *</label>
+                                    <input value={stackForm.name || ''} onChange={e => setStackForm((p: any) => ({ ...p, name: e.target.value, slug: p.slug || e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="The Startup Content Stack" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Slug *</label>
+                                    <input value={stackForm.slug || ''} onChange={e => setStackForm((p: any) => ({ ...p, slug: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-news-accent" placeholder="startup-content-stack" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Workflow Category *</label>
+                                <select value={stackForm.workflow_category || ''} onChange={e => setStackForm((p: any) => ({ ...p, workflow_category: e.target.value }))}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                    <option value="">— Select category —</option>
+                                    {['Marketing','Development','Startup Operations','Content Creation','Sales','Design','Data & Analytics','Customer Support','Education','Finance','HR & Recruiting','Research','Productivity','Other'].map(c => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Short Description * <span className="text-gray-600">(10–40 words)</span></label>
+                                <textarea value={stackForm.short_description || ''} onChange={e => setStackForm((p: any) => ({ ...p, short_description: e.target.value }))} rows={2}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Full Description</label>
+                                <textarea value={stackForm.full_description || ''} onChange={e => setStackForm((p: any) => ({ ...p, full_description: e.target.value }))} rows={4}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Tools <span className="text-gray-600">(one slug per line)</span></label>
+                                <textarea value={stackForm.tools || ''} onChange={e => setStackForm((p: any) => ({ ...p, tools: e.target.value }))} rows={4}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-news-accent resize-none"
+                                    placeholder={"notion\nslack\nlinear"} />
+                                {/* Unresolved tool slugs check */}
+                                {stackForm.tools && (() => {
+                                    const slugs = stackForm.tools.split('\n').map((s: string) => s.trim()).filter(Boolean);
+                                    const unresolved = slugs.filter((s: string) => !tools.some((t: any) => t.slug === s || t.id === s));
+                                    return unresolved.length > 0 ? (
+                                        <div className="mt-1 space-y-1">
+                                            <p className="text-[10px] text-yellow-500/60 uppercase tracking-widest font-bold">Not yet in CMS</p>
+                                            {unresolved.map((s: string) => (
+                                                <div key={s} className="flex items-center justify-between bg-yellow-500/5 border border-yellow-500/20 rounded px-2 py-1">
+                                                    <span className="text-xs text-yellow-400/80 font-mono">{s}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : null;
+                                })()}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Workflow Steps <span className="text-gray-600">(blank line between steps; first line = title; Tools: slug1, slug2)</span></label>
+                                <textarea value={stackForm.workflow_steps || ''} onChange={e => setStackForm((p: any) => ({ ...p, workflow_steps: e.target.value }))} rows={8}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-news-accent resize-none"
+                                    placeholder={"Step 1: Write & plan content\nDraft outlines and long-form posts using AI\nTools: notion, chatgpt\n\nStep 2: Publish & distribute\nSchedule posts across channels\nTools: buffer, zapier"} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Why It Works <span className="text-gray-600">(one per line)</span></label>
+                                    <textarea value={stackForm.why_it_works || ''} onChange={e => setStackForm((p: any) => ({ ...p, why_it_works: e.target.value }))} rows={3}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Who It's For <span className="text-gray-600">(one per line)</span></label>
+                                    <textarea value={stackForm.who_its_for || ''} onChange={e => setStackForm((p: any) => ({ ...p, who_its_for: e.target.value }))} rows={3}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Not For <span className="text-gray-600">(one per line)</span></label>
+                                    <textarea value={stackForm.not_for || ''} onChange={e => setStackForm((p: any) => ({ ...p, not_for: e.target.value }))} rows={2}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Setup Time (hours)</label>
+                                    <input type="number" value={stackForm.setup_time_hours || ''} onChange={e => setStackForm((p: any) => ({ ...p, setup_time_hours: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="2" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Hero Image URL</label>
+                                <input value={stackForm.hero_image || ''} onChange={e => setStackForm((p: any) => ({ ...p, hero_image: e.target.value }))}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-news-accent" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">Status</label>
+                                    <select value={stackForm.status || 'Published'} onChange={e => setStackForm((p: any) => ({ ...p, status: e.target.value }))}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                        <option value="Published">Published</option>
+                                        <option value="Draft">Draft</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2 pt-5">
+                                    <input type="checkbox" id="stack-featured" checked={!!stackForm.featured} onChange={e => setStackForm((p: any) => ({ ...p, featured: e.target.checked }))} className="accent-news-accent" />
+                                    <label htmlFor="stack-featured" className="text-xs text-gray-400">Featured</label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Meta Title</label>
+                                <input value={stackForm.meta_title || ''} onChange={e => setStackForm((p: any) => ({ ...p, meta_title: e.target.value }))}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Meta Description</label>
+                                <textarea value={stackForm.meta_description || ''} onChange={e => setStackForm((p: any) => ({ ...p, meta_description: e.target.value }))} rows={2}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" />
+                            </div>
+
+                            {stackParseErrors.length > 0 && (
+                                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 space-y-1">
+                                    {stackParseErrors.map((e, i) => <p key={i} className="text-xs text-red-400">· {e}</p>)}
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={handleSaveStack} disabled={!stackForm.name || !stackForm.slug || !stackForm.workflow_category || stackLoading}
+                                    className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
+                                    {stackLoading ? 'Saving…' : editingStackId ? 'Update Stack' : 'Add Stack'}
+                                </button>
+                                {editingStackId && (
+                                    <button onClick={() => { setEditingStackId(null); setStackForm({ ...EMPTY_STACK_FORM }); setStackParseErrors([]); }}
+                                        className="px-4 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700">Cancel</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stack list sidebar */}
+                    <div className="col-span-12 lg:col-span-5 xl:col-span-4">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">{stacks.length} Stacks</h3>
+                        <div className="space-y-2 max-h-[80vh] overflow-y-auto pr-1">
+                            {stacks.map((s: any) => (
+                                <div key={s.id || s._id} className="flex items-center justify-between bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 hover:border-white/10 transition-colors">
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-sm text-white truncate">{s.name}</p>
+                                        <p className="text-xs text-gray-500">{s.workflow_category} · {s.slug}</p>
+                                        <p className="text-xs text-gray-600">{Array.isArray(s.tools) ? s.tools.length : 0} tools</p>
+                                    </div>
+                                    <div className="flex gap-2 flex-shrink-0 ml-3">
+                                        <button onClick={() => {
+                                            setEditingStackId(s.id || s._id);
+                                            setStackForm({
+                                                ...EMPTY_STACK_FORM, ...s,
+                                                tools: Array.isArray(s.tools) ? s.tools.join('\n') : (s.tools || ''),
+                                                why_it_works: Array.isArray(s.why_it_works) ? s.why_it_works.join('\n') : (s.why_it_works || ''),
+                                                who_its_for:  Array.isArray(s.who_its_for)  ? s.who_its_for.join('\n')  : (s.who_its_for  || ''),
+                                                not_for:      Array.isArray(s.not_for)      ? s.not_for.join('\n')      : (s.not_for      || ''),
+                                                workflow_steps: Array.isArray(s.workflow_steps)
+                                                    ? s.workflow_steps.map((ws: any) => `${ws.title}\n${ws.description || ''}${ws.tool_slugs?.length ? '\nTools: ' + ws.tool_slugs.join(', ') : ''}`).join('\n\n')
+                                                    : (s.workflow_steps || ''),
+                                                setup_time_hours: s.setup_time_hours?.toString() || '',
+                                            });
+                                            setStackParseErrors([]);
+                                        }} className="p-1.5 text-gray-500 hover:text-blue-400"><Edit size={14} /></button>
+                                        <button onClick={() => handleDeleteStack(s.id || s._id)} className="p-1.5 text-gray-500 hover:text-red-400"><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                            {stacks.length === 0 && <p className="text-gray-600 text-sm text-center py-8">No stacks yet.</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* CATEGORIES TAB */}
             {cmsTab === 'categories' && (

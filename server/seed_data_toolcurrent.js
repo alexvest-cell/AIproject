@@ -15,7 +15,8 @@ const generateBody = (title, type) => [
 
 // ─── TOOLS ────────────────────────────────────────────────────────────────────
 
-export const seedTools = [
+export const seedTools = [];
+const _oldSeedTools = [
     {
         id: 'tool-chatgpt',
         name: 'ChatGPT',
@@ -369,7 +370,8 @@ export const seedTools = [
 
 // ─── COMPARISONS ───────────────────────────────────────────────────────────────
 
-export const seedComparisons = [
+export const seedComparisons = [];
+const _oldSeedComparisons = [
     {
         id: 'cmp-chatgpt-vs-claude',
         title: 'ChatGPT vs Claude: Which AI Should You Use in 2026?',

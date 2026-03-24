@@ -13,7 +13,7 @@ const CATEGORY_PRIMARY_VALUES = [
 
 const USE_CASE_VALUES = [
     'Content Creation', 'Research', 'Coding', 'Automation', 'Lead Generation',
-    'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity',
+    'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity', 'Marketing',
 ];
 
 const PLATFORM_VALUES = ['Web', 'iOS', 'Android', 'API', 'Desktop'];

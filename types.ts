@@ -140,6 +140,12 @@ export interface Tool {
   screenshots?: { url: string; caption: string }[];
   meta_title?: string;
   meta_description?: string;
+  // Editorial fields (used by compareEngine)
+  best_for?: string[];
+  not_ideal_for?: string[];
+  limitations?: string[];
+  use_case_breakdown?: Record<string, string>;
+  review_slug?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -158,13 +164,23 @@ export interface Comparison {
   tool_a_slug: string;
   tool_b_slug: string;
   tool_c_slug?: string;
+  // Data-driven fields
+  comparison_type?: '1v1' | 'multi';
+  primary_use_case?: string;
+  primary_use_cases?: string[];
+  needs_update?: boolean;
+  generation_mode?: 'dynamic' | 'cached';
+  last_generated?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  generated_output?: Record<string, any> | null;
   // Enriched by API
   tool_a?: Tool;
   tool_b?: Tool;
   tool_c?: Tool;
   alternativeComparisons?: Comparison[];
   relatedRankings?: Article[];
-  comparison_table: ComparisonTableRow[];
+  // Deprecated stored content (kept for fallback)
+  comparison_table?: ComparisonTableRow[];
   verdict?: string;
   body?: string;
   choose_tool_a?: string[];

@@ -13,9 +13,8 @@ const useCaseSchema = new mongoose.Schema({
   updatedAt:        { type: Date, default: Date.now }
 });
 
-useCaseSchema.pre('save', function (next) {
+useCaseSchema.pre('save', async function () {
   this.updatedAt = new Date();
-  next();
 });
 
 export default mongoose.model('UseCase', useCaseSchema);

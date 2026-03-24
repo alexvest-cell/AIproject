@@ -35,6 +35,15 @@ const comparisonSchema = new mongoose.Schema({
     meta_title: String,
     meta_description: String,
 
+    // Data-driven comparison fields
+    comparison_type: { type: String, enum: ['1v1', 'multi'], default: '1v1' },
+    primary_use_case: String,        // legacy single value — kept for migration
+    primary_use_cases: [String],     // multi-select use cases for scoring context
+    needs_update: { type: Boolean, default: false },  // true when a linked tool is updated
+    generation_mode: { type: String, enum: ['dynamic', 'cached'], default: 'dynamic' },
+    last_generated: { type: Date, default: null },    // when compareEngine last ran
+    generated_output: { type: mongoose.Schema.Types.Mixed, default: null }, // stored generateComparison() result
+
     // Status
     status: { type: String, enum: ['draft', 'published'], default: 'published' },
     publish_date: { type: Date, default: Date.now },
@@ -44,9 +53,8 @@ const comparisonSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
-comparisonSchema.pre('save', function (next) {
+comparisonSchema.pre('save', async function () {
     this.updatedAt = new Date();
-    next();
 });
 
 export default mongoose.model('Comparison', comparisonSchema);

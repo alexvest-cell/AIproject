@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import express from 'express';
@@ -11,6 +12,7 @@ import mongoose from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 import streamifier from 'streamifier';
 import { seedArticles as stackBriefArticles, seedTools, seedComparisons, seedStacks } from './seed_data_toolcurrent.js';
+import { generateComparison as serverGenerateComparison } from './compareEngine.js';
 import dns from 'dns';
 import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
@@ -178,36 +180,43 @@ async function seedDatabase() {
       console.log('Article seeding complete.');
     }
 
-    // 2. Seed Tools
-    console.log('Syncing ToolCurrent tools...');
+    // 2. Seed Tools — $setOnInsert ensures CMS edits are NEVER overwritten (same pattern as comparisons/stacks)
+    // Only inserts a tool document if one with that slug doesn't already exist.
+    console.log('Syncing seed tools...');
+    let seededCount = 0;
     for (const tool of seedTools) {
-      await Tool.findOneAndUpdate(
+      const result = await Tool.findOneAndUpdate(
         { slug: tool.slug },
-        tool,
-        { upsert: true, new: true }
+        { $setOnInsert: tool },
+        { upsert: true, new: false }
       );
+      if (!result) seededCount++; // result is null when a new doc was inserted
     }
-    console.log('Tool sync complete.');
+    if (seededCount > 0) {
+      console.log(`Tool seed: inserted ${seededCount} new tools.`);
+    } else {
+      console.log(`Tools already in DB, skipping seed (all ${seedTools.length} slugs exist).`);
+    }
 
-    // 3. Seed Comparisons
+    // 3. Seed Comparisons — $setOnInsert ensures CMS edits are NEVER overwritten
     console.log('Syncing ToolCurrent comparisons...');
     for (const comparison of seedComparisons) {
       await Comparison.findOneAndUpdate(
         { slug: comparison.slug },
-        comparison,
+        { $setOnInsert: comparison },  // only writes if document does not already exist
         { upsert: true, new: true }
       );
     }
     console.log('Comparison sync complete.');
 
-    // 4. Seed Stacks
+    // 4. Seed Stacks — $setOnInsert ensures CMS edits are NEVER overwritten
     const stackCount = await Stack.countDocuments();
     if (stackCount < seedStacks.length) {
       console.log('Updating database with ToolCurrent stacks (missing stacks detected)...');
       for (const stack of seedStacks) {
         await Stack.findOneAndUpdate(
           { slug: stack.slug },
-          stack,
+          { $setOnInsert: stack },  // only writes if document does not already exist
           { upsert: true, new: true }
         );
       }
@@ -243,13 +252,10 @@ const streamUpload = (buffer, resourceType = 'image') => {
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme123'; // Set in .env.local
 const ADMIN_TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || 'your-secret-key-change-this'; // Set in .env.local
 
-// Simple token generation (in production, use JWT)
-function generateToken() {
-  return Buffer.from(`${Date.now()}-${Math.random()}`).toString('base64');
+// Deterministic token: SHA-256 of password — survives server restarts, no server-side state needed
+function getAdminToken() {
+  return crypto.createHash('sha256').update(ADMIN_PASSWORD + ':toolcurrent-admin').digest('hex');
 }
-
-// Store valid tokens (in-memory, resets on server restart)
-const validTokens = new Set();
 
 // Global request logger to debug routing issues
 app.use((req, res, next) => {
@@ -260,45 +266,31 @@ app.use((req, res, next) => {
 // Middleware to verify admin token
 function requireAuth(req, res, next) {
   const token = req.headers['authorization']?.replace('Bearer ', '');
-
-  if (!token || !validTokens.has(token)) {
+  if (!token || token !== getAdminToken()) {
     return res.status(401).json({ error: 'Unauthorized - Invalid or missing token' });
   }
-
   next();
 }
 
 // Login endpoint
 app.post('/api/auth/login', (req, res) => {
   const { password } = req.body;
-
   if (password === ADMIN_PASSWORD) {
-    const token = generateToken();
-    validTokens.add(token);
-
-    // Token expires in 24 hours
-    setTimeout(() => validTokens.delete(token), 24 * 60 * 60 * 1000);
-
-    res.json({ token, message: 'Login successful' });
+    res.json({ token: getAdminToken(), message: 'Login successful' });
   } else {
     res.status(401).json({ error: 'Invalid password' });
   }
 });
 
-// Logout endpoint
+// Logout endpoint (client-side only — token is deterministic so server has no state to clear)
 app.post('/api/auth/logout', (req, res) => {
-  const token = req.headers['authorization']?.replace('Bearer ', '');
-  if (token) {
-    validTokens.delete(token);
-  }
   res.json({ message: 'Logged out successfully' });
 });
 
-// Verify token endpoint (check if still logged in)
+// Verify token endpoint
 app.get('/api/auth/verify', (req, res) => {
   const token = req.headers['authorization']?.replace('Bearer ', '');
-
-  if (token && validTokens.has(token)) {
+  if (token && token === getAdminToken()) {
     res.json({ valid: true });
   } else {
     res.status(401).json({ valid: false });
@@ -307,12 +299,84 @@ app.get('/api/auth/verify', (req, res) => {
 
 // --- ROUTES ---
 
+// Upload a local file directly to Cloudinary under toolcurrent/assets
+app.post('/api/tools/upload-logo-file', requireAuth, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file provided' });
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'toolcurrent/assets', resource_type: 'image' },
+        (error, r) => { if (r) resolve(r); else reject(error); }
+      );
+      streamifier.createReadStream(req.file.buffer).pipe(stream);
+    });
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error('upload-logo-file error:', err);
+    res.status(500).json({ error: err.message || 'Upload failed' });
+  }
+});
+
+// Delete an image from Cloudinary by public_id
+app.delete('/api/tools/cloudinary-assets', requireAuth, async (req, res) => {
+  try {
+    const { public_id } = req.body;
+    if (!public_id || typeof public_id !== 'string') return res.status(400).json({ error: 'public_id is required' });
+    const result = await cloudinary.uploader.destroy(public_id, { resource_type: 'image' });
+    res.json({ result });
+  } catch (err) {
+    console.error('cloudinary-assets delete error:', err);
+    res.status(500).json({ error: err.message || 'Delete failed' });
+  }
+});
+
+// List images in toolcurrent/assets Cloudinary folder
+app.get('/api/tools/cloudinary-assets', requireAuth, async (req, res) => {
+  try {
+    const result = await cloudinary.api.resources({
+      type: 'upload',
+      prefix: 'toolcurrent/assets',
+      max_results: 100,
+      resource_type: 'image'
+    });
+    res.json(result.resources.map(r => ({ url: r.secure_url, public_id: r.public_id })));
+  } catch (err) {
+    console.error('cloudinary-assets error:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch assets' });
+  }
+});
+
+// Fetch a remote image URL and upload it to Cloudinary under toolcurrent/assets
+app.post('/api/tools/upload-logo', requireAuth, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url is required' });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!response.ok) return res.status(400).json({ error: `Failed to fetch image: ${response.status} ${response.statusText}` });
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'toolcurrent/assets', resource_type: 'image' },
+        (error, r) => { if (r) resolve(r); else reject(error); }
+      );
+      streamifier.createReadStream(buffer).pipe(stream);
+    });
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error('upload-logo error:', err);
+    res.status(500).json({ error: err.message || 'Upload failed' });
+  }
+});
+
 // GET Articles (public - no auth required)
 app.get('/api/articles', async (req, res) => {
   try {
     const { includeUnpublished } = req.query;
     const token = req.headers['authorization']?.replace('Bearer ', '');
-    const isAdmin = token && validTokens.has(token);
+    const isAdmin = token && token === getAdminToken();
 
     // If no DB, return local file storage or seed data
     if (mongoose.connection.readyState !== 1) {
@@ -520,6 +584,7 @@ app.get('/api/comparisons', async (req, res) => {
       ...c,
       tool_a: toolMap[c.tool_a_slug] || null,
       tool_b: toolMap[c.tool_b_slug] || null,
+      tool_c: c.tool_c_slug ? (toolMap[c.tool_c_slug] || null) : null,
     }));
     res.json(enriched);
   } catch (err) {
@@ -535,18 +600,74 @@ app.get('/api/comparisons/:slug', async (req, res) => {
       const cmp = seedComparisons.find(c => c.slug === req.params.slug);
       return cmp ? res.json(cmp) : res.status(404).json({ error: 'Not found' });
     }
-    const comparison = await Comparison.findOne({ slug: req.params.slug }).lean();
+    let comparison = await Comparison.findOne({ slug: req.params.slug }).lean();
     if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
-    const tools = await Tool.find({ slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } }).lean();
+
+    const slugs = [comparison.tool_a_slug, comparison.tool_b_slug, comparison.tool_c_slug].filter(Boolean);
+    const tools = await Tool.find({ slug: { $in: slugs } }).lean();
     const toolMap = Object.fromEntries(tools.map(t => [t.slug, t]));
+
+    // Dynamic + stale: regenerate server-side, store, return fresh output
+    if (comparison.generation_mode !== 'cached' && comparison.needs_update) {
+      try {
+        const toolList = slugs.map(s => toolMap[s]).filter(Boolean);
+        if (toolList.length >= 2) {
+          const ctx = {
+            primary_use_case: (comparison.primary_use_cases || [])[0] || comparison.primary_use_case,
+            comparison_type: comparison.comparison_type || (toolList.length === 3 ? 'multi' : '1v1'),
+          };
+          const fresh = serverGenerateComparison(toolList, ctx);
+          await Comparison.findOneAndUpdate(
+            { slug: req.params.slug },
+            { $set: { generated_output: fresh, needs_update: false, last_generated: new Date(), updatedAt: new Date() } }
+          );
+          comparison = { ...comparison, generated_output: fresh, needs_update: false, last_generated: new Date() };
+          console.log(`GET /api/comparisons/${req.params.slug}: regenerated (dynamic+stale)`);
+        }
+      } catch (genErr) {
+        // Generation failed — log and continue with existing stored output (graceful degradation)
+        console.error(`GET /api/comparisons/${req.params.slug}: server generation failed, using stored output:`, genErr.message);
+      }
+    }
+
     res.json({
       ...comparison,
       tool_a: toolMap[comparison.tool_a_slug] || null,
       tool_b: toolMap[comparison.tool_b_slug] || null,
+      tool_c: comparison.tool_c_slug ? (toolMap[comparison.tool_c_slug] || null) : null,
     });
   } catch (err) {
     console.error(`GET /api/comparisons/${req.params.slug} error:`, err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST store generated output (auth required — CMS only)
+app.post('/api/comparisons/:slug/store-output', requireAuth, async (req, res) => {
+  try {
+    const { generated_output } = req.body;
+
+    // Validate payload structure
+    if (!generated_output || typeof generated_output !== 'object' || Array.isArray(generated_output)) {
+      return res.status(400).json({ error: 'generated_output must be a non-null object' });
+    }
+    const REQUIRED_FIELDS = ['quick_verdict', 'table', 'decision', 'header', 'features', 'pricing'];
+    const missing = REQUIRED_FIELDS.filter(f => !(f in generated_output));
+    if (missing.length > 0) {
+      return res.status(400).json({ error: `generated_output missing required fields: ${missing.join(', ')}` });
+    }
+
+    const comparison = await Comparison.findOne({ slug: req.params.slug });
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
+
+    await Comparison.findOneAndUpdate(
+      { slug: req.params.slug },
+      { $set: { generated_output, needs_update: false, last_generated: new Date(), updatedAt: new Date() } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`POST /api/comparisons/${req.params.slug}/store-output error:`, error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -1574,14 +1695,18 @@ app.get('/api/tools/:slug', async (req, res) => {
       status: 'published'
     });
 
-    // Fetch articles referencing this tool OR covering the tool's categories
-    const relatedArticles = await Article.find({
-      $or: [
-        { primary_tools: req.params.slug },
-        { category: { $in: tool.category_tags || [] } }
-      ],
+    // Fetch articles referencing this tool, grouped by type
+    const allRelatedArticles = await Article.find({
+      primary_tools: req.params.slug,
       status: 'published'
-    }).sort({ createdAt: -1 }).limit(10);
+    }).sort({ createdAt: -1 }).lean();
+
+    const relatedArticles = allRelatedArticles; // keep legacy field
+    const reviews   = allRelatedArticles.filter(a => a.article_type === 'review');
+    const guides    = allRelatedArticles.filter(a => a.article_type === 'guide');
+    const news      = allRelatedArticles.filter(a => a.article_type === 'news');
+    const bestOf    = allRelatedArticles.filter(a => ['best-of', 'ranking'].includes(a.article_type));
+    const useCaseArticles = allRelatedArticles.filter(a => a.article_type === 'use_case');
 
     // Fetch stacks that feature this tool
     const stacks = await Stack.find({
@@ -1589,7 +1714,13 @@ app.get('/api/tools/:slug', async (req, res) => {
       status: 'Published'
     }).lean();
 
-    res.json({ tool, comparisons, relatedArticles, stacks });
+    // Fetch use cases that list this tool
+    const useCases = await UseCase.find({
+      related_tools: req.params.slug,
+      status: 'active'
+    }).lean();
+
+    res.json({ tool, comparisons, relatedArticles, reviews, guides, news, bestOf, useCaseArticles, stacks, useCases });
   } catch (error) {
     console.error('GET /api/tools/:slug error:', error);
     res.status(500).json({ error: 'Failed to fetch tool' });
@@ -1680,21 +1811,64 @@ app.post('/api/tools', requireAuth, async (req, res) => {
     const tool = await Tool.create(data);
     res.status(201).json(tool);
   } catch (error) {
-    console.error('POST /api/tools error:', error);
+    console.log('POST /api/tools ERROR:', error.message);
+    console.log('Stack:', error.stack);
     if (error.code === 11000) return res.status(400).json({ error: 'Tool with this slug already exists.' });
-    res.status(500).json({ error: 'Failed to create tool: ' + error.message });
+    res.status(500).json({ error: 'Failed to create tool: ' + error.message + ' | ' + error.stack?.split('\n').slice(0,3).join(' >> ') });
   }
 });
+
+// DEBUG: show all docs for a given slug (to detect duplicates) — no auth for easy browser access
 
 // PUT update tool (auth required)
 app.put('/api/tools/:id', requireAuth, async (req, res) => {
   try {
-    const updates = { ...req.body, updatedAt: new Date() };
-    const tool = await Tool.findOneAndUpdate({ id: req.params.id }, updates, { new: true });
-    if (!tool) return res.status(404).json({ error: 'Tool not found' });
-    res.json(tool);
+    // Read the current document for snapshot (change detection) only
+    const existing = await Tool.findOne({ id: req.params.id }).lean();
+    if (!existing) { console.log('PUT tool: NOT FOUND id=', req.params.id); return res.status(404).json({ error: 'Tool not found' }); }
+
+    const { _id, __v, createdAt, ...rawBody } = req.body;
+    // Strip empty/blank values — never overwrite real DB content with blank form fields
+    const safeBody = Object.fromEntries(
+      Object.entries(rawBody).filter(([k, v]) => {
+        if (v === null || v === undefined || v === '') return false;
+        if (Array.isArray(v) && v.length === 0 && k !== 'screenshots') return false;
+        if (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0) return false;
+        return true;
+      })
+    );
+
+    // Use findOneAndUpdate + $set — atomic, bypasses Mongoose change-tracking,
+    // and returns the actual post-write DB state (new: true)
+    const updated = await Tool.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: { ...safeBody, updatedAt: new Date() } },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!updated) return res.status(404).json({ error: 'Tool not found after update' });
+    console.log('PUT tool saved, best_for:', JSON.stringify(updated.best_for?.slice?.(0,1)));
+
+    // Mark related comparisons stale only when fields that affect generateComparison() output change
+    const INVALIDATING_FIELDS = ['key_features', 'pricing_model', 'starting_price', 'rating_score', 'limitations', 'use_case_tags', 'best_for'];
+    const hasRelevantChanges = INVALIDATING_FIELDS.some(field => {
+      const oldVal = JSON.stringify(existing[field] ?? null);
+      const newVal = JSON.stringify(safeBody[field] ?? existing[field] ?? null);
+      return oldVal !== newVal;
+    });
+    if (hasRelevantChanges) {
+      await Comparison.updateMany(
+        { $or: [{ tool_a_slug: updated.slug }, { tool_b_slug: updated.slug }, { tool_c_slug: updated.slug }] },
+        { $set: { needs_update: true } }
+      );
+      console.log('PUT tool: marked related comparisons stale (relevant fields changed)');
+    } else {
+      console.log('PUT tool: no invalidating changes — comparisons not marked stale');
+    }
+
+    res.json(updated);
   } catch (error) {
-    console.error('PUT /api/tools/:id error:', error);
+    console.log('PUT /api/tools/:id error:', error.message, error.stack?.split('\n').slice(0,3).join(' | '));
     res.status(500).json({ error: 'Failed to update tool: ' + error.message });
   }
 });
@@ -1806,6 +1980,45 @@ app.get('/api/stacks/:slug', async (req, res) => {
   }
 });
 
+
+// POST create stack (auth required)
+app.post('/api/stacks', requireAuth, async (req, res) => {
+  try {
+    const { name, slug, ...rest } = req.body;
+    if (!name || !slug) return res.status(400).json({ error: 'name and slug are required' });
+    const existing = await Stack.findOne({ $or: [{ slug }, { id: slug }] });
+    if (existing) return res.status(409).json({ error: `Stack slug "${slug}" already exists` });
+    const stack = new Stack({ ...rest, id: slug, name, slug });
+    await stack.save();
+    res.status(201).json(stack);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// PUT update stack (auth required)
+app.put('/api/stacks/:id', requireAuth, async (req, res) => {
+  try {
+    const stack = await Stack.findOne({ $or: [{ id: req.params.id }, { slug: req.params.id }] });
+    if (!stack) return res.status(404).json({ error: 'Stack not found' });
+    Object.assign(stack, req.body);
+    await stack.save();
+    res.json(stack);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE stack (auth required)
+app.delete('/api/stacks/:id', requireAuth, async (req, res) => {
+  try {
+    const stack = await Stack.findOneAndDelete({ $or: [{ id: req.params.id }, { slug: req.params.id }] });
+    if (!stack) return res.status(404).json({ error: 'Stack not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ==========================================
 // --- CATEGORIES API ---
@@ -2113,6 +2326,24 @@ app.delete('/api/comparisons/:id', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('DELETE /api/comparisons/:id error:', error);
     res.status(500).json({ error: 'Failed to delete comparison: ' + error.message });
+  }
+});
+
+// POST /api/comparisons/generate — mark comparison as up-to-date after client regenerates
+app.post('/api/comparisons/generate', requireAuth, async (req, res) => {
+  try {
+    const { slug } = req.body;
+    if (!slug) return res.status(400).json({ error: 'slug is required' });
+    const comparison = await Comparison.findOneAndUpdate(
+      { slug },
+      { $set: { needs_update: false, last_generated: new Date(), updatedAt: new Date() } },
+      { new: true }
+    );
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
+    res.json({ success: true, comparison });
+  } catch (error) {
+    console.error('POST /api/comparisons/generate error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

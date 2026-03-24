@@ -22,8 +22,15 @@ const stackSchema = new mongoose.Schema({
         tool_slugs: [String] // Which tools are used in this step
     }],
 
+    // Editorial enrichment (optional — used by StackPage)
+    why_it_works: [String],         // Key advantages / reasoning behind tool selection
+    who_its_for: [String],          // Ideal user profiles
+    not_for: [String],              // Non-ideal user profiles
+    setup_time_hours: Number,       // Estimated setup time in hours
+
     // Status
     status: { type: String, enum: ['Draft', 'Published'], default: 'Published' },
+    featured: { type: Boolean, default: false },
 
     // SEO
     meta_title: String,
@@ -35,9 +42,8 @@ const stackSchema = new mongoose.Schema({
 });
 
 // Auto-update updatedAt
-stackSchema.pre('save', function (next) {
+stackSchema.pre('save', async function () {
     this.updatedAt = new Date();
-    next();
 });
 
 export default mongoose.model('Stack', stackSchema);

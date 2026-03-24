@@ -204,7 +204,7 @@ export const ToolSummaryCard = ({ slug }: { slug: string }) => {
             <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
                 {/* Logo */}
                 {tool.logo ? (
-                    <img src={tool.logo} alt={tool.name} className="w-20 h-20 rounded-2xl bg-surface-base p-2 border border-border-divider shadow-inner object-contain flex-shrink-0" />
+                    <img src={tool.logo} alt={tool.name} className="w-20 h-20 rounded-2xl bg-white p-2 border border-border-divider shadow-inner object-contain flex-shrink-0" />
                 ) : (
                     <div className="w-20 h-20 rounded-2xl bg-surface-base flex items-center justify-center border border-border-divider text-3xl font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                 )}
@@ -319,7 +319,7 @@ export const TopAlternativesModule = ({ tool, alternatives }: { tool: Tool; alte
                     <a key={alt.id} href={`/tools/${alt.slug}`} className="group bg-surface-card border border-border-subtle rounded-2xl p-5 hover:border-news-accent/50 transition-all shadow-elevation flex flex-col h-full">
                         <div className="flex items-start justify-between mb-4">
                             {alt.logo ? (
-                                <img src={alt.logo} alt={alt.name} className="w-12 h-12 rounded-xl bg-surface-base p-2 border border-border-divider object-contain" />
+                                <img src={alt.logo} alt={alt.name} className="w-12 h-12 rounded-xl bg-white p-2 border border-border-divider object-contain" />
                             ) : (
                                 <div className="w-12 h-12 rounded-xl bg-surface-base flex items-center justify-center text-xl font-bold text-news-muted border border-border-divider">
                                     {alt.name[0]}
@@ -542,7 +542,7 @@ export const ToolSectionBlock: React.FC<{ slug: string; rank: number }> = ({ slu
         <div id={slug} className="scroll-mt-32 my-12 bg-surface-card border border-border-subtle rounded-3xl overflow-hidden shadow-elevation group">
             <div className="p-6 md:p-8 border-b border-border-divider flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
                 <div className="flex items-center gap-4 md:gap-6">
-                    <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-surface-base rounded-2xl border border-border-divider p-2 flex items-center justify-center shadow-inner relative">
+                    <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl border border-border-divider p-2 flex items-center justify-center shadow-inner relative">
                         {tool.logo ? <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain" /> : <span className="text-2xl font-bold text-news-muted">{tool.name[0]}</span>}
                         <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-news-accent text-white flex items-center justify-center font-bold text-sm shadow-lg border-2 border-surface-card">
                             #{rank}
@@ -607,7 +607,7 @@ export const SideBySideHeader = ({ slugA, slugB }: { slugA: string; slugB: strin
     const ToolCard = ({ tool }: { tool: Tool }) => (
         <div className="flex-1 flex flex-col items-center text-center p-6 md:p-8 bg-surface-card rounded-2xl border border-border-subtle shadow-elevation">
             {tool.logo ? (
-                <img src={tool.logo} alt={tool.name} className="w-16 h-16 rounded-xl bg-surface-base p-1.5 border border-border-divider object-contain mb-4" />
+                <img src={tool.logo} alt={tool.name} className="w-16 h-16 rounded-xl bg-white p-1.5 border border-border-divider object-contain mb-4" />
             ) : (
                 <div className="w-16 h-16 rounded-xl bg-surface-base flex items-center justify-center text-2xl font-black text-news-muted mb-4">{tool.name[0]}</div>
             )}
@@ -765,7 +765,7 @@ export const RelatedToolsModule: React.FC<{ toolSlugs: string[] }> = ({ toolSlug
                 {tools.map(tool => (
                     <div key={tool.id} className="bg-surface-card border border-border-subtle rounded-2xl p-5 hover:border-news-accent/30 transition-all group flex items-center gap-4">
                         {tool.logo ? (
-                            <img src={tool.logo} alt="" className="w-12 h-12 rounded-lg bg-surface-base p-1.5 border border-border-divider object-contain" />
+                            <img src={tool.logo} alt="" className="w-12 h-12 rounded-lg bg-white p-1.5 border border-border-divider object-contain" />
                         ) : (
                             <div className="w-12 h-12 rounded-lg bg-surface-base flex items-center justify-center text-xl font-black text-news-muted">{tool.name[0]}</div>
                         )}
@@ -841,7 +841,7 @@ export const ToolsUsedSummary: React.FC<{ toolSlugs: string[] }> = ({ toolSlugs 
                 {tools.map(tool => (
                     <a key={tool.id} href={`/tools/${tool.slug}`} className="flex items-center gap-2 px-3 py-2 bg-surface-card border border-border-subtle rounded-xl hover:border-news-accent/50 transition-all group">
                         {tool.logo ? (
-                            <img src={tool.logo} alt="" className="w-5 h-5 rounded object-contain bg-surface-base p-0.5" />
+                            <img src={tool.logo} alt="" className="w-5 h-5 rounded object-contain bg-white p-0.5" />
                         ) : (
                             <div className="w-5 h-5 rounded bg-surface-base flex items-center justify-center text-[10px] font-black">{tool.name[0]}</div>
                         )}

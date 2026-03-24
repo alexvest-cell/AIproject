@@ -503,7 +503,7 @@ const AIToolsHub: React.FC<{
                                     className="group flex-shrink-0 flex items-center gap-3 px-4 py-3.5 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/40 hover:bg-surface-hover transition-all min-w-[200px]"
                                 >
                                     {tool.logo
-                                        ? <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0"><img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" /></div>
+                                        ? <div className="w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" /></div>
                                         : <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-sm font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                                     }
                                     <div className="text-left min-w-0">
@@ -532,7 +532,7 @@ const AIToolsHub: React.FC<{
                                 className="group flex items-center gap-3 p-4 bg-surface-card border border-border-subtle rounded-xl hover:border-news-accent/30 hover:bg-surface-hover transition-all text-left"
                             >
                                 {tool.logo
-                                    ? <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0"><img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" /></div>
+                                    ? <div className="w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" /></div>
                                     : <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-base font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                                 }
                                 <div className="flex-1 min-w-0">
@@ -693,7 +693,7 @@ const AIToolsHub: React.FC<{
                                     {/* Logo + Name */}
                                     <button onClick={() => onToolClick(tool.slug)} className="flex items-center gap-3 mb-3 text-left w-full">
                                         {tool.logo
-                                            ? <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0"><img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" /></div>
+                                            ? <div className="w-10 h-10 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" /></div>
                                             : <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-base font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                                         }
                                         <div className="min-w-0 flex-1">
@@ -713,9 +713,14 @@ const AIToolsHub: React.FC<{
                                     <p className="text-news-text text-xs leading-relaxed line-clamp-2 flex-1 mb-4">{tool.short_description}</p>
                                     {/* Footer */}
                                     <div className="pt-3 border-t border-border-divider flex items-center justify-between gap-2">
-                                        <span className={`text-[10px] px-2.5 py-1 rounded-lg border font-bold flex-shrink-0 ${tool.pricing_model === 'Free' || tool.pricing_model === 'Freemium' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20'}`}>
-                                            {tool.pricing_model}{tool.starting_price && tool.starting_price !== 'Free' ? ` · ${tool.starting_price}` : ''}
-                                        </span>
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className={`text-[10px] px-2.5 py-1 rounded-lg border font-bold flex-shrink-0 ${tool.pricing_model === 'Free' || tool.pricing_model === 'Freemium' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/15 text-blue-400 border-blue-500/20'}`}>
+                                                {tool.pricing_model}
+                                            </span>
+                                            {tool.starting_price && tool.starting_price !== 'Free' && (
+                                                <span className="text-[10px] text-news-muted truncate">from {tool.starting_price.split(/[·(;]/)[0].trim()}</span>
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             {onComparisonClick && (
                                                 <button onClick={() => onComparisonClick('comparisons')}
@@ -1025,7 +1030,7 @@ const BestSoftwareHub: React.FC<{
                             {top3.map(slug => {
                                 const t = toolMap[slug];
                                 return t?.logo ? (
-                                    <div key={slug} title={t.name} className="w-5 h-5 rounded-full bg-surface-base border border-border-subtle overflow-hidden ring-1 ring-surface-card flex-shrink-0">
+                                    <div key={slug} title={t.name} className="w-5 h-5 rounded-full bg-white border border-border-subtle overflow-hidden ring-1 ring-surface-card flex-shrink-0">
                                         <img src={t.logo} alt={t.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
                                     </div>
                                 ) : (
@@ -1147,7 +1152,7 @@ const BestSoftwareHub: React.FC<{
                                 onClick={() => onToolClick?.(t.slug)}
                                 className="group flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/50 hover:-translate-y-0.5 transition-all text-center"
                             >
-                                <div className="w-10 h-10 rounded-xl bg-surface-alt border border-border-subtle flex items-center justify-center p-1.5 flex-shrink-0">
+                                <div className="w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center p-1.5 flex-shrink-0">
                                     {t.logo
                                         ? <img src={t.logo} alt={t.name} className="max-w-full max-h-full object-contain" loading="lazy" />
                                         : <Layers size={16} className="text-news-muted" />
@@ -1421,19 +1426,17 @@ const ComparisonsHub: React.FC<{
         }).catch(() => setLoading(false));
     }, []);
 
-    // Category matching: check if either tool in comparison has matching tags
+    // Category matching: check if any tool in comparison has matching tags
     const catMatch = (c: Comparison) => {
         if (catFilter === 'All') return true;
-        const q = catFilter.toLowerCase();
-        const tagsA = c.tool_a?.category_tags || [];
-        const tagsB = c.tool_b?.category_tags || [];
-        return [...tagsA, ...tagsB].some(t => t.toLowerCase().includes(q.replace(' tools','').replace(' platforms','').replace(' generation','')));
+        const q = catFilter.toLowerCase().replace(' tools','').replace(' platforms','').replace(' generation','');
+        const allTags = [...(c.tool_a?.category_tags || []), ...(c.tool_b?.category_tags || []), ...((c as any).tool_c?.category_tags || [])];
+        return allTags.some(t => t.toLowerCase().includes(q));
     };
 
     const avgRating = (c: Comparison) => {
-        const rA = c.tool_a?.rating_score || 0;
-        const rB = c.tool_b?.rating_score || 0;
-        return rA && rB ? (rA + rB) / 2 : rA || rB;
+        const scores = [c.tool_a?.rating_score, c.tool_b?.rating_score, (c as any).tool_c?.rating_score].filter(Boolean) as number[];
+        return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
     };
 
     const filtered = comparisons.filter(catMatch);
@@ -1497,22 +1500,24 @@ const ComparisonsHub: React.FC<{
                         {popular.map(c => {
                             const tA = c.tool_a;
                             const tB = c.tool_b;
+                            const tC = (c as any).tool_c;
+                            const compTools = [tA, tB, tC].filter(Boolean);
                             return (
                                 <button
                                     key={c.id}
                                     onClick={() => onComparisonClick(c.slug)}
                                     className="group flex-shrink-0 w-56 text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:border-news-accent/40 hover:bg-surface-hover transition-all shadow-elevation"
                                 >
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                            {tA?.logo && <img src={tA.logo} alt={tA.name} className="w-6 h-6 rounded-md object-contain flex-shrink-0" loading="lazy" />}
-                                            <span className="text-xs font-bold text-white truncate">{tA?.name || c.tool_a_slug}</span>
-                                        </div>
-                                        <span className="text-[9px] font-black text-news-muted px-1.5 py-0.5 rounded-full bg-surface-base border border-border-divider flex-shrink-0">VS</span>
-                                        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-                                            <span className="text-xs font-bold text-white truncate text-right">{tB?.name || c.tool_b_slug}</span>
-                                            {tB?.logo && <img src={tB.logo} alt={tB.name} className="w-6 h-6 rounded-md object-contain flex-shrink-0" loading="lazy" />}
-                                        </div>
+                                    <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                                        {compTools.map((t, i) => (
+                                            <React.Fragment key={t.slug}>
+                                                {i > 0 && <span className="text-[9px] font-black text-news-muted flex-shrink-0">VS</span>}
+                                                <div className="flex items-center gap-1 min-w-0">
+                                                    {t.logo && <div className="w-5 h-5 rounded bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><img src={t.logo} alt={t.name} className="w-full h-full object-contain" loading="lazy" /></div>}
+                                                    <span className="text-xs font-bold text-white truncate">{t.name}</span>
+                                                </div>
+                                            </React.Fragment>
+                                        ))}
                                     </div>
                                     <p className="text-[10px] text-news-muted group-hover:text-news-accent transition-colors flex items-center gap-1">Read comparison <ArrowRight size={9} /></p>
                                 </button>
@@ -1555,38 +1560,33 @@ const ComparisonsHub: React.FC<{
                     {sorted.map(c => {
                         const tA = c.tool_a;
                         const tB = c.tool_b;
-                        const catTag = tA?.category_tags?.[0] || tB?.category_tags?.[0];
+                        const tC = (c as any).tool_c;
+                        const compTools = [tA, tB, tC].filter(Boolean);
+                        const catTag = compTools.find(t => t?.category_tags?.[0])?.category_tags?.[0];
                         return (
                             <button
                                 key={c.id}
                                 onClick={() => onComparisonClick(c.slug)}
                                 className="group text-left bg-surface-card border border-border-subtle shadow-elevation hover:border-border-divider hover:shadow-elevation-hover hover:bg-surface-hover hover:-translate-y-0.5 rounded-2xl p-5 transition-all flex flex-col"
                             >
-                                {/* Tool A vs Tool B logos */}
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 w-full bg-surface-base/50 p-2 rounded-lg border border-border-subtle">
-                                            {tA?.logo && <img src={tA.logo} alt={tA.name} className="w-7 h-7 rounded-md object-contain flex-shrink-0" loading="lazy" />}
-                                            <span className="text-xs font-bold text-white truncate">{tA?.name || c.tool_a_slug}</span>
-                                        </div>
-                                        {tA?.rating_score > 0 && (
-                                            <span className="text-[9px] font-bold text-news-accent flex items-center gap-0.5">
-                                                <Star size={8} className="fill-news-accent" />{tA.rating_score.toFixed(1)}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <span className="text-[10px] font-black text-news-muted px-2 py-1 rounded-full bg-surface-base border border-border-divider shadow-sm flex-shrink-0">VS</span>
-                                    <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 justify-end w-full bg-surface-base/50 p-2 rounded-lg border border-border-subtle">
-                                            <span className="text-xs font-bold text-white truncate text-right">{tB?.name || c.tool_b_slug}</span>
-                                            {tB?.logo && <img src={tB.logo} alt={tB.name} className="w-7 h-7 rounded-md object-contain flex-shrink-0" loading="lazy" />}
-                                        </div>
-                                        {tB?.rating_score > 0 && (
-                                            <span className="text-[9px] font-bold text-news-accent flex items-center gap-0.5">
-                                                <Star size={8} className="fill-news-accent" />{tB.rating_score.toFixed(1)}
-                                            </span>
-                                        )}
-                                    </div>
+                                {/* Tool logos — supports 2 or 3 tools */}
+                                <div className="flex items-center gap-2 mb-4">
+                                    {compTools.map((t, i) => (
+                                        <React.Fragment key={t.slug}>
+                                            {i > 0 && <span className="text-[10px] font-black text-news-muted px-1.5 py-0.5 rounded-full bg-surface-base border border-border-divider shadow-sm flex-shrink-0">VS</span>}
+                                            <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                                                <div className="flex items-center gap-1.5 w-full bg-surface-base/50 p-2 rounded-lg border border-border-subtle">
+                                                    {t.logo && <div className="w-6 h-6 rounded bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><img src={t.logo} alt={t.name} className="w-full h-full object-contain" loading="lazy" /></div>}
+                                                    <span className="text-xs font-bold text-white truncate">{t.name}</span>
+                                                </div>
+                                                {t.rating_score > 0 && (
+                                                    <span className="text-[9px] font-bold text-news-accent flex items-center gap-0.5">
+                                                        <Star size={8} className="fill-news-accent" />{t.rating_score.toFixed(1)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </React.Fragment>
+                                    ))}
                                 </div>
 
                                 {/* Category tag */}
@@ -1706,7 +1706,7 @@ const ReviewsHub: React.FC<{
                                 className="group flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/50 hover:bg-surface-hover transition-all shadow-elevation"
                             >
                                 {tool.logo ? (
-                                    <div className="w-8 h-8 rounded-lg bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0">
+                                    <div className="w-8 h-8 rounded-lg bg-white border border-border-subtle overflow-hidden flex-shrink-0">
                                         <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
                                     </div>
                                 ) : (
@@ -1791,7 +1791,7 @@ const ReviewsHub: React.FC<{
                                             loading="lazy"
                                         />
                                         {tool?.logo && (
-                                            <div className="absolute top-2 left-2 w-9 h-9 rounded-xl bg-surface-card border border-border-subtle shadow-elevation overflow-hidden p-1">
+                                            <div className="absolute top-2 left-2 w-9 h-9 rounded-xl bg-white border border-border-subtle shadow-elevation overflow-hidden p-1">
                                                 <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain" />
                                             </div>
                                         )}
@@ -1803,7 +1803,7 @@ const ReviewsHub: React.FC<{
                                     {/* Tool identity row */}
                                     <div className="flex items-center gap-2.5 mb-3">
                                         {!article.imageUrl && tool?.logo && (
-                                            <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0 p-1">
+                                            <div className="w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0 p-1">
                                                 <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain" />
                                             </div>
                                         )}
@@ -1844,7 +1844,7 @@ const ReviewsHub: React.FC<{
                                                             className="text-[10px] font-medium text-news-accent hover:text-white border border-border-subtle hover:border-news-accent/50 rounded-full px-2.5 py-1 bg-surface-base transition-colors flex items-center gap-1"
                                                         >
                                                             {otherTool?.logo && (
-                                                                <img src={otherTool.logo} alt={otherTool.name} className="w-3.5 h-3.5 rounded-sm object-contain" />
+                                                                <div className="w-3.5 h-3.5 rounded-sm bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><img src={otherTool.logo} alt={otherTool.name} className="w-full h-full object-contain" /></div>
                                                             )}
                                                             {otherTool?.name || otherSlug}
                                                             <ArrowRight size={9} />
@@ -2021,7 +2021,7 @@ const UseCasesHubInner: React.FC<{
                                         const t = toolMap[slug];
                                         return t ? (
                                             <div key={slug} className="flex items-center gap-1 bg-surface-base border border-border-subtle rounded-lg px-2 py-1">
-                                                {t.logo && <img src={t.logo} alt={t.name} className="w-4 h-4 rounded object-contain" loading="lazy" />}
+                                                {t.logo && <div className="w-4 h-4 rounded bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><img src={t.logo} alt={t.name} className="w-full h-full object-contain" loading="lazy" /></div>}
                                                 <span className="text-[9px] font-bold text-news-muted">{t.name}</span>
                                             </div>
                                         ) : (
@@ -2107,7 +2107,7 @@ const UseCasesHubInner: React.FC<{
                                             {toolSlugs.map(slug => {
                                                 const t = toolMap[slug];
                                                 return t?.logo ? (
-                                                    <div key={slug} title={t.name} className="w-5 h-5 rounded bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0">
+                                                    <div key={slug} title={t.name} className="w-5 h-5 rounded bg-white border border-border-subtle overflow-hidden flex-shrink-0">
                                                         <img src={t.logo} alt={t.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
                                                     </div>
                                                 ) : (
@@ -2372,7 +2372,7 @@ const GuidesHubInner: React.FC<{
                                             {toolSlugs.map(slug => {
                                                 const t = toolMap[slug];
                                                 return t?.logo ? (
-                                                    <div key={slug} title={t.name} className="w-5 h-5 rounded bg-surface-base border border-border-subtle overflow-hidden flex-shrink-0">
+                                                    <div key={slug} title={t.name} className="w-5 h-5 rounded bg-white border border-border-subtle overflow-hidden flex-shrink-0">
                                                         <img src={t.logo} alt={t.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
                                                     </div>
                                                 ) : (

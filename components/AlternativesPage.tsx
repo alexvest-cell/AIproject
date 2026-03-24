@@ -129,7 +129,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
         <div className="mb-10 pb-10 border-b border-border-divider">
           <div className="flex items-center gap-3 mb-4">
             {tool.logo && (
-              <div className="w-12 h-12 rounded-xl bg-surface-card border border-border-subtle flex-shrink-0 overflow-hidden">
+              <div className="w-12 h-12 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
                 <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
               </div>
             )}
@@ -181,7 +181,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
 
                       {/* Logo */}
                       {alt.logo && (
-                        <div className="w-14 h-14 rounded-xl bg-surface-alt border border-border-subtle flex-shrink-0 overflow-hidden">
+                        <div className="w-14 h-14 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
                           <img src={alt.logo} alt={alt.name} className="w-full h-full object-contain p-2" loading="lazy" />
                         </div>
                       )}

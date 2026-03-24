@@ -12,7 +12,7 @@ const toolSchema = new mongoose.Schema({
         caption: String
     }],
     featured_image: String,
-    short_description: { type: String, maxlength: 160 },
+    short_description: { type: String, maxlength: 180 },
     full_description: String,
 
     // Categorisation
@@ -48,10 +48,19 @@ const toolSchema = new mongoose.Schema({
     integrations: [String],
     supported_platforms: [String], // e.g. ['Web', 'iOS', 'Android', 'API']
 
-    // Intelligence fields (future-proofed)
+    // Intelligence fields
     ai_enabled: { type: Boolean, default: false },
     rating_score: { type: Number, min: 0, max: 10, default: 0 },
+    rating_breakdown: { type: mongoose.Schema.Types.Mixed },   // e.g. { Value: 8.5, Features: 7.5 }
     review_count: { type: Number, default: 0 },
+    model_version: String,   // e.g. "Grok 4 (Grok 4.1 Fast for API)"
+
+    // Editorial content
+    best_for: [String],              // ideal user profiles
+    not_ideal_for: [String],         // who should avoid it
+    use_case_breakdown: { type: mongoose.Schema.Types.Mixed },  // { Research: "detailed text..." }
+    alternative_selection: String,   // when to choose this vs alternatives
+    limitations: [String],           // taxonomy tags: bias_risk, reliability_risk, etc.
 
     // Data quality
     data_confidence: {
@@ -64,20 +73,23 @@ const toolSchema = new mongoose.Schema({
     // Internal linking hooks
     related_tools: [String],   // tool IDs
     competitors: [String],     // tool IDs
+    competitor_differentiator: { type: mongoose.Schema.Types.Mixed },  // { [toolId]: 'one-line differentiator' }
+    related_tool_note: { type: mongoose.Schema.Types.Mixed },          // { [toolId]: 'complementary role note' }
+    _unresolved_competitors: [String],  // names not yet in DB — restored on CMS edit open
+    _unresolved_related: [String],      // names not yet in DB — restored on CMS edit open
+
+    // Cross-linking
+    review_slug: String,   // slug of the /articles/[slug] review page for this tool
 
     // SEO
     meta_title: String,
     meta_description: String,
+    primary_keyword: String,
+    alternative_keywords: [String],
 
     // Timestamps
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
-});
-
-// Auto-update updatedAt
-toolSchema.pre('save', function (next) {
-    this.updatedAt = new Date();
-    next();
 });
 
 export default mongoose.model('Tool', toolSchema);

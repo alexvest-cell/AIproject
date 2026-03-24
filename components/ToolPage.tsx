@@ -27,7 +27,7 @@ const CATEGORY_PRIMARY_VALUES = [
 
 const USE_CASE_VALUES = [
     'Content Creation', 'Research', 'Coding', 'Automation', 'Lead Generation',
-    'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity',
+    'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity', 'Marketing',
 ] as const;
 
 const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick }) => {
@@ -35,7 +35,14 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const [comparisons, setComparisons] = useState<Comparison[]>([]);
     const [alternatives, setAlternatives] = useState<Tool[]>([]);
     const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
+    const [reviews, setReviews] = useState<Article[]>([]);
+    const [guides, setGuides] = useState<Article[]>([]);
+    const [news, setNews] = useState<Article[]>([]);
+    const [bestOf, setBestOf] = useState<Article[]>([]);
+    const [useCaseArticles, setUseCaseArticles] = useState<Article[]>([]);
     const [stacks, setStacks] = useState<Stack[]>([]);
+    const [useCases, setUseCases] = useState<any[]>([]);
+    const [allTools, setAllTools] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -48,13 +55,21 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
         Promise.all([
             fetch(`/api/tools/${slug}`).then(r => r.ok ? r.json() : Promise.reject('Tool not found')),
-            fetch(`/api/tools/${slug}/alternatives`).then(r => r.ok ? r.json() : { alternatives: [] })
+            fetch(`/api/tools/${slug}/alternatives`).then(r => r.ok ? r.json() : { alternatives: [] }),
+            fetch('/api/tools').then(r => r.ok ? r.json() : []).catch(() => [])
         ])
-            .then(async ([data, altData]) => {
+            .then(async ([data, altData, toolsData]) => {
                 setTool(data.tool);
                 setComparisons(data.comparisons || []);
                 setRelatedArticles(data.relatedArticles || []);
+                setReviews(data.reviews || []);
+                setGuides(data.guides || []);
+                setNews(data.news || []);
+                setBestOf(data.bestOf || []);
+                setUseCaseArticles(data.useCaseArticles || []);
                 setStacks(data.stacks || []);
+                setUseCases(data.useCases || []);
+                setAllTools(Array.isArray(toolsData) ? toolsData : []);
                 let alts: Tool[] = (altData.alternatives || []).slice(0, MAX_ALTERNATIVES);
                 // Fallback: if no alternatives found, show popular tools (excluding this one)
                 if (alts.length === 0) {
@@ -131,12 +146,42 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
         </div>
     );
 
+    const t = tool as any;
+    const ratingBreakdown: Record<string, number> = (t.rating_breakdown && typeof t.rating_breakdown === 'object' && !Array.isArray(t.rating_breakdown)) ? t.rating_breakdown : {};
+    const useCaseBreakdown: Record<string, string> = (t.use_case_breakdown && typeof t.use_case_breakdown === 'object' && !Array.isArray(t.use_case_breakdown)) ? t.use_case_breakdown : {};
+
+    const competitorIds: string[] = Array.isArray(t.competitors) ? t.competitors : [];
+    const relatedToolIds: string[] = Array.isArray(t.related_tools) ? t.related_tools : [];
+    const competitorObjs = allTools.filter(at => competitorIds.includes(at.id));
+    const relatedToolObjs = allTools.filter(at => relatedToolIds.includes(at.id));
+
+    // Inline link injection: wraps competitor names in <a> tags within prose text
+    const linkifyCompetitors = (text: string): React.ReactNode => {
+        if (!text || !competitorObjs.length) return text;
+        const entries = competitorObjs.filter((c: any) => c.name && c.slug);
+        if (!entries.length) return text;
+        const sorted = [...entries].sort((a: any, b: any) => b.name.length - a.name.length);
+        const pattern = sorted.map((c: any) => c.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+        const regex = new RegExp(`(${pattern})`, 'gi');
+        const parts = text.split(regex);
+        return (
+            <>{parts.map((part, i) => {
+                const match = entries.find((c: any) => c.name.toLowerCase() === part.toLowerCase());
+                if (match) return <a key={i} href={`/tools/${match.slug}`} className="text-news-accent hover:underline decoration-news-accent/50">{part}</a>;
+                return <React.Fragment key={i}>{part}</React.Fragment>;
+            })}</>
+        );
+    };
+
     const sections = [];
     if (tool.full_description) sections.push({ id: 'overview', label: 'Overview' });
-    if ((tool as any).screenshots?.length > 0) sections.push({ id: 'screenshots', label: 'Screenshots' });
+    if (t.screenshots?.length > 0) sections.push({ id: 'screenshots', label: 'Screenshots' });
     if (tool.key_features?.length > 0) sections.push({ id: 'features', label: 'Features' });
     if (tool.pros?.length > 0 || tool.cons?.length > 0) sections.push({ id: 'proscons', label: 'Pros & Cons' });
+    if (t.best_for?.length > 0 || t.not_ideal_for?.length > 0) sections.push({ id: 'best-for', label: 'Who It\'s For' });
     if (tool.use_case_tags?.length > 0) sections.push({ id: 'use-cases', label: 'Use Cases' });
+    if (t.alternative_selection) sections.push({ id: 'alternatives-guide', label: 'When to Choose' });
+    if (competitorObjs.length > 0) sections.push({ id: 'how-it-compares', label: 'How It Compares' });
     if (tool.integrations?.length > 0) sections.push({ id: 'integrations', label: 'Integrations' });
 
     const pricingClass = PRICING_COLORS[tool.pricing_model] || 'bg-surface-alt text-news-muted border-border-subtle';
@@ -170,7 +215,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                 {/* Hero Header */}
                 <div className="flex flex-col md:flex-row gap-6 items-start mb-10 pb-10 border-b border-border-divider">
                     {tool.logo && (
-                        <div className="w-20 h-20 rounded-2xl bg-surface-card border border-border-subtle flex-shrink-0 overflow-hidden shadow-inner">
+                        <div className="w-20 h-20 rounded-2xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden shadow-inner">
                             <img src={tool.logo} alt={`${tool.name} logo`} className="w-full h-full object-contain p-2" loading="lazy" />
                         </div>
                     )}
@@ -190,9 +235,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     <Zap size={10} /> AI-Powered
                                 </span>
                             )}
-                            {(tool as any).last_updated && (
+                            {t.last_updated && (
                                 <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-news-muted">
-                                    <Calendar size={12} /> Last updated: {new Date((tool as any).last_updated).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                    <Calendar size={12} /> Last updated: {new Date(t.last_updated).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                 </span>
                             )}
                         </div>
@@ -206,12 +251,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     {tag}
                                 </a>
                             ))}
-                            {/* secondary_tags: SEO label pills, no filter action */}
-                            {(tool as any).secondary_tags?.map((tag: string) => (
-                                <span key={tag} className="text-xs px-2 py-1 rounded-full bg-surface-alt/50 text-news-muted/60 border border-border-subtle/50">
-                                    {tag}
-                                </span>
-                            ))}
+                            {/* secondary_tags are SEO-only — not rendered */}
                             {(tool.category_primary || tool.category_tags.length > 0) && (
                                 <a href={`/best-software?category=${encodeURIComponent(tool.category_primary || tool.category_tags[0])}`}
                                    className="text-xs px-2 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 hover:bg-news-accent/20 transition-colors font-medium">
@@ -233,6 +273,14 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                 </a>
                             )}
                         </div>
+                        {t.review_slug && (
+                            <div className="mt-3">
+                                <a href={`/articles/${t.review_slug}`}
+                                    className="inline-flex items-center gap-1.5 text-xs text-news-accent hover:underline font-medium">
+                                    Want our full verdict? Read the {tool.name} Review 2026 <ArrowRight size={12} />
+                                </a>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -244,7 +292,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         {tool.full_description && (
                             <section id="overview" className="scroll-mt-24">
                                 <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Overview</h2>
-                                <p className="text-news-text leading-relaxed text-lg">{tool.full_description}</p>
+                                <p className="text-news-text leading-relaxed text-lg">{linkifyCompetitors(tool.full_description)}</p>
                             </section>
                         )}
 
@@ -298,7 +346,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         <ul className="space-y-2">
                                             {tool.pros.map((p, i) => (
                                                 <li key={i} className="flex items-start gap-2 text-news-text text-sm">
-                                                    <Check size={14} className="text-news-accent mt-0.5 flex-shrink-0" /> {p}
+                                                    <Check size={14} className="text-news-accent mt-0.5 flex-shrink-0" /><span>{linkifyCompetitors(p)}</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -309,7 +357,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         <ul className="space-y-2">
                                             {tool.cons.map((c, i) => (
                                                 <li key={i} className="flex items-start gap-2 text-news-text text-sm">
-                                                    <X size={14} className="text-red-400 mt-0.5 flex-shrink-0" /> {c}
+                                                    <X size={14} className="text-red-400 mt-0.5 flex-shrink-0" /><span>{linkifyCompetitors(c)}</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -318,14 +366,99 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </section>
                         )}
 
+                        {/* Best For / Not Ideal For */}
+                        {(t.best_for?.length > 0 || t.not_ideal_for?.length > 0) && (
+                            <section id="best-for" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Who It's For</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {t.best_for?.length > 0 && (
+                                        <div className="bg-surface-card border border-border-subtle rounded-xl p-5 relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-news-accent"></div>
+                                            <h3 className="text-news-accent font-bold text-sm uppercase tracking-widest mb-3">Best For</h3>
+                                            <ul className="space-y-2">
+                                                {t.best_for.map((item: string, i: number) => (
+                                                    <li key={i} className="flex items-start gap-2 text-news-text text-sm">
+                                                        <Check size={14} className="text-news-accent mt-0.5 flex-shrink-0" /> {item}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {t.not_ideal_for?.length > 0 && (
+                                        <div className="bg-surface-card border border-border-subtle rounded-xl p-5 relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                                            <h3 className="text-orange-400 font-bold text-sm uppercase tracking-widest mb-3">Not Ideal For</h3>
+                                            <ul className="space-y-2">
+                                                {t.not_ideal_for.map((item: string, i: number) => (
+                                                    <li key={i} className="flex items-start gap-2 text-news-text text-sm">
+                                                        <X size={14} className="text-orange-400 mt-0.5 flex-shrink-0" /> {item}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        )}
+
                         {/* Use Cases */}
                         {tool.use_case_tags?.length > 0 && (
                             <section id="use-cases" className="scroll-mt-24">
                                 <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Use Cases</h2>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-3 mb-4">
                                     {tool.use_case_tags.map(uc => (
                                         <span key={uc} className="text-xs px-3 py-1.5 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/20 font-medium">{uc}</span>
                                     ))}
+                                </div>
+                                {Object.keys(useCaseBreakdown).length > 0 && (
+                                    <div className="space-y-4 mt-4">
+                                        {Object.entries(useCaseBreakdown).map(([useCase, breakdown]) => (
+                                            <div key={useCase} className="bg-surface-card border border-border-subtle rounded-xl p-4">
+                                                <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-1">{useCase}</p>
+                                                <p className="text-sm text-news-text leading-relaxed">{breakdown}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
+                        {/* Alternative Selection */}
+                        {t.alternative_selection && (
+                            <section id="alternatives-guide" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">When to Choose {tool.name}</h2>
+                                <div className="bg-surface-card border border-border-subtle rounded-xl p-5">
+                                    <p className="text-sm text-news-text leading-relaxed">{linkifyCompetitors(t.alternative_selection)}</p>
+                                </div>
+                            </section>
+                        )}
+
+                        {/* How It Compares */}
+                        {competitorObjs.length > 0 && (
+                            <section id="how-it-compares" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">How It Compares</h2>
+                                <div className="space-y-2">
+                                    {competitorObjs.map((comp: any) => {
+                                        const diff = (t.competitor_differentiator as any)?.[comp.id] || null;
+                                        const compSlug = comp.slug || '';
+                                        const matchComp = comparisons.find((c: any) =>
+                                            c.slug === `${tool.slug}-vs-${compSlug}` || c.slug === `${compSlug}-vs-${tool.slug}`
+                                        );
+                                        const row = (
+                                            <div className="flex items-center gap-3 bg-surface-card border border-border-subtle rounded-xl px-4 py-3 hover:border-news-accent/30 transition-colors">
+                                                {comp.logo && <div className="w-7 h-7 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                <span className="text-sm font-semibold text-white flex-shrink-0">{comp.name}</span>
+                                                <span className="text-sm text-news-muted flex-1 text-right truncate">{diff || <span className="text-news-accent/70 text-xs">See full comparison →</span>}</span>
+                                            </div>
+                                        );
+                                        return matchComp ? (
+                                            <a key={comp.id} href={`/compare/${matchComp.slug}`} className="block">{row}</a>
+                                        ) : compSlug ? (
+                                            <a key={comp.id} href={`/tools/${compSlug}`} className="block">{row}</a>
+                                        ) : (
+                                            <div key={comp.id}>{row}</div>
+                                        );
+                                    })}
                                 </div>
                             </section>
                         )}
@@ -342,12 +475,95 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </section>
                         )}
 
-                        {/* Deferred modules — populated dynamically once data is available */}
-                        <div data-section="alternatives" />
-                        <div data-section="comparisons" />
-                        <div data-section="ecosystems" />
-                        <div data-section="rankings" />
-                        <div data-section="guides" />
+                        {/* Build a Stack banner */}
+                        <div className="border border-news-accent/20 bg-news-accent/5 rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm text-news-text">
+                                Using <span className="font-semibold text-white">{tool.name}</span> in your workflow?
+                            </p>
+                            <a href={stacks.length > 0 ? `/stacks?tool=${tool.slug}` : '/stacks'}
+                                className="text-xs font-bold text-news-accent hover:underline whitespace-nowrap">
+                                See recommended stacks →
+                            </a>
+                        </div>
+
+                        {/* Reviews */}
+                        {reviews.length > 0 && (
+                            <section id="linked-reviews" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-3 border-b border-border-divider pb-2">Reviews</h2>
+                                <div className="space-y-2">
+                                    {reviews.map((a: Article) => (
+                                        <a key={a.id || (a as any)._id} href={`/articles/${a.slug}`}
+                                            className="flex items-center justify-between gap-3 bg-surface-alt border border-border-subtle rounded-lg px-4 py-3 hover:border-news-accent/40 transition-colors group">
+                                            <span className="text-sm text-news-text group-hover:text-white truncate">{a.title}</span>
+                                            <ArrowRight size={12} className="flex-shrink-0 text-news-muted group-hover:text-news-accent" />
+                                        </a>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Guides */}
+                        {guides.length > 0 && (
+                            <section id="linked-guides" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-3 border-b border-border-divider pb-2">Guides</h2>
+                                <div className="space-y-2">
+                                    {guides.map((a: Article) => (
+                                        <a key={a.id || (a as any)._id} href={`/articles/${a.slug}`}
+                                            className="flex items-center justify-between gap-3 bg-surface-alt border border-border-subtle rounded-lg px-4 py-3 hover:border-news-accent/40 transition-colors group">
+                                            <span className="text-sm text-news-text group-hover:text-white truncate">{a.title}</span>
+                                            <ArrowRight size={12} className="flex-shrink-0 text-news-muted group-hover:text-news-accent" />
+                                        </a>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* News */}
+                        {news.length > 0 && (
+                            <section id="linked-news" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-3 border-b border-border-divider pb-2">News</h2>
+                                <div className="space-y-2">
+                                    {news.map((a: Article) => (
+                                        <a key={a.id || (a as any)._id} href={`/articles/${a.slug}`}
+                                            className="flex items-center justify-between gap-3 bg-surface-alt border border-border-subtle rounded-lg px-4 py-3 hover:border-news-accent/40 transition-colors group">
+                                            <span className="text-sm text-news-text group-hover:text-white truncate">{a.title}</span>
+                                            <ArrowRight size={12} className="flex-shrink-0 text-news-muted group-hover:text-news-accent" />
+                                        </a>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Best-of / Rankings */}
+                        {bestOf.length > 0 && (
+                            <section id="linked-bestof" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-3 border-b border-border-divider pb-2">Best-of Rankings</h2>
+                                <div className="space-y-2">
+                                    {bestOf.map((a: Article) => (
+                                        <a key={a.id || (a as any)._id} href={`/articles/${a.slug}`}
+                                            className="flex items-center justify-between gap-3 bg-surface-alt border border-border-subtle rounded-lg px-4 py-3 hover:border-news-accent/40 transition-colors group">
+                                            <span className="text-sm text-news-text group-hover:text-white truncate">{a.title}</span>
+                                            <ArrowRight size={12} className="flex-shrink-0 text-news-muted group-hover:text-news-accent" />
+                                        </a>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Use Cases */}
+                        {useCases.length > 0 && (
+                            <section id="linked-usecases" className="scroll-mt-24">
+                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-3 border-b border-border-divider pb-2">Use Cases</h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {useCases.map((uc: any) => (
+                                        <a key={uc.slug} href={`/use-cases/${uc.slug}`}
+                                            className="text-xs px-3 py-1.5 rounded-full bg-surface-alt border border-border-subtle hover:border-news-accent/40 text-news-text hover:text-white transition-colors">
+                                            {uc.name}
+                                        </a>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
                     </div>
 
                     {/* Sidebar */}
@@ -388,16 +604,103 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
                         {/* Rating */}
                         {tool.rating_score > 0 && (
-                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6 text-center">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Our Score</h3>
-                                <div className="flex items-center justify-center gap-1 text-news-accent mb-1">
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our Score</h3>
+                                <div className="flex items-center justify-center gap-1 text-news-accent mb-4">
                                     <Star size={18} fill="currentColor" />
                                     <span className="text-2xl font-black text-white">{tool.rating_score.toFixed(1)}</span>
                                     <span className="text-news-muted text-sm">/10</span>
                                 </div>
-                                {tool.review_count > 0 && (
-                                    <p className="text-[10px] text-news-muted font-bold uppercase tracking-widest mt-2">{tool.review_count} review{tool.review_count !== 1 ? 's' : ''}</p>
+                                {Object.keys(ratingBreakdown).length > 0 && (
+                                    <div className="space-y-2 border-t border-border-divider pt-4">
+                                        {Object.entries(ratingBreakdown).map(([dim, score]) => (
+                                            <div key={dim}>
+                                                <div className="flex justify-between text-[10px] text-news-muted mb-1">
+                                                    <span className="font-bold uppercase tracking-widest">{dim}</span>
+                                                    <span className="text-white font-bold">{score.toFixed(1)}</span>
+                                                </div>
+                                                <div className="w-full bg-surface-alt rounded-full h-1.5">
+                                                    <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: `${(score / 10) * 100}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Competes With */}
+                        {competitorObjs.length > 0 && (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Competes With</h3>
+                                <div className="flex flex-col gap-2">
+                                    {competitorObjs.map((comp: any) => (
+                                        comp.slug ? (
+                                            <a key={comp.id} href={`/tools/${comp.slug}`}
+                                                className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-alt border border-border-subtle hover:border-news-accent/40 hover:text-news-accent transition-colors group">
+                                                {comp.logo && <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                <span className="text-sm text-news-text group-hover:text-news-accent transition-colors truncate">{comp.name}</span>
+                                            </a>
+                                        ) : (
+                                            <div key={comp.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-alt border border-border-subtle">
+                                                {comp.logo && <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                <span className="text-sm text-news-text truncate">{comp.name}</span>
+                                            </div>
+                                        )
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Often Used With */}
+                        {relatedToolObjs.length > 0 && (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Often Used With</h3>
+                                <div className="flex flex-col gap-3">
+                                    {relatedToolObjs.map((rel: any) => {
+                                        const note = (t.related_tool_note as any)?.[rel.id] || rel.short_description || null;
+                                        const inner = (
+                                            <div className="flex items-start gap-3 group">
+                                                {rel.logo && (
+                                                    <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                                        <img src={rel.logo} alt="" className="w-full h-full object-contain p-1" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-white group-hover:text-news-accent transition-colors">{rel.name}</p>
+                                                    {note && <p className="text-[11px] text-news-muted leading-relaxed line-clamp-2 mt-0.5">{note}</p>}
+                                                </div>
+                                            </div>
+                                        );
+                                        return rel.slug ? (
+                                            <a key={rel.id} href={`/tools/${rel.slug}`}>{inner}</a>
+                                        ) : (
+                                            <div key={rel.id}>{inner}</div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Model Version */}
+                        {t.model_version && (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-2">Current Model</h3>
+                                <p className="text-sm text-white font-medium">{t.model_version}</p>
+                            </div>
+                        )}
+
+                        {/* Limitations */}
+                        {t.limitations?.length > 0 && (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Known Limitations</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {t.limitations.map((lim: string) => (
+                                        <span key={lim} className="text-[10px] px-2 py-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-mono">
+                                            {lim.replace(/_/g, ' ')}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

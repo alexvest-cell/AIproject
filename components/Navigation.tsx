@@ -190,7 +190,7 @@ const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect
                   >
                     {/* Icon or Logo */}
                     {item.logo ? (
-                      <div className="w-7 h-7 rounded-lg bg-surface-base border border-border-subtle p-1 flex-shrink-0 flex items-center justify-center group-hover/item:border-news-accent/30 transition-colors shadow-inner">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-border-subtle p-1 flex-shrink-0 flex items-center justify-center group-hover/item:border-news-accent/30 transition-colors shadow-inner">
                         <img src={item.logo} alt={item.label} className="w-full h-full object-contain grayscale group-hover/item:grayscale-0 transition-all opacity-80 group-hover/item:opacity-100" />
                       </div>
                     ) : item.icon ? (
@@ -531,15 +531,9 @@ const Navigation: React.FC<NavigationProps> = ({
                 >
                   <button
                     onClick={() => {
-                      if (hasMega && activeDropdown === cat.slug) {
-                        setActiveDropdown(null);
-                      } else if (hasMega) {
-                        openDropdown(cat.slug);
-                      } else {
-                        if (onHubClick) onHubClick(cat.slug);
-                        else onCategorySelect(cat.id);
-                        setActiveDropdown(null);
-                      }
+                      if (onHubClick) onHubClick(cat.slug);
+                      else onCategorySelect(cat.id);
+                      setActiveDropdown(null);
                     }}
                     aria-haspopup={hasMega ? 'true' : undefined}
                     aria-expanded={hasMega ? activeDropdown === cat.slug : undefined}
@@ -648,7 +642,7 @@ const Navigation: React.FC<NavigationProps> = ({
                                     >
                                       <div className="flex items-center gap-3 min-w-0">
                                         {item.logo ? (
-                                          <div className="w-6 h-6 rounded bg-surface-base border border-border-subtle p-0.5 flex-shrink-0">
+                                          <div className="w-6 h-6 rounded bg-white border border-border-subtle p-0.5 flex-shrink-0">
                                             <img src={item.logo} alt={item.label} className="w-full h-full object-contain" />
                                           </div>
                                         ) : item.icon ? (
