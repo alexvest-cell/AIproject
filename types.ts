@@ -146,6 +146,17 @@ export interface Tool {
   limitations?: string[];
   use_case_breakdown?: Record<string, string>;
   review_slug?: string;
+  rating_breakdown?: Record<string, number>;
+  model_version?: string;
+  // Capabilities
+  context_window?: string;
+  max_integrations?: string;
+  api_pricing?: string;
+  image_generation?: 'yes' | 'no' | 'partial';
+  memory_persistence?: 'yes' | 'no' | 'partial';
+  computer_use?: 'yes' | 'no' | 'partial';
+  api_available?: 'yes' | 'no';
+  use_case_scores?: { use_case: string; score: number | null; description: string }[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -166,6 +177,7 @@ export interface Comparison {
   tool_c_slug?: string;
   // Data-driven fields
   comparison_type?: '1v1' | 'multi';
+  use_case?: string;
   primary_use_case?: string;
   primary_use_cases?: string[];
   needs_update?: boolean;
@@ -173,6 +185,19 @@ export interface Comparison {
   last_generated?: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   generated_output?: Record<string, any> | null;
+  // Override model
+  is_override?: boolean;
+  verdict_override?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  strengths_override?: Record<string, any> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  weaknesses_override?: Record<string, any> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  recommendation_override?: Record<string, any> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  feature_comparison_override?: Record<string, any> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  use_case_breakdown_override?: Record<string, any> | null;
   // Enriched by API
   tool_a?: Tool;
   tool_b?: Tool;

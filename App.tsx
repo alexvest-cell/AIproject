@@ -68,6 +68,7 @@ function App() {
   const [activeHub, setActiveHub] = useState<string>('');
   const [activeToolSlug, setActiveToolSlug] = useState<string>('');
   const [activeComparisonSlug, setActiveComparisonSlug] = useState<string>();
+  const [activeComparisonUseCase, setActiveComparisonUseCase] = useState<string>('');
   const [activeAlternativesToolSlug, setActiveAlternativesToolSlug] = useState<string>('');
   const [activeStackSlug, setActiveStackSlug] = useState<string>('');
   const [activeCategorySlug, setActiveCategorySlug] = useState<string>(() => {
@@ -255,8 +256,9 @@ function App() {
       setActiveToolSlug(slug);
       setView('tool');
     } else if (pathname.startsWith('/compare/')) {
-      const slug = pathname.replace('/compare/', '');
-      setActiveComparisonSlug(slug);
+      const parts = pathname.replace('/compare/', '').split('/');
+      setActiveComparisonSlug(parts[0]);
+      setActiveComparisonUseCase(parts[1] ? parts[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '');
       setView('comparison');
     }
   }, [articles]);
@@ -311,6 +313,7 @@ function App() {
             break;
           case 'comparison':
             setActiveComparisonSlug(event.state.slug);
+            setActiveComparisonUseCase(event.state.useCase || '');
             setView('comparison');
             break;
           case 'about':
@@ -351,7 +354,9 @@ function App() {
           setActiveToolSlug(path.replace('/tools/', ''));
           setView('tool');
         } else if (path.startsWith('/compare/')) {
-          setActiveComparisonSlug(path.replace('/compare/', ''));
+          const parts = path.replace('/compare/', '').split('/');
+          setActiveComparisonSlug(parts[0]);
+          setActiveComparisonUseCase(parts[1] ? parts[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '');
           setView('comparison');
         } else if (path === '/admin') {
           setView('admin');
@@ -441,11 +446,13 @@ function App() {
   };
 
   // Comparison navigation
-  const handleComparisonClick = (slug: string) => {
+  const handleComparisonClick = (slug: string, useCase?: string) => {
     setActiveComparisonSlug(slug);
+    setActiveComparisonUseCase(useCase || '');
     setView('comparison');
     window.scrollTo(0, 0);
-    window.history.pushState({ view: 'comparison', slug }, '', `/compare/${slug}`);
+    const ucSlug = useCase ? '/' + useCase.toLowerCase().replace(/\s+/g, '-') : '';
+    window.history.pushState({ view: 'comparison', slug, useCase: useCase || '' }, '', `/compare/${slug}${ucSlug}`);
   };
 
   // Stack navigation
@@ -676,8 +683,10 @@ function App() {
           {view === 'comparison' && activeComparisonSlug && (
             <ComparisonPage
               slug={activeComparisonSlug}
+              useCase={activeComparisonUseCase}
               onBack={() => window.history.back()}
               onToolClick={handleToolClick}
+              onUseCaseChange={(uc) => handleComparisonClick(activeComparisonSlug, uc)}
             />
           )}
 

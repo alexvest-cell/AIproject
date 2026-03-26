@@ -90,7 +90,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
-    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', use_case_breakdown: '', rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
+    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', context_window: '', max_integrations: '', api_pricing: '', image_generation: '', memory_persistence: '', computer_use: '', api_available: '', use_case_breakdown: '', use_case_scores: [] as any[], rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
     const [toolForm, setToolForm] = useState<any>({ ...EMPTY_TOOL_FORM });
     const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
@@ -113,7 +113,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Comparisons state
     const COMP_USE_CASES = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'];
-    const EMPTY_COMP_FORM = { title: '', slug: '', tool_a: '', tool_b: '', tool_c: '', comparison_type: '1v1', primary_use_cases: [] as string[], generation_mode: 'dynamic', meta_title: '', meta_description: '', status: 'published' };
+    const EMPTY_COMP_FORM = { title: '', slug: '', tool_a: '', tool_b: '', tool_c: '', comparison_type: '1v1', use_case: '', generation_mode: 'dynamic', meta_title: '', meta_description: '', status: 'published', is_override: false, verdict_override: '', why_it_wins_override: '', strengths_override: '', weaknesses_override: '', recommendation_override: '', feature_comparison_override: '', use_case_breakdown_override: '' };
     const [comparisons, setComparisons] = useState<any[]>([]);
     const [compForm, setCompForm] = useState<any>({ ...EMPTY_COMP_FORM });
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
@@ -331,14 +331,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 screenshots: Array.isArray(toolForm.screenshots) ? toolForm.screenshots.filter((s: any) => s.url?.trim()) : [],
                 // Don't send empty strings for enum fields — Mongoose rejects them
                 category_primary: toolForm.category_primary || undefined,
+                // Capabilities — pass undefined for empty strings so Mongoose ignores them
+                context_window: toolForm.context_window || undefined,
+                max_integrations: toolForm.max_integrations || undefined,
+                api_pricing: toolForm.api_pricing || undefined,
+                image_generation: toolForm.image_generation || undefined,
+                memory_persistence: toolForm.memory_persistence || undefined,
+                computer_use: toolForm.computer_use || undefined,
+                api_available: toolForm.api_available || undefined,
                 // New fields — convert textarea strings back to arrays/objects
                 best_for: splitLines(toolForm.best_for),
                 not_ideal_for: splitLines(toolForm.not_ideal_for),
                 limitations: splitComma(toolForm.limitations),
                 alternative_keywords: splitComma(toolForm.alternative_keywords),
+                use_case_scores: (Array.isArray(toolForm.use_case_scores) ? toolForm.use_case_scores : [])
+                    .filter((s: any) => s.use_case)
+                    .map((s: any) => ({ use_case: s.use_case, score: (s.score !== '' && s.score !== null && s.score !== undefined) ? parseFloat(String(s.score)) : null, description: s.description || '' })),
                 use_case_breakdown: (() => {
                     const obj: Record<string, string> = {};
-                    (toolForm.use_case_breakdown || '').split('\n').forEach((line: string) => { const idx = line.indexOf(':'); if (idx > 0) { obj[line.slice(0, idx).trim()] = line.slice(idx + 1).trim(); } });
+                    (Array.isArray(toolForm.use_case_scores) ? toolForm.use_case_scores : [])
+                        .filter((s: any) => s.use_case)
+                        .forEach((s: any) => { const sc = (s.score !== '' && s.score !== null && s.score !== undefined) ? `${s.score}/10 — ` : ''; obj[s.use_case] = `${sc}${s.description || ''}`.trim(); });
                     return obj;
                 })(),
                 rating_breakdown: (() => {
@@ -438,7 +451,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
             not_ideal_for: Array.isArray(t.not_ideal_for) ? t.not_ideal_for.join('\n') : (t.not_ideal_for || ''),
             limitations: Array.isArray(t.limitations) ? t.limitations.join(', ') : (t.limitations || ''),
             alternative_keywords: Array.isArray(t.alternative_keywords) ? t.alternative_keywords.join(', ') : (t.alternative_keywords || ''),
+            context_window: t.context_window || '',
+            max_integrations: t.max_integrations || '',
+            api_pricing: t.api_pricing || '',
+            image_generation: t.image_generation || '',
+            memory_persistence: t.memory_persistence || '',
+            computer_use: t.computer_use || '',
+            api_available: t.api_available || '',
             use_case_breakdown: mapToStr(t.use_case_breakdown),
+            use_case_scores: (() => {
+                let parsed: any[] = [];
+                if (Array.isArray(t.use_case_scores) && t.use_case_scores.length > 0) {
+                    parsed = t.use_case_scores.map((s: any) => ({ use_case: s.use_case || '', score: s.score != null ? String(s.score) : '', description: s.description || '' }));
+                } else if (t.use_case_breakdown && typeof t.use_case_breakdown === 'object' && !Array.isArray(t.use_case_breakdown)) {
+                    parsed = Object.entries(t.use_case_breakdown).map(([uc, text]: [string, any]) => {
+                        const m = (text || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+                        return { use_case: uc, score: m ? m[1] : '', description: (text || '').replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '').trim() };
+                    });
+                }
+                const ucTags: string[] = Array.isArray(t.use_case_tags) ? t.use_case_tags : [];
+                for (const uc of ucTags) {
+                    if (!parsed.find((s: any) => s.use_case.toLowerCase() === uc.toLowerCase())) parsed.push({ use_case: uc, score: '', description: '' });
+                }
+                return parsed;
+            })(),
             rating_breakdown: mapToStr(t.rating_breakdown),
             alternative_selection: t.alternative_selection || '',
             model_version: t.model_version || '',
@@ -547,6 +583,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const review_slug = extracted['REVIEW_SLUG'] || null;
         const competitor_differentiator_raw = parseKeyValueStr(extracted['COMPETITOR_DIFFERENTIATORS']);
         const related_tool_note_raw = parseKeyValueStr(extracted['RELATED_TOOL_NOTES']);
+
+        // Capability fields
+        const context_window = extracted['CONTEXT_WINDOW'] || null;
+        const max_integrations = extracted['MAX_INTEGRATIONS'] || null;
+        const api_pricing = extracted['API_PRICING'] || null;
+        const ENUM_YNP = ['yes', 'no', 'partial'];
+        const ENUM_YN  = ['yes', 'no'];
+        const imgGenRaw = (extracted['IMAGE_GENERATION'] || '').toLowerCase().trim();
+        const memPersRaw = (extracted['MEMORY_PERSISTENCE'] || '').toLowerCase().trim();
+        const compUseRaw = (extracted['COMPUTER_USE'] || '').toLowerCase().trim();
+        const apiAvailRaw = (extracted['API_AVAILABLE'] || '').toLowerCase().trim();
+        const image_generation = ENUM_YNP.includes(imgGenRaw) ? imgGenRaw : null;
+        const memory_persistence = ENUM_YNP.includes(memPersRaw) ? memPersRaw : null;
+        const computer_use = ENUM_YNP.includes(compUseRaw) ? compUseRaw : null;
+        const api_available = ENUM_YN.includes(apiAvailRaw) ? apiAvailRaw : null;
+
         // Parse "Month Year" (e.g. "March 2026") into ISO date string; fall back to now
         const last_updated_raw = extracted['LAST_UPDATED'] || null;
         const last_updated = (() => {
@@ -568,10 +620,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (use_case_tags.length < 1 || use_case_tags.length > 5) errors.push(`USE_CASES must have 1–5 valid items (got ${use_case_tags.length})`);
         if (catRaw && !category_primary) errors.push(`CATEGORY_PRIMARY "${catRaw}" is not valid. Options: ${CATEGORY_PRIMARY_OPTS.join(', ')}`);
         if (invalidUC.length) errors.push(`USE_CASES has unrecognised values: ${invalidUC.join(', ')}`);
+        if (imgGenRaw && !image_generation) errors.push(`IMAGE_GENERATION must be yes, no, or partial (got "${imgGenRaw}")`);
+        if (memPersRaw && !memory_persistence) errors.push(`MEMORY_PERSISTENCE must be yes, no, or partial (got "${memPersRaw}")`);
+        if (compUseRaw && !computer_use) errors.push(`COMPUTER_USE must be yes, no, or partial (got "${compUseRaw}")`);
+        if (apiAvailRaw && !api_available) errors.push(`API_AVAILABLE must be yes or no (got "${apiAvailRaw}")`);
 
         if (errors.length) return { status: 'error' as const, errors };
 
-        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated } };
+        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated, context_window, max_integrations, api_pricing, image_generation, memory_persistence, computer_use, api_available } };
     };
 
     const handleParseInput = () => {
@@ -619,6 +675,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 best_for: d.best_for?.length ? d.best_for.join('\n') : (isEditing ? prev.best_for : ''),
                 not_ideal_for: d.not_ideal_for?.length ? d.not_ideal_for.join('\n') : (isEditing ? prev.not_ideal_for : ''),
                 use_case_breakdown: d.use_case_breakdown_raw || (isEditing ? prev.use_case_breakdown : ''),
+                use_case_scores: (() => {
+                    const raw: string = d.use_case_breakdown_raw || '';
+                    if (!raw) return isEditing ? prev.use_case_scores : [];
+                    const parsed = raw.split('\n').filter(Boolean).map((line: string) => {
+                        const colonIdx = line.indexOf(':'); if (colonIdx < 0) return null;
+                        const ucName = line.slice(0, colonIdx).trim();
+                        const rest = line.slice(colonIdx + 1).trim();
+                        const m = rest.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+                        return { use_case: ucName, score: m ? m[1] : '', description: rest.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '').trim() };
+                    }).filter(Boolean);
+                    return parsed.length ? parsed : (isEditing ? prev.use_case_scores : []);
+                })(),
                 alternative_selection: d.alternative_selection || (isEditing ? prev.alternative_selection : ''),
                 limitations: d.limitations?.length ? d.limitations.join(', ') : (isEditing ? prev.limitations : ''),
                 rating_breakdown: Object.keys(d.rating_breakdown || {}).length ? Object.entries(d.rating_breakdown).map(([k, v]) => `${k}: ${v}`).join('\n') : (isEditing ? prev.rating_breakdown : ''),
@@ -629,6 +697,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 last_updated: d.last_updated || (isEditing ? prev.last_updated : ''),
                 competitor_differentiator: d.competitor_differentiator_raw || (isEditing ? prev.competitor_differentiator : ''),
                 related_tool_note: d.related_tool_note_raw || (isEditing ? prev.related_tool_note : ''),
+                context_window: d.context_window || (isEditing ? prev.context_window : ''),
+                max_integrations: d.max_integrations || (isEditing ? prev.max_integrations : ''),
+                api_pricing: d.api_pricing || (isEditing ? prev.api_pricing : ''),
+                image_generation: d.image_generation || (isEditing ? prev.image_generation : ''),
+                memory_persistence: d.memory_persistence || (isEditing ? prev.memory_persistence : ''),
+                computer_use: d.computer_use || (isEditing ? prev.computer_use : ''),
+                api_available: d.api_available || (isEditing ? prev.api_available : ''),
             }));
             setUnresolvedRelated((d.related_tool_names || []).filter((n: string) => !tools.some((t: any) => t.name.toLowerCase() === n.toLowerCase())));
             setUnresolvedCompetitors((d.competitor_names || []).filter((n: string) => !tools.some((t: any) => t.name.toLowerCase() === n.toLowerCase())));
@@ -687,7 +762,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 tool_a:            d.tool_a            || (isEditing ? prev.tool_a            : ''),
                 tool_b:            d.tool_b            || (isEditing ? prev.tool_b            : ''),
                 tool_c:            d.tool_c            || (isEditing ? prev.tool_c            : ''),
-                primary_use_cases: d.primary_use_case ? [d.primary_use_case] : (isEditing ? prev.primary_use_cases : []),
+                use_case: (d as any).use_case || d.primary_use_case || (isEditing ? prev.use_case : ''),
                 meta_title:        d.meta_title        || (isEditing ? prev.meta_title        : ''),
                 meta_description:  d.meta_description  || (isEditing ? prev.meta_description  : ''),
             }));
@@ -709,8 +784,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 if (!t) throw new Error(`Tool "${slug}" not found in loaded tools`);
                 return t as CompareTool;
             });
-            const ucArr: string[] = Array.isArray(compForm.primary_use_cases) ? compForm.primary_use_cases : [];
-        const result = generateComparison(toolObjs, { primary_use_case: ucArr[0] || undefined, comparison_type: compForm.comparison_type || '1v1' });
+        const result = generateComparison(toolObjs, { primary_use_case: compForm.use_case || undefined, comparison_type: compForm.comparison_type || '1v1' });
             setCompPreview(result);
             // Auto-fill title/slug if blank
             setCompForm((prev: any) => ({
@@ -735,7 +809,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 tool_b_slug:      compForm.tool_b,
                 tool_c_slug:      compForm.tool_c || undefined,
                 comparison_type:  compForm.comparison_type || '1v1',
-                primary_use_cases: Array.isArray(compForm.primary_use_cases) ? compForm.primary_use_cases : [],
+                use_case:         compForm.use_case || undefined,
+                primary_use_cases: compForm.use_case ? [compForm.use_case] : [],
                 generation_mode:  compForm.generation_mode || 'dynamic',
                 meta_title:       compForm.meta_title       || undefined,
                 meta_description: compForm.meta_description || undefined,
@@ -744,6 +819,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 last_generated:   compPreview ? new Date().toISOString() : undefined,
                 generated_output: compPreview ?? undefined,
                 id: compForm.slug || editingCompId,
+                is_override:      compForm.is_override || false,
+                verdict_override: compForm.verdict_override || null,
+                why_it_wins_override: compForm.why_it_wins_override || null,
+                strengths_override: compForm.strengths_override ? (() => { try { return JSON.parse(compForm.strengths_override); } catch { return null; } })() : null,
+                weaknesses_override: compForm.weaknesses_override ? (() => { try { return JSON.parse(compForm.weaknesses_override); } catch { return null; } })() : null,
+                recommendation_override: compForm.recommendation_override ? (() => { try { return JSON.parse(compForm.recommendation_override); } catch { return null; } })() : null,
+                feature_comparison_override: compForm.feature_comparison_override ? (() => { try { return JSON.parse(compForm.feature_comparison_override); } catch { return null; } })() : null,
+                use_case_breakdown_override: compForm.use_case_breakdown_override ? (() => { try { return JSON.parse(compForm.use_case_breakdown_override); } catch { return null; } })() : null,
             };
 
             const method = editingCompId ? 'PUT' : 'POST';
@@ -1968,7 +2051,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 // Get filename from Content-Disposition header or use default
                 const contentDisposition = res.headers.get('Content-Disposition');
                 const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
-                const filename = filenameMatch ? filenameMatch[1] : `greenshift-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                const filename = filenameMatch ? filenameMatch[1] : `toolcurrent-backup-${new Date().toISOString().slice(0, 10)}.json`;
 
                 a.download = filename;
                 document.body.appendChild(a);
@@ -2000,7 +2083,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                 const contentDisposition = res.headers.get('Content-Disposition');
                 const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
-                const filename = filenameMatch ? filenameMatch[1] : `greenshift-images-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                const filename = filenameMatch ? filenameMatch[1] : `toolcurrent-images-backup-${new Date().toISOString().slice(0, 10)}.json`;
 
                 a.download = filename;
                 document.body.appendChild(a);
@@ -2953,7 +3036,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                             return (
                                                 <button key={uc} type="button" disabled={atMax} onClick={() => { setToolForm((p: any) => {
                                                     const cur: string[] = Array.isArray(p.use_case_tags) ? p.use_case_tags : [];
-                                                    return { ...p, use_case_tags: selected ? cur.filter((x: string) => x !== uc) : [...cur, uc] };
+                                                    const newTags = selected ? cur.filter((x: string) => x !== uc) : [...cur, uc];
+                                                    const curScores: any[] = Array.isArray(p.use_case_scores) ? p.use_case_scores : [];
+                                                    const newScores = !selected && !curScores.find((s: any) => s.use_case.toLowerCase() === uc.toLowerCase()) ? [...curScores, { use_case: uc, score: '', description: '' }] : curScores;
+                                                    return { ...p, use_case_tags: newTags, use_case_scores: newScores };
                                                 }); setToolErrors((e: any) => ({ ...e, use_case_tags: undefined })); }}
                                                 className={`text-xs px-2 py-1 rounded-full border transition-colors ${selected ? 'bg-news-accent/20 text-news-accent border-news-accent/40' : atMax ? 'opacity-30 cursor-not-allowed bg-surface-alt/50 text-gray-500 border-white/5' : 'bg-surface-alt/50 text-gray-400 border-white/10 hover:border-white/20'}`}>
                                                     {uc}
@@ -3015,6 +3101,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                                 </button>
                                             );
                                         })}
+                                    </div>
+                                </div>
+
+                                {/* CAPABILITIES */}
+                                <div className="rounded-lg border border-white/10 p-4 space-y-3">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-0.5">Capabilities</p>
+                                        <p className="text-[11px] text-gray-500">These fields power the Feature Comparison table on comparison pages. Use N/A if not applicable.</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[['context_window','Context Window','e.g. 128K, 1M, N/A'],['max_integrations','Native Integrations','e.g. 500+, 50–100, N/A'],['api_pricing','API Pricing','e.g. $3.00 input / $15.00 output per MTok']].map(([key, label, ph]) => (
+                                            <div key={key} className={key === 'api_pricing' ? 'col-span-2' : ''}>
+                                                <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                                                <input value={toolForm[key] || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setToolForm((p: any) => ({ ...p, [key]: e.target.value }))}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder={ph} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {[['image_generation','Image Generation',['yes','no','partial']],['memory_persistence','Memory Persistence',['yes','no','partial']],['computer_use','Computer Use',['yes','no','partial']],['api_available','API Available',['yes','no']]].map(([key, label, opts]) => (
+                                            <div key={key as string}>
+                                                <label className="block text-xs text-gray-400 mb-1">{label as string}</label>
+                                                <select value={toolForm[key as string] || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setToolForm((p: any) => ({ ...p, [key as string]: e.target.value }))}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                                    <option value="">— not set —</option>
+                                                    {(opts as string[]).map(o => <option key={o} value={o}>{o}</option>)}
+                                                </select>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -3299,9 +3414,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder="Choose ChatGPT when you need 500+ integrations…" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Use Case Breakdown <span className="text-gray-600">(UseCase: explanation, one per line)</span></label>
-                                    <textarea value={toolForm.use_case_breakdown || ''} onChange={e => setToolForm((p: any) => ({ ...p, use_case_breakdown: e.target.value }))}
-                                        rows={5} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Research: Real-time X search gives it a live data advantage...\nCoding: Scores 75% on SWE-bench..."} />
+                                    <label className="block text-xs text-gray-400 mb-2">Use Case Breakdown <span className="text-gray-600">(one row per selected use case)</span></label>
+                                    {(!Array.isArray(toolForm.use_case_tags) || toolForm.use_case_tags.length === 0) ? (
+                                        <p className="text-xs text-gray-600 italic">Select use cases above to fill in breakdown scores.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {(Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : []).map((uc: string) => {
+                                                const scores: any[] = Array.isArray(toolForm.use_case_scores) ? toolForm.use_case_scores : [];
+                                                const entry = scores.find((s: any) => s.use_case.toLowerCase() === uc.toLowerCase()) || { use_case: uc, score: '', description: '' };
+                                                const updateEntry = (field: string, value: string) => setToolForm((p: any) => {
+                                                    const cur: any[] = Array.isArray(p.use_case_scores) ? p.use_case_scores : [];
+                                                    const idx = cur.findIndex((s: any) => s.use_case.toLowerCase() === uc.toLowerCase());
+                                                    const updated = idx >= 0 ? cur.map((s: any, i: number) => i === idx ? { ...s, [field]: value } : s) : [...cur, { use_case: uc, score: '', description: '', [field]: value }];
+                                                    return { ...p, use_case_scores: updated };
+                                                });
+                                                const scoreNum = parseFloat(String(entry.score));
+                                                const scoreValid = entry.score === '' || (!isNaN(scoreNum) && scoreNum >= 0 && scoreNum <= 10);
+                                                return (
+                                                    <div key={uc} className="bg-black/30 border border-white/10 rounded-lg p-3">
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-2">{uc}</p>
+                                                        <div className="flex gap-2 items-start">
+                                                            <div className="w-20 flex-shrink-0">
+                                                                <label className="text-[10px] text-gray-500 block mb-1">Score /10</label>
+                                                                <input type="number" min="0" max="10" step="0.1" value={entry.score} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry('score', e.target.value)}
+                                                                    className={`w-full bg-black/40 border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-news-accent ${scoreValid ? 'border-white/10' : 'border-red-500/60'}`} placeholder="8.5" />
+                                                                {!scoreValid && <p className="text-[10px] text-red-400 mt-0.5">0–10, 1 decimal</p>}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <label className="text-[10px] text-gray-500 block mb-1">Description</label>
+                                                                <textarea value={entry.description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateEntry('description', e.target.value)} rows={2}
+                                                                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-news-accent resize-none" placeholder={`How this tool performs for ${uc}...`} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs text-gray-400 mb-1">Limitations <span className="text-gray-600">(comma-separated tags)</span></label>
@@ -3556,22 +3705,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         </select>
                                     </div>
                                     <div className="col-span-2">
-                                        <label className="block text-xs text-gray-400 mb-1">Use Cases <span className="text-gray-600">(select all that apply — boosts scoring)</span></label>
-                                        <div className="flex flex-wrap gap-1.5 p-3 bg-black/40 border border-white/10 rounded-lg">
-                                            {COMP_USE_CASES.map(uc => {
-                                                const ucArr: string[] = Array.isArray(compForm.primary_use_cases) ? compForm.primary_use_cases : [];
-                                                const selected = ucArr.includes(uc);
-                                                return (
-                                                    <button key={uc} type="button" onClick={() => setCompForm((p: any) => {
-                                                        const cur: string[] = Array.isArray(p.primary_use_cases) ? p.primary_use_cases : [];
-                                                        return { ...p, primary_use_cases: selected ? cur.filter((x: string) => x !== uc) : [...cur, uc] };
-                                                    })}
-                                                    className={`text-xs px-2 py-1 rounded-full border transition-colors ${selected ? 'bg-news-accent/20 text-news-accent border-news-accent/40' : 'bg-zinc-800 text-gray-400 border-white/10 hover:border-white/20'}`}>
-                                                        {uc}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                                        <label className="block text-xs text-gray-400 mb-1">Use Case <span className="text-gray-600">(optional — leave blank for overall /compare/slug, set for /compare/slug/use-case)</span></label>
+                                        <select value={compForm.use_case || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCompForm((p: any) => ({ ...p, use_case: e.target.value }))}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
+                                            <option value="">— None (overall comparison) —</option>
+                                            {COMP_USE_CASES.map(uc => <option key={uc} value={uc}>{uc}</option>)}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -3596,20 +3735,76 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none" />
                                 </div>
 
+                                {/* Override Mode toggle */}
+                                <div className="flex items-center gap-3 py-2 border-t border-white/5">
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" checked={compForm.is_override || false}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompForm((p: any) => ({ ...p, is_override: e.target.checked }))}
+                                            className="w-4 h-4 rounded border-white/20 bg-black/40 text-purple-500 focus:ring-purple-500" />
+                                        <span className="text-xs text-gray-400 font-medium">Override Mode — blank fields use dynamic data from tool profiles</span>
+                                    </label>
+                                    {compForm.is_override && (
+                                        <span className="text-xs bg-purple-900/60 text-purple-400 border border-purple-700/50 px-2 py-0.5 rounded font-bold">OVERRIDE MODE</span>
+                                    )}
+                                </div>
+
+                                {/* Override content fields (visible when is_override=true) */}
+                                {compForm.is_override && (
+                                    <div className="space-y-3 p-4 bg-purple-900/10 border border-purple-700/20 rounded-xl">
+                                        <p className="text-xs text-purple-400 font-bold uppercase tracking-wider">Override Fields — leave blank to use dynamic data</p>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Verdict Override <span className="text-gray-600">(plain text)</span></label>
+                                            <textarea value={compForm.verdict_override || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCompForm((p: any) => ({ ...p, verdict_override: e.target.value }))}
+                                                placeholder={compPreview ? `Dynamic: "${compPreview.quick_verdict.summary}"` : 'Leave blank to use dynamic verdict'}
+                                                rows={2} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-400 resize-none placeholder-gray-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Why It Wins <span className="text-gray-600">(optional)</span></label>
+                                            <textarea value={compForm.why_it_wins_override || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCompForm((p: any) => ({ ...p, why_it_wins_override: e.target.value }))}
+                                                placeholder="A specific comparative reason why this tool beat the others in this comparison. Leave blank to hide this section. Write in plain language, 1–2 sentences maximum, explaining the comparative advantage over the specific tools being compared."
+                                                rows={2} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-400 resize-none placeholder-gray-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Strengths Override <span className="text-gray-600">(JSON: {'{'}slug: ["item1","item2"]{'}'})</span></label>
+                                            <textarea value={compForm.strengths_override || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCompForm((p: any) => ({ ...p, strengths_override: e.target.value }))}
+                                                placeholder='{"tool-slug": ["Strength 1", "Strength 2"]}'
+                                                rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-purple-400 resize-none placeholder-gray-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Weaknesses Override <span className="text-gray-600">(JSON: {'{'}slug: ["item1"]{'}'})</span></label>
+                                            <textarea value={compForm.weaknesses_override || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCompForm((p: any) => ({ ...p, weaknesses_override: e.target.value }))}
+                                                placeholder='{"tool-slug": ["Weakness 1"]}'
+                                                rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-purple-400 resize-none placeholder-gray-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Feature Comparison Override <span className="text-gray-600">(JSON array of table rows)</span></label>
+                                            <textarea value={compForm.feature_comparison_override || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCompForm((p: any) => ({ ...p, feature_comparison_override: e.target.value }))}
+                                                placeholder='[{"feature":"Custom Feature","values":{"slug-a":"Yes","slug-b":"No"},"winner_slug":"slug-a"}]'
+                                                rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-purple-400 resize-none placeholder-gray-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Recommendation Override <span className="text-gray-600">(JSON: {'{'}choose: {'{'}slug: ["reason"]{'}'}', summary: "..."{'}'})</span></label>
+                                            <textarea value={compForm.recommendation_override || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCompForm((p: any) => ({ ...p, recommendation_override: e.target.value }))}
+                                                placeholder='{"choose":{"tool-slug":["Reason 1"]},"summary":"..."}'
+                                                rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-purple-400 resize-none placeholder-gray-600" />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Action Buttons */}
                                 <div className="flex gap-3 pt-2 flex-wrap">
                                     <button
                                         onClick={handleGenerateComparisonPreview}
                                         disabled={!compForm.tool_a || !compForm.tool_b || compPreviewLoading}
                                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-sm disabled:opacity-40 transition-colors">
-                                        <Sparkles size={13} /> {compPreviewLoading ? 'Generating…' : compPreview ? 'Regenerate' : 'Generate Comparison'}
+                                        <Sparkles size={13} /> {compPreviewLoading ? 'Generating…' : compPreview ? 'Regenerate' : 'Preview Dynamic Output'}
                                     </button>
                                     <button onClick={handleSaveComparison} disabled={!compForm.title || !compForm.tool_a || !compForm.tool_b || compLoading}
                                         className="flex-1 bg-news-accent hover:bg-news-accentHover text-black font-bold py-2 rounded-lg text-sm disabled:opacity-40 transition-colors">
                                         {compLoading ? 'Saving…' : editingCompId ? 'Update' : 'Save Comparison'}
                                     </button>
                                     {compForm.slug && (
-                                        <button onClick={() => window.open(`/comparisons/${compForm.slug}`, '_blank')}
+                                        <button onClick={() => window.open(`/compare/${compForm.slug}${compForm.use_case ? '/' + compForm.use_case.toLowerCase().replace(/\s+/g, '-') : ''}`, '_blank')}
                                             className="px-3 py-2 bg-zinc-800 text-gray-300 rounded-lg text-sm hover:bg-zinc-700 flex items-center gap-1.5">
                                             <ExternalLink size={12} />
                                         </button>
@@ -3724,13 +3919,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                         {/* List sidebar */}
                         <div className="col-span-12 lg:col-span-5 xl:col-span-4">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">{comparisons.length} Comparisons</h3>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">{comparisons.length} Comparisons</h3>
+                                <button onClick={() => { setEditingCompId(null); setCompPreview(null); setCompForm({ ...EMPTY_COMP_FORM, is_override: true }); }}
+                                    className="text-xs px-2.5 py-1 bg-purple-900/50 text-purple-400 border border-purple-700/40 rounded-lg hover:bg-purple-800/50 font-bold">
+                                    + Override Record
+                                </button>
+                            </div>
                             <div className="space-y-2 max-h-[80vh] overflow-y-auto pr-1">
                                 {comparisons.map(c => (
                                     <div key={c.id || c._id} className={`flex items-center justify-between rounded-xl px-4 py-3 hover:border-white/10 transition-colors border ${c.needs_update ? 'bg-amber-950/20 border-amber-700/30' : 'bg-zinc-900 border-white/5'}`}>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-bold text-sm text-white truncate">{c.title}</p>
+                                                {(c as any).is_override && (
+                                                    <span className="text-xs bg-purple-900/60 text-purple-400 border border-purple-700/50 px-1.5 py-0.5 rounded font-bold flex-shrink-0">OVERRIDE</span>
+                                                )}
                                                 {c.needs_update && (
                                                     <span className="text-xs bg-amber-900/60 text-amber-400 border border-amber-700/50 px-1.5 py-0.5 rounded font-bold flex-shrink-0">Stale</span>
                                                 )}
@@ -3753,11 +3957,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                                     tool_b:           c.tool_b_slug      || c.tool_b || '',
                                                     tool_c:           c.tool_c_slug      || c.tool_c || '',
                                                     comparison_type:  c.comparison_type  || '1v1',
-                                                    primary_use_cases: Array.isArray(c.primary_use_cases) ? c.primary_use_cases : (c.primary_use_case ? [c.primary_use_case] : []),
+                                                    use_case:          c.use_case || (Array.isArray(c.primary_use_cases) ? c.primary_use_cases[0] : '') || c.primary_use_case || '',
                                                     generation_mode:  c.generation_mode  || 'dynamic',
                                                     meta_title:       c.meta_title       || '',
                                                     meta_description: c.meta_description || '',
                                                     status:           c.status           || 'published',
+                                                    is_override:      (c as any).is_override || false,
+                                                    verdict_override: (c as any).verdict_override || '',
+                                    why_it_wins_override: (c as any).why_it_wins_override || '',
+                                                    strengths_override: (c as any).strengths_override ? JSON.stringify((c as any).strengths_override, null, 2) : '',
+                                                    weaknesses_override: (c as any).weaknesses_override ? JSON.stringify((c as any).weaknesses_override, null, 2) : '',
+                                                    recommendation_override: (c as any).recommendation_override ? JSON.stringify((c as any).recommendation_override, null, 2) : '',
+                                                    feature_comparison_override: (c as any).feature_comparison_override ? JSON.stringify((c as any).feature_comparison_override, null, 2) : '',
+                                                    use_case_breakdown_override: (c as any).use_case_breakdown_override ? JSON.stringify((c as any).use_case_breakdown_override, null, 2) : '',
                                                 });
                                                 setCompParseErrors([]);
                                             }} className="p-1.5 text-gray-500 hover:text-blue-400"><Edit size={14} /></button>

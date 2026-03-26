@@ -9,7 +9,7 @@ interface HubPageProps {
     articles: Article[];
     onArticleClick: (article: Article) => void;
     onToolClick: (slug: string) => void;
-    onComparisonClick: (slug: string) => void;
+    onComparisonClick: (slug: string, useCase?: string) => void;
     onBack: () => void;
     onHubNavigate?: (hub: string) => void;
     workflowFilter?: string;
@@ -682,7 +682,7 @@ const AIToolsHub: React.FC<{
                         <button onClick={clearAllFilters} className="block mx-auto mt-3 text-news-accent text-xs font-bold hover:underline">Clear filters</button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {visible.map(tool => {
                             const badge = getBadge(tool);
                             return (
@@ -1269,7 +1269,7 @@ const BestSoftwareHub: React.FC<{
                         <button onClick={() => { setCatFilter('All'); setPricingFilter('All'); setRoleFilter('All'); }} className="block mx-auto mt-3 text-news-accent text-xs font-bold hover:underline">Clear filters</button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {sorted.map((a, i) => <RankingCard key={a.id} a={a} index={i} />)}
                     </div>
                 )}
@@ -1399,232 +1399,614 @@ const BestSoftwareHub: React.FC<{
 };
 
 
+// ─── Generated comparison pair type ──────────────────────────────────────────
+interface GenPair {
+    toolA: Tool;
+    toolB: Tool;
+    sharedUseCase: string | null;
+    combinedScore: number;
+    isEditorialPick: boolean;
+    slug: string;
+    ucSlug: string | null;
+}
+
+// Build pairs from top-rated tools' competitor relationships
+function buildTrendingPairs(tools: Tool[], cmsPairs: Comparison[]): GenPair[] {
+    const rated = tools.filter(t => (t.rating_score || 0) > 0);
+    const top12 = [...rated].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 12);
+    const toolById: Record<string, Tool> = {};
+    tools.forEach(t => { toolById[(t as any).id] = t; toolById[t.slug] = t; });
+    const seen = new Set<string>();
+    const pairs: GenPair[] = [];
+    for (const tA of top12) {
+        const competitorIds: string[] = (tA as any).competitors || [];
+        for (const cId of competitorIds) {
+            const tB = toolById[cId];
+            if (!tB) continue;
+            const [hiT, loT] = (tA.rating_score || 0) >= (tB.rating_score || 0) ? [tA, tB] : [tB, tA];
+            const key = `${hiT.slug}|${loT.slug}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const ucA: string[] = (hiT as any).use_case_tags || [];
+            const ucB: string[] = (loT as any).use_case_tags || [];
+            const sharedUC = ucA.find((uc: string) => ucB.includes(uc)) || null;
+            const editPick = cmsPairs.some(c =>
+                ((c.tool_a_slug === hiT.slug && c.tool_b_slug === loT.slug) ||
+                 (c.tool_a_slug === loT.slug && c.tool_b_slug === hiT.slug)) &&
+                (c as any).is_override === true
+            );
+            pairs.push({
+                toolA: hiT, toolB: loT, sharedUseCase: sharedUC,
+                combinedScore: (hiT.rating_score || 0) + (loT.rating_score || 0),
+                isEditorialPick: editPick,
+                slug: `${hiT.slug}-vs-${loT.slug}`,
+                ucSlug: sharedUC ? sharedUC.toLowerCase().replace(/\s+/g, '-') : null,
+            });
+        }
+    }
+    return pairs.sort((a, b) => b.combinedScore - a.combinedScore).slice(0, 9);
+}
+
+// Build ALL pairs for category browsing (all rated tools, not just top 12)
+function buildAllPairs(tools: Tool[], cmsPairs: Comparison[]): GenPair[] {
+    const toolById: Record<string, Tool> = {};
+    tools.forEach(t => { toolById[(t as any).id] = t; toolById[t.slug] = t; });
+    const seen = new Set<string>();
+    const pairs: GenPair[] = [];
+    for (const tA of tools) {
+        if (!((tA.rating_score || 0) > 0)) continue;
+        const competitorIds: string[] = (tA as any).competitors || [];
+        for (const cId of competitorIds) {
+            const tB = toolById[cId];
+            if (!tB || !((tB.rating_score || 0) > 0)) continue;
+            const [hiT, loT] = (tA.rating_score || 0) >= (tB.rating_score || 0) ? [tA, tB] : [tB, tA];
+            const key = `${hiT.slug}|${loT.slug}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const ucA: string[] = (hiT as any).use_case_tags || [];
+            const ucB: string[] = (loT as any).use_case_tags || [];
+            const sharedUC = ucA.find((uc: string) => ucB.includes(uc)) || null;
+            const editPick = cmsPairs.some(c =>
+                ((c.tool_a_slug === hiT.slug && c.tool_b_slug === loT.slug) ||
+                 (c.tool_a_slug === loT.slug && c.tool_b_slug === hiT.slug)) &&
+                (c as any).is_override === true
+            );
+            pairs.push({
+                toolA: hiT, toolB: loT, sharedUseCase: sharedUC,
+                combinedScore: (hiT.rating_score || 0) + (loT.rating_score || 0),
+                isEditorialPick: editPick,
+                slug: `${hiT.slug}-vs-${loT.slug}`,
+                ucSlug: sharedUC ? sharedUC.toLowerCase().replace(/\s+/g, '-') : null,
+            });
+        }
+    }
+    return pairs.sort((a, b) => b.combinedScore - a.combinedScore);
+}
+
+const CAT_KEYWORDS: Record<string, string[]> = {
+    'AI Assistants':        ['chatbot', 'ai chatbot', 'ai assistant'],
+    'Productivity Tools':   ['productivity'],
+    'Automation Platforms': ['automation'],
+    'AI Writing':           ['ai writing', 'writing'],
+    'Developer Tools':      ['development', 'developer', 'coding'],
+    'Image Generation':     ['design', 'image'],
+};
+
+function toolMatchesCat(tool: Tool, cat: string): boolean {
+    if (cat === 'All') return true;
+    const keywords = CAT_KEYWORDS[cat] || [cat.toLowerCase().replace(/ tools?| platforms?| generation/g, '')];
+    const tags = [(tool as any).category_primary, ...(tool.category_tags || [])].filter(Boolean)
+        .map((s: string) => s.toLowerCase());
+    return keywords.some(kw => tags.some(tag => tag.includes(kw)));
+}
+
+// ─── Pair card skeleton ────────────────────────────────────────────────────────
+const PairCardSkeleton: React.FC = () => (
+    <div className="flex flex-col bg-surface-card border border-border-subtle rounded-2xl overflow-hidden animate-pulse">
+        <div className="px-4 pt-3 pb-1">
+            <div className="w-14 h-3.5 bg-surface-alt rounded" />
+        </div>
+        <div className="flex items-stretch px-3 py-3 gap-1">
+            <div className="flex-1 flex flex-col items-center gap-2 px-2 py-2">
+                <div className="w-10 h-10 rounded-xl bg-surface-alt flex-shrink-0" />
+                <div className="h-2.5 bg-surface-alt rounded w-3/4" />
+                <div className="h-7 bg-surface-alt rounded w-1/2" />
+                <div className="h-2 bg-surface-alt rounded w-1/3" />
+            </div>
+            <div className="w-6 flex flex-col items-center justify-center gap-1">
+                <div className="w-px flex-1 bg-surface-alt" />
+                <div className="w-5 h-5 rounded-full bg-surface-alt flex-shrink-0" />
+                <div className="w-px flex-1 bg-surface-alt" />
+            </div>
+            <div className="flex-1 flex flex-col items-center gap-2 px-2 py-2">
+                <div className="w-10 h-10 rounded-xl bg-surface-alt flex-shrink-0" />
+                <div className="h-2.5 bg-surface-alt rounded w-3/4" />
+                <div className="h-7 bg-surface-alt rounded w-1/2" />
+                <div className="h-2 bg-surface-alt rounded w-1/3" />
+            </div>
+        </div>
+        <div className="border-t border-border-divider px-4 py-2.5">
+            <div className="h-3 bg-surface-alt rounded w-2/3 mx-auto" />
+        </div>
+    </div>
+);
+
+// ─── Pair card — shared between Trending and Browse sections ──────────────────
+const PairCard: React.FC<{ pair: GenPair; onClick: () => void }> = ({ pair, onClick }) => {
+    const { toolA, toolB, sharedUseCase, isEditorialPick, slug } = pair;
+
+    const scoreA = (() => {
+        if (sharedUseCase) {
+            const entry = ((toolA as any).use_case_scores || []).find(
+                (s: any) => s.use_case?.toLowerCase() === sharedUseCase.toLowerCase()
+            );
+            if (entry?.score != null) return entry.score as number;
+        }
+        return toolA.rating_score || 0;
+    })();
+    const scoreB = (() => {
+        if (sharedUseCase) {
+            const entry = ((toolB as any).use_case_scores || []).find(
+                (s: any) => s.use_case?.toLowerCase() === sharedUseCase.toLowerCase()
+            );
+            if (entry?.score != null) return entry.score as number;
+        }
+        return toolB.rating_score || 0;
+    })();
+
+    const tied = scoreA === scoreB;
+    const aWins = !tied && scoreA >= scoreB;
+    const bWins = !tied && scoreB > scoreA;
+
+    return (
+        <a href={`/compare/${slug}`}
+            onClick={e => { e.preventDefault(); onClick(); }}
+            className="group flex flex-col bg-surface-card border border-border-subtle rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 ease-out hover:border-news-accent/60 hover:bg-surface-hover hover:-translate-y-1 no-underline">
+
+            {/* Category tag + editorial badge */}
+            <div className="flex items-center justify-between px-4 pt-3 pb-0">
+                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium uppercase tracking-wider ${sharedUseCase ? 'border-news-accent/25 text-news-accent/60' : 'border-border-subtle text-news-muted/60'}`}>
+                    {sharedUseCase || 'Overall'}
+                </span>
+                {isEditorialPick && (
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-news-accent/50">Pick</span>
+                )}
+            </div>
+
+            {/* Three-zone comparison area */}
+            <div className="flex items-stretch px-3 py-3 gap-0.5">
+
+                {/* Tool A */}
+                <div className={`flex-1 flex flex-col items-center gap-2 px-2 pt-2 pb-2.5 rounded-xl transition-colors duration-200 ${aWins ? 'bg-news-accent/5' : ''}`}>
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0 p-1">
+                        {toolA.logo
+                            ? <img src={toolA.logo} alt={toolA.name} width={40} height={40}
+                                className="w-full h-full object-contain"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                            : <span className="text-sm font-black text-surface-base">{toolA.name[0]}</span>
+                        }
+                    </div>
+                    <p className={`text-[11px] font-semibold text-center leading-tight w-full truncate ${aWins ? 'text-white' : tied ? 'text-white/80' : 'text-white/45'}`}>
+                        {toolA.name}
+                    </p>
+                    <p className={`text-2xl font-black leading-none tabular-nums ${aWins ? 'text-news-accent' : tied ? 'text-news-accent/70' : 'text-white/35'}`}>
+                        {scoreA > 0 ? scoreA.toFixed(1) : '—'}
+                    </p>
+                    <div className="h-3 flex items-center justify-center">
+                        {aWins
+                            ? <span className="text-[8px] font-bold uppercase tracking-widest text-news-accent/60">Top rated</span>
+                            : <span className="text-[8px] invisible select-none">x</span>
+                        }
+                    </div>
+                </div>
+
+                {/* VS divider */}
+                <div className="flex flex-col items-center justify-center gap-1 w-6 flex-shrink-0">
+                    <div className="w-px flex-1 bg-border-subtle" />
+                    <div className="w-5 h-5 rounded-full bg-surface-base border border-border-subtle flex items-center justify-center flex-shrink-0">
+                        <span className="text-[7px] font-black text-news-muted/70 leading-none">VS</span>
+                    </div>
+                    <div className="w-px flex-1 bg-border-subtle" />
+                </div>
+
+                {/* Tool B */}
+                <div className={`flex-1 flex flex-col items-center gap-2 px-2 pt-2 pb-2.5 rounded-xl transition-colors duration-200 ${bWins ? 'bg-news-accent/5' : ''}`}>
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0 p-1">
+                        {toolB.logo
+                            ? <img src={toolB.logo} alt={toolB.name} width={40} height={40}
+                                className="w-full h-full object-contain"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                            : <span className="text-sm font-black text-surface-base">{toolB.name[0]}</span>
+                        }
+                    </div>
+                    <p className={`text-[11px] font-semibold text-center leading-tight w-full truncate ${bWins ? 'text-white' : tied ? 'text-white/80' : 'text-white/45'}`}>
+                        {toolB.name}
+                    </p>
+                    <p className={`text-2xl font-black leading-none tabular-nums ${bWins ? 'text-news-accent' : tied ? 'text-news-accent/70' : 'text-white/35'}`}>
+                        {scoreB > 0 ? scoreB.toFixed(1) : '—'}
+                    </p>
+                    <div className="h-3 flex items-center justify-center">
+                        {bWins
+                            ? <span className="text-[8px] font-bold uppercase tracking-widest text-news-accent/60">Top rated</span>
+                            : <span className="text-[8px] invisible select-none">x</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            {/* CTA */}
+            <div className="border-t border-border-divider px-4 py-2.5">
+                <p className="text-xs text-center font-semibold text-news-muted/70 group-hover:text-news-accent transition-colors duration-150">
+                    View full comparison <span className="inline-block group-hover:translate-x-0.5 transition-transform duration-150">→</span>
+                </p>
+            </div>
+        </a>
+    );
+};
+
 // ─── Comparisons Hub ──────────────────────────────────────────────────────────
 const COMP_CATEGORIES = ['All', 'AI Assistants', 'Productivity Tools', 'Automation Platforms', 'AI Writing', 'Developer Tools', 'Image Generation'];
 
 const ComparisonsHub: React.FC<{
-    onComparisonClick: (s: string) => void;
+    onComparisonClick: (s: string, uc?: string) => void;
     articles: Article[];
     onArticleClick: (a: Article) => void;
 }> = ({ onComparisonClick, articles, onArticleClick }) => {
-    const [comparisons, setComparisons] = useState<Comparison[]>([]);
+    // ── Core data state ──────────────────────────────────────────────────────
     const [tools, setTools] = useState<Tool[]>([]);
+    const [cmsPairs, setCmsPairs] = useState<Comparison[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // ── Browse / sort state ──────────────────────────────────────────────────
     const [catFilter, setCatFilter] = useState('All');
-    const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'rated'>('popular');
+    const [sortBy, setSortBy] = useState<'popular' | 'rated'>('popular');
+
+    // ── Tool selector state ──────────────────────────────────────────────────
     const [builderA, setBuilderA] = useState('');
     const [builderB, setBuilderB] = useState('');
+    const [builderC, setBuilderC] = useState('');
+    const [builderUC, setBuilderUC] = useState('');
+    const browseRef = React.useRef<HTMLElement>(null);
 
+    // ── Animation motion preference ──────────────────────────────────────────
+    const prefersReducedMotion = React.useRef(
+        typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ).current;
+
+    // ── Data fetch ───────────────────────────────────────────────────────────
     useEffect(() => {
         Promise.all([
-            fetch('/api/comparisons').then(r => r.json()),
             fetch('/api/tools').then(r => r.json()),
-        ]).then(([comps, t]) => {
-            setComparisons(comps);
-            setTools(t);
+            fetch('/api/comparisons').then(r => r.json()).catch(() => []),
+        ]).then(([t, comps]) => {
+            setTools(Array.isArray(t) ? t : []);
+            setCmsPairs(Array.isArray(comps) ? comps : []);
             setLoading(false);
         }).catch(() => setLoading(false));
     }, []);
 
-    // Category matching: check if any tool in comparison has matching tags
-    const catMatch = (c: Comparison) => {
-        if (catFilter === 'All') return true;
-        const q = catFilter.toLowerCase().replace(' tools','').replace(' platforms','').replace(' generation','');
-        const allTags = [...(c.tool_a?.category_tags || []), ...(c.tool_b?.category_tags || []), ...((c as any).tool_c?.category_tags || [])];
-        return allTags.some(t => t.toLowerCase().includes(q));
+    // ── Generated pairs ──────────────────────────────────────────────────────
+    const trendingPairs = React.useMemo(() => buildTrendingPairs(tools, cmsPairs), [tools, cmsPairs]);
+    const allPairs      = React.useMemo(() => buildAllPairs(tools, cmsPairs),      [tools, cmsPairs]);
+
+    // ── Tool selector derived state ──────────────────────────────────────────
+    const toolObjA = tools.find(t => t.slug === builderA);
+    const toolObjB = tools.find(t => t.slug === builderB);
+    const toolsForB = tools.filter(t => t.slug !== builderA);
+    const toolsForC = tools.filter(t => t.slug !== builderA && t.slug !== builderB);
+
+    const ucIntersection: string[] = React.useMemo(() => {
+        if (!toolObjA || !toolObjB) return [];
+        const ucA: string[] = (toolObjA as any).use_case_tags || [];
+        const ucB: string[] = (toolObjB as any).use_case_tags || [];
+        return ucA.filter((uc: string) => ucB.includes(uc));
+    }, [toolObjA, toolObjB]);
+
+    // Auto-select if exactly one shared use case
+    useEffect(() => {
+        if (ucIntersection.length === 1) setBuilderUC(ucIntersection[0]);
+        else setBuilderUC('');
+    }, [ucIntersection.join(',')]);
+
+    const handleCompare = () => {
+        if (!builderA || !builderB) return;
+        const slug = builderC
+            ? `${builderA}-vs-${builderB}-vs-${builderC}`
+            : `${builderA}-vs-${builderB}`;
+        const ucSlug = builderUC ? builderUC.toLowerCase().replace(/\s+/g, '-') : undefined;
+        onComparisonClick(slug, ucSlug);
     };
 
-    const avgRating = (c: Comparison) => {
-        const scores = [c.tool_a?.rating_score, c.tool_b?.rating_score, (c as any).tool_c?.rating_score].filter(Boolean) as number[];
-        return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    };
-
-    const filtered = comparisons.filter(catMatch);
-
-    const sorted = [...filtered].sort((a, b) => {
-        if (sortBy === 'rated') return avgRating(b) - avgRating(a);
-        return 0; // popular/newest = API order
-    });
-
-    // Popular = first 6 from unfiltered list
-    const popular = comparisons.slice(0, 6);
+    // ── Browse by category ───────────────────────────────────────────────────
+    const filteredPairs = React.useMemo(() => {
+        const base = catFilter === 'All'
+            ? trendingPairs
+            : allPairs.filter(p => toolMatchesCat(p.toolA, catFilter) && toolMatchesCat(p.toolB, catFilter));
+        return sortBy === 'rated'
+            ? [...base].sort((a, b) => b.combinedScore - a.combinedScore)
+            : base;
+    }, [catFilter, sortBy, trendingPairs, allPairs]);
 
     const relatedRankings = articles.filter(a => (a as any).article_type === 'best-of').slice(0, 4);
 
-    const handleCompare = () => {
-        if (!builderA || !builderB || builderA === builderB) return;
-        const slug = `${builderA}-vs-${builderB}`;
-        onComparisonClick(slug);
+    // ── Shared styles ────────────────────────────────────────────────────────
+    const heroGradientStyle: React.CSSProperties = {
+        background: 'radial-gradient(ellipse 90% 70% at 50% 0%, rgba(43,212,195,0.05) 0%, transparent 70%)',
+    };
+    const dotGridStyle: React.CSSProperties = {
+        backgroundImage: 'radial-gradient(circle, rgba(43,212,195,0.04) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
     };
 
-    if (loading) return <div className="flex items-center justify-center py-24 text-gray-500"><div className="w-6 h-6 border-2 border-news-accent border-t-transparent rounded-full animate-spin mr-3" /> Loading…</div>;
+    // ── Loading skeleton ─────────────────────────────────────────────────────
+    if (loading) return (
+        <div>
+            <section className="relative overflow-hidden" style={heroGradientStyle}>
+                <div className="hidden md:block absolute inset-0 pointer-events-none" style={dotGridStyle} />
+                <div className="container mx-auto px-4 md:px-8 pt-[140px] md:pt-[150px] pb-8 md:pb-10">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-2">ToolCurrent Comparisons</p>
+                    <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight mb-4">Comparisons</h1>
+                    <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">Compare any two AI tools instantly. See scores, features, and a clear verdict.</p>
+                </div>
+                <div className="absolute bottom-0 inset-x-0 h-10 pointer-events-none"
+                    style={{ background: 'linear-gradient(to bottom, transparent, #0B0F14)' }} />
+            </section>
+            <div className="container mx-auto px-4 md:px-8 py-10">
+                <div className="space-y-16">
+                    <div>
+                        <div className="flex items-end justify-between mb-6">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Popular</p>
+                                <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Trending Comparisons</h2>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {Array.from({ length: 8 }).map((_, i) => <PairCardSkeleton key={i} />)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div>
-            {/* Comparison Builder */}
-            <div className="mb-10 p-5 bg-surface-card border border-border-subtle rounded-2xl shadow-elevation">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-4">Compare Tools</p>
-                <div className="flex flex-wrap items-center gap-3">
-                    <select
-                        value={builderA}
-                        onChange={e => setBuilderA(e.target.value)}
-                        className="flex-1 min-w-[160px] appearance-none bg-surface-base border border-border-subtle text-sm font-medium text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-news-accent cursor-pointer"
-                    >
-                        <option value="" disabled>Select Tool A</option>
-                        {tools.map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
-                    </select>
-                    <span className="text-xs font-black text-news-muted px-3 py-1.5 rounded-full bg-surface-base border border-border-divider flex-shrink-0">VS</span>
-                    <select
-                        value={builderB}
-                        onChange={e => setBuilderB(e.target.value)}
-                        className="flex-1 min-w-[160px] appearance-none bg-surface-base border border-border-subtle text-sm font-medium text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-news-accent cursor-pointer"
-                    >
-                        <option value="" disabled>Select Tool B</option>
-                        {tools.filter(t => t.slug !== builderA).map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
-                    </select>
-                    <button
-                        onClick={handleCompare}
-                        disabled={!builderA || !builderB || builderA === builderB}
-                        className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-news-accent text-white text-sm font-bold hover:bg-news-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        Compare Tools <ArrowRight size={14} />
-                    </button>
-                </div>
-            </div>
+            {/* ─── Hero section ─────────────────────────────────────────────── */}
+            <section className="relative overflow-hidden" style={heroGradientStyle}>
+                {/* Dot grid overlay — desktop only */}
+                <div className="hidden md:block absolute inset-0 pointer-events-none" style={dotGridStyle} />
 
-            {/* Popular Comparisons strip */}
-            {popular.length >= 2 && (
-                <div className="mb-10">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-4">Popular Comparisons</p>
-                    <HScrollRow>
-                        {popular.map(c => {
-                            const tA = c.tool_a;
-                            const tB = c.tool_b;
-                            const tC = (c as any).tool_c;
-                            const compTools = [tA, tB, tC].filter(Boolean);
-                            return (
-                                <button
-                                    key={c.id}
-                                    onClick={() => onComparisonClick(c.slug)}
-                                    className="group flex-shrink-0 w-56 text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:border-news-accent/40 hover:bg-surface-hover transition-all shadow-elevation"
-                                >
-                                    <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-                                        {compTools.map((t, i) => (
-                                            <React.Fragment key={t.slug}>
-                                                {i > 0 && <span className="text-[9px] font-black text-news-muted flex-shrink-0">VS</span>}
-                                                <div className="flex items-center gap-1 min-w-0">
-                                                    {t.logo && <div className="w-5 h-5 rounded bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><img src={t.logo} alt={t.name} className="w-full h-full object-contain" loading="lazy" /></div>}
-                                                    <span className="text-xs font-bold text-white truncate">{t.name}</span>
-                                                </div>
-                                            </React.Fragment>
+                <div className="container mx-auto px-4 md:px-8 pt-[140px] md:pt-[150px] pb-8 md:pb-10">
+                    {/* Eyebrow */}
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-2">ToolCurrent Comparisons</p>
+
+                    {/* Title */}
+                    <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight mb-4">Comparisons</h1>
+
+                    {/* Supporting line */}
+                    <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">
+                        Compare any two AI tools instantly. See scores, features, and a clear verdict.
+                    </p>
+
+                    {/* Crosslink banner */}
+                    <a href="/best-software"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-news-accent border border-news-accent/30 bg-news-accent/5 rounded-lg px-3 py-2 hover:bg-news-accent/10 transition-colors">
+                        Not sure which tools to compare? Browse Best Software to find your options
+                        <ArrowRight size={11} />
+                    </a>
+                </div>
+
+                {/* Bottom fade */}
+                <div className="absolute bottom-0 inset-x-0 h-10 pointer-events-none"
+                    style={{ background: 'linear-gradient(to bottom, transparent, #0B0F14)' }} />
+            </section>
+
+            {/* ─── Main content ─────────────────────────────────────────────── */}
+            <div className="container mx-auto px-4 md:px-8 py-10">
+            <div className="space-y-16">
+
+            {/* ── 1. Tool Selector ─────────────────────────────────────────── */}
+            <section>
+                <div className="mb-5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Compare Tools</p>
+                    <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Compare Any Tools Side by Side</h2>
+                </div>
+                <div className="p-5 bg-surface-card border border-border-subtle rounded-2xl shadow-elevation">
+                    {/* Tool A / VS / Tool B / VS / Tool C — all on one row */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        {/* Tool A */}
+                        <div className="relative flex-1">
+                            <select
+                                value={builderA}
+                                onChange={e => { setBuilderA(e.target.value); setBuilderB(''); setBuilderC(''); setBuilderUC(''); }}
+                                className={`w-full appearance-none bg-surface-base border border-border-subtle text-sm font-medium rounded-xl px-4 py-2.5 pr-9 focus:outline-none focus:border-news-accent cursor-pointer transition-colors ${builderA ? 'text-white' : 'text-news-muted'}`}
+                            >
+                                <option value="" disabled>Select Tool A</option>
+                                {tools.map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
+                        </div>
+
+                        <span className="text-xs font-black text-news-muted px-2 py-2 rounded-full bg-surface-base border border-border-divider flex-shrink-0 text-center">VS</span>
+
+                        {/* Tool B */}
+                        <div className="relative flex-1">
+                            <select
+                                value={builderB}
+                                onChange={e => { setBuilderB(e.target.value); setBuilderC(''); setBuilderUC(''); }}
+                                disabled={!builderA}
+                                className={`w-full appearance-none bg-surface-base border border-border-subtle text-sm font-medium rounded-xl px-4 py-2.5 pr-9 focus:outline-none focus:border-news-accent cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${builderB ? 'text-white' : 'text-news-muted'}`}
+                            >
+                                <option value="" disabled>Select Tool B</option>
+                                {toolsForB.map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
+                        </div>
+
+                        <span className="text-xs font-black text-news-muted px-2 py-2 rounded-full bg-surface-base border border-border-divider flex-shrink-0 text-center opacity-50">VS</span>
+
+                        {/* Tool C — optional */}
+                        <div className="relative flex-1">
+                            <select
+                                value={builderC}
+                                onChange={e => setBuilderC(e.target.value)}
+                                disabled={!builderB}
+                                className={`w-full appearance-none bg-surface-base border border-border-subtle text-sm font-medium rounded-xl px-4 py-2.5 pr-9 focus:outline-none focus:border-news-accent cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${builderC ? 'text-white' : 'text-news-muted'}`}
+                            >
+                                <option value="">+ Tool C (optional)</option>
+                                {toolsForC.map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
+                        </div>
+
+                        {/* Compare button — same row, matches select height */}
+                        <button
+                            onClick={handleCompare}
+                            disabled={!builderA || !builderB}
+                            className={`flex-shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-150 ${builderA && builderB
+                                ? `bg-news-accent text-white hover:bg-news-accentHover cursor-pointer${!prefersReducedMotion ? ' scale-[1.02]' : ''}`
+                                : 'bg-surface-alt text-news-muted opacity-60 cursor-not-allowed'
+                            }`}
+                        >
+                            Compare <ArrowRight size={14} />
+                        </button>
+                    </div>
+
+                    {/* Use case selector — revealed after A and B both selected */}
+                    {builderA && builderB && (
+                        <div className="mt-4 pt-4 border-t border-border-divider">
+                            {ucIntersection.length > 0 ? (
+                                <div>
+                                    <p className="text-xs text-news-muted mb-2.5">
+                                        <span className="font-semibold text-white">Optimised for</span>
+                                        <span className="ml-1">(optional) — select a use case for a focused comparison, or leave blank for an overall comparison.</span>
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button onClick={() => setBuilderUC('')}
+                                            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${!builderUC ? 'bg-news-accent text-white border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:border-news-accent/50 hover:text-news-accent'}`}>
+                                            Overall
+                                        </button>
+                                        {ucIntersection.map(uc => (
+                                            <button key={uc} onClick={() => setBuilderUC(builderUC === uc ? '' : uc)}
+                                                className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${builderUC === uc ? 'bg-news-accent text-white border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:border-news-accent/50 hover:text-news-accent'}`}>
+                                                {uc}
+                                            </button>
                                         ))}
                                     </div>
-                                    <p className="text-[10px] text-news-muted group-hover:text-news-accent transition-colors flex items-center gap-1">Read comparison <ArrowRight size={9} /></p>
-                                </button>
-                            );
-                        })}
-                    </HScrollRow>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-news-muted italic">These tools serve different primary use cases — you'll see an overall comparison.</p>
+                            )}
+                        </div>
+                    )}
                 </div>
-            )}
+            </section>
 
-            {/* Category filter + Sort */}
-            <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-surface-card rounded-2xl border border-border-subtle shadow-elevation">
-                <div className="flex flex-wrap gap-2 flex-1">
+
+            {/* ── 2. Trending Comparisons ──────────────────────────────────── */}
+            <section>
+                <div className="flex items-end justify-between mb-6">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Popular</p>
+                        <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Trending Comparisons</h2>
+                    </div>
+                    <button
+                        onClick={() => browseRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                        className="text-xs text-news-accent hover:underline font-medium flex items-center gap-1 mb-1 flex-shrink-0">
+                        See all <ArrowRight size={11} />
+                    </button>
+                </div>
+                {trendingPairs.length === 0 ? (
+                    <p className="text-sm text-news-muted py-10 text-center border border-dashed border-border-subtle rounded-2xl">
+                        Add more tools to the database to generate comparisons.
+                    </p>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {trendingPairs.map(pair => (
+                            <PairCard key={pair.slug} pair={pair}
+                                onClick={() => onComparisonClick(pair.slug, pair.ucSlug || undefined)} />
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {/* ── 3. Browse by Category ────────────────────────────────────── */}
+            <section ref={browseRef}>
+                <div className="flex items-end justify-between mb-5">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Browse</p>
+                        <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Compare by Category</h2>
+                    </div>
+                    <div className="relative flex-shrink-0 mb-1">
+                        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
+                            className="appearance-none bg-surface-base border border-border-subtle text-news-muted text-xs font-bold rounded-xl px-3 py-2 pr-7 focus:outline-none focus:border-news-accent cursor-pointer">
+                            <option value="popular">Most Popular</option>
+                            <option value="rated">Highest Rated</option>
+                        </select>
+                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
+                    </div>
+                </div>
+                {/* Category tabs — scrollable on mobile */}
+                <div className="flex gap-2 overflow-x-auto pb-1 mb-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {COMP_CATEGORIES.map(cat => (
                         <button key={cat} onClick={() => setCatFilter(cat)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-                                catFilter === cat ? 'bg-news-accent text-white border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'
-                            }`}>{cat}</button>
+                            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${catFilter === cat ? 'bg-news-accent text-white border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'}`}>
+                            {cat}
+                        </button>
                     ))}
                 </div>
-                <div className="relative flex-shrink-0">
-                    <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-                        className="appearance-none bg-surface-base border border-border-subtle text-news-muted text-xs font-bold rounded-xl px-3 py-2 pr-7 focus:outline-none focus:border-news-accent cursor-pointer"
-                    >
-                        <option value="popular">Most Popular</option>
-                        <option value="newest">Newest</option>
-                        <option value="rated">Highest Rated</option>
-                    </select>
-                    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
-                </div>
-            </div>
+                {filteredPairs.length === 0 ? (
+                    <div className="py-12 text-center">
+                        <p className="text-sm text-news-muted mb-3">No comparisons available in this category yet.</p>
+                        <a href={`/best-software?category=${encodeURIComponent(catFilter)}`}
+                            className="text-xs text-news-accent hover:underline font-medium">
+                            Browse {catFilter} tools →
+                        </a>
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {filteredPairs.map(pair => (
+                                <PairCard key={`browse-${pair.slug}-${catFilter}`} pair={pair}
+                                    onClick={() => onComparisonClick(pair.slug, pair.ucSlug || undefined)} />
+                            ))}
+                        </div>
+                        {catFilter === 'All' && (
+                            <p className="text-xs text-news-muted text-center mt-5 italic">
+                                Showing top comparisons across all categories — select a category to filter.
+                            </p>
+                        )}
+                    </>
+                )}
+            </section>
 
-            {/* Count */}
-            <p className="text-xs text-news-muted uppercase tracking-widest mb-6">{sorted.length} Comparisons</p>
-
-            {/* Comparison Grid */}
-            {comparisons.length === 0 ? <EmptyState hub="comparisons" /> : sorted.length === 0 ? (
-                <div className="text-center py-16 text-gray-500 border border-dashed border-border-subtle rounded-2xl">No comparisons in this category yet.</div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {sorted.map(c => {
-                        const tA = c.tool_a;
-                        const tB = c.tool_b;
-                        const tC = (c as any).tool_c;
-                        const compTools = [tA, tB, tC].filter(Boolean);
-                        const catTag = compTools.find(t => t?.category_tags?.[0])?.category_tags?.[0];
-                        return (
-                            <button
-                                key={c.id}
-                                onClick={() => onComparisonClick(c.slug)}
-                                className="group text-left bg-surface-card border border-border-subtle shadow-elevation hover:border-border-divider hover:shadow-elevation-hover hover:bg-surface-hover hover:-translate-y-0.5 rounded-2xl p-5 transition-all flex flex-col"
-                            >
-                                {/* Tool logos — supports 2 or 3 tools */}
-                                <div className="flex items-center gap-2 mb-4">
-                                    {compTools.map((t, i) => (
-                                        <React.Fragment key={t.slug}>
-                                            {i > 0 && <span className="text-[10px] font-black text-news-muted px-1.5 py-0.5 rounded-full bg-surface-base border border-border-divider shadow-sm flex-shrink-0">VS</span>}
-                                            <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-                                                <div className="flex items-center gap-1.5 w-full bg-surface-base/50 p-2 rounded-lg border border-border-subtle">
-                                                    {t.logo && <div className="w-6 h-6 rounded bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><img src={t.logo} alt={t.name} className="w-full h-full object-contain" loading="lazy" /></div>}
-                                                    <span className="text-xs font-bold text-white truncate">{t.name}</span>
-                                                </div>
-                                                {t.rating_score > 0 && (
-                                                    <span className="text-[9px] font-bold text-news-accent flex items-center gap-0.5">
-                                                        <Star size={8} className="fill-news-accent" />{t.rating_score.toFixed(1)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </React.Fragment>
-                                    ))}
-                                </div>
-
-                                {/* Category tag */}
-                                {catTag && <span className="text-[9px] px-2 py-0.5 rounded-full bg-surface-base border border-border-subtle text-news-muted mb-3 self-start">{catTag}</span>}
-
-                                {/* Title + verdict */}
-                                <h3 className="text-sm font-bold text-white leading-snug mb-2 group-hover:text-news-accent transition-colors flex-1">{c.title}</h3>
-                                {c.verdict && <p className="text-xs text-news-text line-clamp-2 mb-4">{c.verdict}</p>}
-
-                                {/* CTA */}
-                                <div className="pt-3 border-t border-border-divider mt-auto">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent flex items-center gap-1 group-hover:text-white transition-colors">
-                                        Read comparison <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                                    </span>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Related Rankings */}
+            {/* ── 4. Related Rankings ──────────────────────────────────────── */}
             {relatedRankings.length > 0 && (
-                <div className="mt-16 pt-10 border-t border-border-divider">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-5">Related Rankings</p>
+                <section className="pt-10 border-t border-border-divider">
+                    <div className="flex items-end justify-between mb-5">
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Best Software</p>
+                            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Related Rankings</h2>
+                        </div>
+                        <a href="/best-software" className="text-xs text-news-accent hover:underline font-medium flex items-center gap-1 mb-1 flex-shrink-0">
+                            Browse all rankings <ArrowRight size={11} />
+                        </a>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {relatedRankings.map(a => (
                             <button key={a.id} onClick={() => onArticleClick(a)}
-                                className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all shadow-elevation"
-                            >
+                                className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all shadow-elevation">
                                 <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-2">Best Of</p>
                                 <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
                                 <span className="text-[10px] text-news-muted flex items-center gap-1 mt-2 group-hover:text-white transition-colors">View ranking <ArrowRight size={9} /></span>
                             </button>
                         ))}
                     </div>
-                </div>
+                </section>
             )}
+
+            </div>{/* end space-y-16 */}
+            </div>{/* end container */}
         </div>
     );
 };
@@ -1635,7 +2017,7 @@ const REVIEW_CATEGORIES = ['All', 'AI Writing', 'Productivity', 'Automation', 'D
 const ReviewsHub: React.FC<{
     articles: Article[];
     onArticleClick: (a: Article) => void;
-    onComparisonClick: (s: string) => void;
+    onComparisonClick: (s: string, uc?: string) => void;
 }> = ({ articles, onArticleClick, onComparisonClick }) => {
     const [tools, setTools] = useState<Tool[]>([]);
     const [comparisons, setComparisons] = useState<Comparison[]>([]);
@@ -2084,7 +2466,7 @@ const UseCasesHubInner: React.FC<{
             {sorted.length === 0 ? (
                 <div className="text-center py-16 text-gray-500 border border-dashed border-border-subtle rounded-2xl">No workflows match your filters.</div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {sorted.map(a => {
                         const toolSlugs = a.primary_tools?.slice(0, 4) || [];
                         return (
@@ -2348,7 +2730,7 @@ const GuidesHubInner: React.FC<{
             {sorted.length === 0 ? (
                 <div className="text-center py-16 text-gray-500 border border-dashed border-border-subtle rounded-2xl">No guides match your filters.</div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {sorted.map(a => {
                         const difficulty = inferDifficulty(a);
                         const diffColor = DIFFICULTY_COLORS[difficulty] || DIFFICULTY_COLORS['Beginner'];
@@ -2706,10 +3088,11 @@ const HubPage: React.FC<HubPageProps> = ({ hub: rawHub, articles, onArticleClick
 
     return (
         <div className="min-h-screen bg-surface-base text-news-text font-sans">
-            <HubHeader hub={hub} onBack={onBack} titleOverride={dynamicLabel} />
-            <div className="container mx-auto px-4 md:px-8 py-10">
-                {renderContent()}
-            </div>
+            {hub !== 'comparisons' && <HubHeader hub={hub} onBack={onBack} titleOverride={dynamicLabel} />}
+            {hub === 'comparisons'
+                ? renderContent()
+                : <div className="container mx-auto px-4 md:px-8 py-10">{renderContent()}</div>
+            }
         </div>
     );
 };

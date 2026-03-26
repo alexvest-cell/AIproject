@@ -59,6 +59,20 @@ const toolSchema = new mongoose.Schema({
     best_for: [String],              // ideal user profiles
     not_ideal_for: [String],         // who should avoid it
     use_case_breakdown: { type: mongoose.Schema.Types.Mixed },  // { Research: "detailed text..." }
+    // Capabilities
+    context_window: String,          // e.g. "128K", "1M", "N/A"
+    max_integrations: String,        // e.g. "500+", "50–100", "N/A"
+    api_pricing: String,             // e.g. "$3.00 input / $15.00 output per MTok"
+    image_generation:  { type: String, enum: ['yes', 'no', 'partial'] },
+    memory_persistence: { type: String, enum: ['yes', 'no', 'partial'] },
+    computer_use:       { type: String, enum: ['yes', 'no', 'partial'] },
+    api_available:      { type: String, enum: ['yes', 'no'] },
+
+    use_case_scores: [{                        // structured array — one entry per use case
+        use_case: String,                      // must match a use_case_tags value
+        score: { type: Number, min: 0, max: 10 },
+        description: String
+    }],
     alternative_selection: String,   // when to choose this vs alternatives
     limitations: [String],           // taxonomy tags: bias_risk, reliability_risk, etc.
 

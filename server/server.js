@@ -209,6 +209,21 @@ async function seedDatabase() {
     }
     console.log('Comparison sync complete.');
 
+    // Migrate: copy primary_use_cases[0] or primary_use_case → use_case for docs missing it
+    const migrated = await Comparison.updateMany(
+      { use_case: { $in: [null, undefined, ''] }, $or: [{ primary_use_cases: { $exists: true, $not: { $size: 0 } } }, { primary_use_case: { $exists: true, $ne: '' } }] },
+      [{ $set: { use_case: { $ifNull: [{ $arrayElemAt: ['$primary_use_cases', 0] }, '$primary_use_case'] } } }],
+      { updatePipeline: true }
+    );
+    if (migrated.modifiedCount > 0) console.log(`Migrated ${migrated.modifiedCount} comparisons → use_case field.`);
+
+    // Migrate: set is_override=true on all existing comparison records (idempotent)
+    const overrideMigrated = await Comparison.updateMany(
+      { is_override: { $exists: false } },
+      { $set: { is_override: true } }
+    );
+    if (overrideMigrated.modifiedCount > 0) console.log(`Migration: marked ${overrideMigrated.modifiedCount} comparisons as is_override=true.`);
+
     // 4. Seed Stacks — $setOnInsert ensures CMS edits are NEVER overwritten
     const stackCount = await Stack.countDocuments();
     if (stackCount < seedStacks.length) {
@@ -487,12 +502,16 @@ app.get('/api/articles/export', requireAuth, async (req, res) => {
     // Set headers for file download
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="greenshift-backup-${timestamp}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="toolcurrent-backup-${timestamp}.json"`);
+
+    const tools = mongoose.connection.readyState === 1 ? await Tool.find().lean() : [];
 
     res.json({
       exportDate: new Date().toISOString(),
       totalArticles: articles.length,
-      articles: articles
+      totalTools: tools.length,
+      articles,
+      tools
     });
   } catch (error) {
     console.error('Export error:', error);
@@ -555,7 +574,7 @@ app.get('/api/articles/export-images', requireAuth, async (req, res) => {
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="greenshift-images-backup-${timestamp}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="toolcurrent-images-backup-${timestamp}.json"`);
 
     res.json({
       exportDate: new Date().toISOString(),
@@ -593,54 +612,7 @@ app.get('/api/comparisons', async (req, res) => {
   }
 });
 
-// GET Comparison by slug
-app.get('/api/comparisons/:slug', async (req, res) => {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      const cmp = seedComparisons.find(c => c.slug === req.params.slug);
-      return cmp ? res.json(cmp) : res.status(404).json({ error: 'Not found' });
-    }
-    let comparison = await Comparison.findOne({ slug: req.params.slug }).lean();
-    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
-
-    const slugs = [comparison.tool_a_slug, comparison.tool_b_slug, comparison.tool_c_slug].filter(Boolean);
-    const tools = await Tool.find({ slug: { $in: slugs } }).lean();
-    const toolMap = Object.fromEntries(tools.map(t => [t.slug, t]));
-
-    // Dynamic + stale: regenerate server-side, store, return fresh output
-    if (comparison.generation_mode !== 'cached' && comparison.needs_update) {
-      try {
-        const toolList = slugs.map(s => toolMap[s]).filter(Boolean);
-        if (toolList.length >= 2) {
-          const ctx = {
-            primary_use_case: (comparison.primary_use_cases || [])[0] || comparison.primary_use_case,
-            comparison_type: comparison.comparison_type || (toolList.length === 3 ? 'multi' : '1v1'),
-          };
-          const fresh = serverGenerateComparison(toolList, ctx);
-          await Comparison.findOneAndUpdate(
-            { slug: req.params.slug },
-            { $set: { generated_output: fresh, needs_update: false, last_generated: new Date(), updatedAt: new Date() } }
-          );
-          comparison = { ...comparison, generated_output: fresh, needs_update: false, last_generated: new Date() };
-          console.log(`GET /api/comparisons/${req.params.slug}: regenerated (dynamic+stale)`);
-        }
-      } catch (genErr) {
-        // Generation failed — log and continue with existing stored output (graceful degradation)
-        console.error(`GET /api/comparisons/${req.params.slug}: server generation failed, using stored output:`, genErr.message);
-      }
-    }
-
-    res.json({
-      ...comparison,
-      tool_a: toolMap[comparison.tool_a_slug] || null,
-      tool_b: toolMap[comparison.tool_b_slug] || null,
-      tool_c: comparison.tool_c_slug ? (toolMap[comparison.tool_c_slug] || null) : null,
-    });
-  } catch (err) {
-    console.error(`GET /api/comparisons/${req.params.slug} error:`, err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// GET Comparison by slug — handled by the full dynamic route below
 
 // POST store generated output (auth required — CMS only)
 app.post('/api/comparisons/:slug/store-output', requireAuth, async (req, res) => {
@@ -1847,7 +1819,6 @@ app.put('/api/tools/:id', requireAuth, async (req, res) => {
     ).lean();
 
     if (!updated) return res.status(404).json({ error: 'Tool not found after update' });
-    console.log('PUT tool saved, best_for:', JSON.stringify(updated.best_for?.slice?.(0,1)));
 
     // Mark related comparisons stale only when fields that affect generateComparison() output change
     const INVALIDATING_FIELDS = ['key_features', 'pricing_model', 'starting_price', 'rating_score', 'limitations', 'use_case_tags', 'best_for'];
@@ -2251,35 +2222,144 @@ app.get('/api/comparisons', async (req, res) => {
   }
 });
 
-// GET single comparison by slug (public)
+// GET single comparison by slug (public) — supports dynamic generation without CMS record
 app.get('/api/comparisons/:slug', async (req, res) => {
   try {
-    const comparison = await Comparison.findOne({ slug: req.params.slug });
-    if (!comparison) return res.status(404).json({ error: 'Comparison not found' });
+    const { use_case: ucParam } = req.query;
 
-    // Enrich with full tool data
-    const tool_a = await Tool.findOne({ slug: comparison.tool_a_slug });
-    const tool_b = await Tool.findOne({ slug: comparison.tool_b_slug });
-    const tool_c = comparison.tool_c_slug ? await Tool.findOne({ slug: comparison.tool_c_slug }) : null;
+    // 1. Try to find existing CMS record
+    let comparison = await Comparison.findOne({ slug: req.params.slug });
 
-    // Fetch alternative comparisons
-    const alternativeComparisons = await Comparison.find({
-      $or: [
-        { tool_a_slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } },
-        { tool_b_slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } },
-        { tool_c_slug: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] } }
-      ],
-      slug: { $ne: req.params.slug },
-      status: 'published'
-    }).limit(5);
+    // 2. Resolve tools (from CMS record or by parsing slug)
+    let toolA, toolB, toolC;
+    if (comparison) {
+      [toolA, toolB] = await Promise.all([
+        Tool.findOne({ slug: comparison.tool_a_slug }),
+        Tool.findOne({ slug: comparison.tool_b_slug }),
+      ]);
+      toolC = comparison.tool_c_slug ? await Tool.findOne({ slug: comparison.tool_c_slug }) : null;
+    } else {
+      // Dynamic: parse slug using -vs- delimiter
+      const parts = req.params.slug.split('-vs-');
+      if (parts.length < 2) return res.status(404).json({ error: 'Invalid comparison slug' });
+      if (parts.length === 3) {
+        [toolA, toolB, toolC] = await Promise.all([
+          Tool.findOne({ slug: parts[0] }),
+          Tool.findOne({ slug: parts[1] }),
+          Tool.findOne({ slug: parts[2] }),
+        ]);
+      } else {
+        [toolA, toolB] = await Promise.all([
+          Tool.findOne({ slug: parts[0] }),
+          Tool.findOne({ slug: parts.slice(1).join('-vs-') }),
+        ]);
+      }
+      if (!toolA || !toolB) return res.status(404).json({ error: 'One or more tools not found' });
+    }
 
-    // Fetch related rankings
-    const relatedRankings = await Article.find({
-      primary_tools: { $in: [comparison.tool_a_slug, comparison.tool_b_slug] },
-      status: 'published'
-    }).sort({ createdAt: -1 }).limit(4);
+    const toolList = [toolA, toolB, toolC].filter(Boolean);
 
-    res.json({ ...comparison.toObject(), tool_a, tool_b, tool_c, alternativeComparisons, relatedRankings });
+    // 3. Determine active use case; validate against tools' use_case_tags
+    let ucDisplay = null;
+    let invalidUseCase = false;
+    let available_use_cases = [];
+
+    if (ucParam) {
+      ucDisplay = ucParam.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      // Compute intersection of all tools' use_case_tags
+      const allTagSets = toolList.map(t => (t.use_case_tags || []).map(u => u.toLowerCase()));
+      available_use_cases = (toolList[0].use_case_tags || []).filter(uc =>
+        allTagSets.every(s => s.includes(uc.toLowerCase()))
+      );
+      if (!available_use_cases.some(uc => uc.toLowerCase() === ucDisplay.toLowerCase())) {
+        invalidUseCase = true;
+        ucDisplay = null; // fall back to overall
+      }
+    }
+    // NOTE: when no ?use_case param is present, ucDisplay stays null → overall mode.
+    // Never inherit the CMS record's stored use_case — that is editorial metadata only.
+
+    // 4. Generate comparison server-side
+    const ctx = {
+      primary_use_case: ucDisplay || undefined,
+      comparison_type: comparison?.comparison_type || (toolC ? 'multi' : '1v1'),
+    };
+    let generatedOutput = serverGenerateComparison(toolList, ctx);
+
+    // 5. Apply section overrides if CMS record exists and is_override=true
+    if (comparison?.is_override) {
+      const ov = comparison;
+      if (ov.verdict_override) {
+        generatedOutput = {
+          ...generatedOutput,
+          header: { ...generatedOutput.header, quick_summary: ov.verdict_override },
+          quick_verdict: { ...generatedOutput.quick_verdict, summary: ov.verdict_override },
+        };
+      }
+      if (ov.strengths_override) {
+        // Merge strengths per tool, keep dynamic weaknesses
+        const merged = { ...generatedOutput.strengths_weaknesses };
+        Object.keys(ov.strengths_override).forEach(slug => {
+          if (merged[slug]) merged[slug] = { ...merged[slug], strengths: ov.strengths_override[slug] };
+        });
+        generatedOutput = { ...generatedOutput, strengths_weaknesses: merged };
+      }
+      if (ov.weaknesses_override) {
+        const merged = { ...generatedOutput.strengths_weaknesses };
+        Object.keys(ov.weaknesses_override).forEach(slug => {
+          if (merged[slug]) merged[slug] = { ...merged[slug], weaknesses: ov.weaknesses_override[slug] };
+        });
+        generatedOutput = { ...generatedOutput, strengths_weaknesses: merged };
+      }
+      if (ov.feature_comparison_override) {
+        generatedOutput = { ...generatedOutput, table: ov.feature_comparison_override };
+      }
+      if (ov.recommendation_override) {
+        generatedOutput = { ...generatedOutput, decision: ov.recommendation_override };
+      }
+    }
+
+    // 6. Fetch alternative comparisons and related rankings
+    const toolSlugs = toolList.map(t => t.slug);
+    const [alternativeComparisons, relatedRankings] = await Promise.all([
+      Comparison.find({
+        $or: [
+          { tool_a_slug: { $in: toolSlugs } },
+          { tool_b_slug: { $in: toolSlugs } },
+          { tool_c_slug: { $in: toolSlugs } },
+        ],
+        slug: { $ne: req.params.slug },
+        status: 'published',
+      }).limit(5),
+      Article.find({ primary_tools: { $in: toolSlugs }, status: 'published' })
+        .sort({ createdAt: -1 }).limit(4),
+    ]);
+
+    // 7. Build base comparison object (CMS record or synthetic)
+    const compObj = comparison ? comparison.toObject() : {
+      id: null,
+      title: toolList.map(t => t.name).join(' vs '),
+      slug: req.params.slug,
+      tool_a_slug: toolA.slug,
+      tool_b_slug: toolB.slug,
+      tool_c_slug: toolC?.slug || null,
+      is_override: false,
+      use_case: ucDisplay,
+      comparison_type: ctx.comparison_type,
+      status: 'published',
+      primary_use_cases: [],
+    };
+
+    res.json({
+      ...compObj,
+      tool_a: toolA,
+      tool_b: toolB,
+      tool_c: toolC || null,
+      generated_output: generatedOutput,
+      alternativeComparisons,
+      relatedRankings,
+      ...(invalidUseCase ? { invalid_use_case: true, available_use_cases } : {}),
+    });
   } catch (error) {
     console.error('GET /api/comparisons/:slug error:', error);
     res.status(500).json({ error: 'Failed to fetch comparison' });
@@ -2415,8 +2495,30 @@ app.get('/compare/:slug', async (req, res, next) => {
   try {
     const comparison = await Comparison.findOne({ slug: req.params.slug });
     if (comparison) {
-      const title = comparison.meta_title || `${comparison.title}`;
-      const desc = comparison.meta_description || comparison.verdict || `Head-to-head comparison: ${comparison.title}. See the full verdict on ToolCurrent.`;
+      const title = comparison.meta_title || comparison.title;
+      const desc = comparison.meta_description || `Head-to-head comparison: ${comparison.title}. See the full verdict on ToolCurrent.`;
+      return serveWithMeta(req, res, title, desc);
+    }
+    // No CMS record — check if valid tool pair (dynamic comparison)
+    const slugParts = req.params.slug.split('-vs-');
+    if (slugParts.length >= 2) {
+      const tA = await Tool.findOne({ slug: slugParts[0] });
+      const tB = await Tool.findOne({ slug: slugParts[slugParts.length - 1] });
+      if (tA && tB) {
+        return serveWithMeta(req, res, `${tA.name} vs ${tB.name}`, `Compare ${tA.name} and ${tB.name} — analysis on ToolCurrent.`);
+      }
+    }
+    next();
+  } catch (e) { next(); }
+});
+
+app.get('/compare/:slug/:uc', async (req, res, next) => {
+  try {
+    const comparison = await Comparison.findOne({ slug: req.params.slug });
+    if (comparison) {
+      const ucLabel = req.params.uc.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const title = comparison.meta_title || `${comparison.title} for ${ucLabel}`;
+      const desc = comparison.meta_description || `Compare ${comparison.title} for ${ucLabel}. Full analysis on ToolCurrent.`;
       return serveWithMeta(req, res, title, desc);
     }
     next();

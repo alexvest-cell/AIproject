@@ -37,12 +37,23 @@ const comparisonSchema = new mongoose.Schema({
 
     // Data-driven comparison fields
     comparison_type: { type: String, enum: ['1v1', 'multi'], default: '1v1' },
+    use_case: String,                // single use case for scoring context (new)
     primary_use_case: String,        // legacy single value — kept for migration
-    primary_use_cases: [String],     // multi-select use cases for scoring context
+    primary_use_cases: [String],     // legacy multi-select — kept for migration
     needs_update: { type: Boolean, default: false },  // true when a linked tool is updated
     generation_mode: { type: String, enum: ['dynamic', 'cached'], default: 'dynamic' },
     last_generated: { type: Date, default: null },    // when compareEngine last ran
     generated_output: { type: mongoose.Schema.Types.Mixed, default: null }, // stored generateComparison() result
+
+    // Override model: CMS can override individual sections on top of dynamic generation
+    is_override: { type: Boolean, default: false },
+    verdict_override: { type: mongoose.Schema.Types.Mixed, default: null },
+    why_it_wins_override: { type: String, default: null },
+    strengths_override: { type: mongoose.Schema.Types.Mixed, default: null },
+    weaknesses_override: { type: mongoose.Schema.Types.Mixed, default: null },
+    recommendation_override: { type: mongoose.Schema.Types.Mixed, default: null },
+    feature_comparison_override: { type: mongoose.Schema.Types.Mixed, default: null },
+    use_case_breakdown_override: { type: mongoose.Schema.Types.Mixed, default: null },
 
     // Status
     status: { type: String, enum: ['draft', 'published'], default: 'published' },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tool, Comparison, Article, Stack } from '../types';
+import { Tool, Article, Stack } from '../types';
 import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon } from 'lucide-react';
 import { RelatedContent } from './RelatedContent';
 
@@ -32,7 +32,6 @@ const USE_CASE_VALUES = [
 
 const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick }) => {
     const [tool, setTool] = useState<Tool | null>(null);
-    const [comparisons, setComparisons] = useState<Comparison[]>([]);
     const [alternatives, setAlternatives] = useState<Tool[]>([]);
     const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
     const [reviews, setReviews] = useState<Article[]>([]);
@@ -60,7 +59,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
         ])
             .then(async ([data, altData, toolsData]) => {
                 setTool(data.tool);
-                setComparisons(data.comparisons || []);
                 setRelatedArticles(data.relatedArticles || []);
                 setReviews(data.reviews || []);
                 setGuides(data.guides || []);
@@ -149,6 +147,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const t = tool as any;
     const ratingBreakdown: Record<string, number> = (t.rating_breakdown && typeof t.rating_breakdown === 'object' && !Array.isArray(t.rating_breakdown)) ? t.rating_breakdown : {};
     const useCaseBreakdown: Record<string, string> = (t.use_case_breakdown && typeof t.use_case_breakdown === 'object' && !Array.isArray(t.use_case_breakdown)) ? t.use_case_breakdown : {};
+    const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = Array.isArray(t.use_case_scores) ? t.use_case_scores : [];
 
     const competitorIds: string[] = Array.isArray(t.competitors) ? t.competitors : [];
     const relatedToolIds: string[] = Array.isArray(t.related_tools) ? t.related_tools : [];
@@ -180,9 +179,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     if (tool.pros?.length > 0 || tool.cons?.length > 0) sections.push({ id: 'proscons', label: 'Pros & Cons' });
     if (t.best_for?.length > 0 || t.not_ideal_for?.length > 0) sections.push({ id: 'best-for', label: 'Who It\'s For' });
     if (tool.use_case_tags?.length > 0) sections.push({ id: 'use-cases', label: 'Use Cases' });
-    if (t.alternative_selection) sections.push({ id: 'alternatives-guide', label: 'When to Choose' });
-    if (competitorObjs.length > 0) sections.push({ id: 'how-it-compares', label: 'How It Compares' });
-    if (tool.integrations?.length > 0) sections.push({ id: 'integrations', label: 'Integrations' });
+    if (t.alternative_selection) sections.push({ id: 'alternatives-guide', label: 'When Not To Choose' });
 
     const pricingClass = PRICING_COLORS[tool.pricing_model] || 'bg-surface-alt text-news-muted border-border-subtle';
 
@@ -282,6 +279,120 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* ─── Mobile only: decision-critical blocks (positions 2–6) ─── */}
+                <div className="md:hidden space-y-4 mb-8">
+
+                    {/* Pricing */}
+                    <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4">Pricing</h3>
+                        <div className={`inline-block text-sm font-bold px-3 py-1 rounded-full border mb-3 ${pricingClass}`}>{tool.pricing_model}</div>
+                        {tool.starting_price && <p className="text-white font-semibold mb-3">{tool.starting_price}</p>}
+                        {tool.affiliate_url && (
+                            <a href={tool.affiliate_url} target="_blank" rel="noopener noreferrer"
+                                className="block w-full text-center bg-news-accent hover:opacity-90 text-white font-bold text-sm px-4 py-2.5 rounded-lg transition-opacity shadow-md">
+                                Get Started →
+                            </a>
+                        )}
+                    </div>
+
+                    {/* Platforms */}
+                    {tool.supported_platforms?.length > 0 && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 flex items-center gap-2">
+                                <Smartphone size={12} /> Platforms
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {tool.supported_platforms.map(p => (
+                                    <span key={p} className="text-xs px-2 py-1 rounded bg-surface-alt shadow-sm text-news-text border border-border-subtle">{p}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Capabilities — 2-column grid if ≥4 items */}
+                    {(() => {
+                        const capRows = [
+                            { label: 'Context Window', value: t.context_window },
+                            { label: 'API Pricing', value: t.api_pricing },
+                            { label: 'Image Generation', value: t.image_generation },
+                            { label: 'Memory Persistence', value: t.memory_persistence },
+                            { label: 'Computer Use', value: t.computer_use },
+                            { label: 'API Available', value: t.api_available },
+                        ].filter(r => r.value);
+                        if (!capRows.length) return null;
+                        const renderCap = (value: string | null | undefined) => {
+                            if (value === 'yes') return <span className="flex items-center gap-1 text-news-accent text-xs font-bold">✓ Yes</span>;
+                            if (value === 'no') return <span className="text-news-muted text-xs">✗ No</span>;
+                            if (value === 'partial') return <span className="text-yellow-500 text-xs">◑ Partial</span>;
+                            return <span className="text-white text-xs font-medium">{value}</span>;
+                        };
+                        return (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4 flex items-center gap-2">
+                                    <Zap size={12} /> Capabilities
+                                </h3>
+                                <div className={capRows.length >= 4 ? 'grid grid-cols-2 gap-x-3 gap-y-3' : 'space-y-2.5'}>
+                                    {capRows.map(r => (
+                                        <div key={r.label} className="space-y-0.5">
+                                            <span className="text-[11px] text-news-muted block">{r.label}</span>
+                                            {renderCap(r.value)}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Score breakdown — 2-column grid for bars */}
+                    {tool.rating_score > 0 && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our Score</h3>
+                            <div className="flex items-center justify-center gap-1 text-news-accent mb-4">
+                                <Star size={18} fill="currentColor" />
+                                <span className="text-2xl font-black text-white">{tool.rating_score.toFixed(1)}</span>
+                                <span className="text-news-muted text-sm">/10</span>
+                            </div>
+                            {Object.keys(ratingBreakdown).length > 0 && (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border-divider pt-4">
+                                    {Object.entries(ratingBreakdown).map(([dim, score]) => (
+                                        <div key={dim}>
+                                            <div className="flex justify-between text-[10px] text-news-muted mb-1">
+                                                <span className="font-bold uppercase tracking-widest">{dim}</span>
+                                                <span className="text-white font-bold">{score.toFixed(1)}</span>
+                                            </div>
+                                            <div className="w-full bg-surface-alt rounded-full h-1.5">
+                                                <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: `${(score / 10) * 100}%` }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Use Cases chips — horizontal scrollable row */}
+                    {tool.use_case_tags?.length > 0 && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Use Cases</h3>
+                            <div className="flex flex-row flex-nowrap gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                {tool.use_case_tags.map((uc: string) => {
+                                    const se = ucScoresArr.find(s => s.use_case.toLowerCase() === uc.toLowerCase());
+                                    const sc = se?.score != null ? se.score : (() => { const m = (useCaseBreakdown[uc] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
+                                    const ucAnchor = `use-case-${uc.toLowerCase().replace(/\s+/g, '-')}`;
+                                    return (
+                                        <a key={uc} href={`#${ucAnchor}`}
+                                            onClick={(e: React.MouseEvent) => { e.preventDefault(); document.getElementById(ucAnchor)?.scrollIntoView({ behavior: 'smooth' }); }}
+                                            className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/20 font-medium whitespace-nowrap">
+                                            {uc}{sc != null && <span className="ml-1 opacity-70">{sc.toFixed(1)}</span>}
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
@@ -401,78 +512,127 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </section>
                         )}
 
+                        {/* ─── Mobile only: compares with + often used with (positions 11–12) ─── */}
+                        {(competitorObjs.length > 0 || relatedToolObjs.length > 0) && (
+                            <div className="md:hidden space-y-4">
+                                {competitorObjs.length > 0 && (
+                                    <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                        <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Compares With</h3>
+                                        <div className="divide-y divide-border-divider">
+                                            {competitorObjs.map((comp: any) => {
+                                                const diff = (t.competitor_differentiator as any)?.[comp.id] || null;
+                                                const compSlug = comp.slug || '';
+                                                return (
+                                                    <a key={comp.id} href={`/compare/${tool.slug}-vs-${compSlug}`}
+                                                        className="flex items-start gap-2.5 group py-3 first:pt-0 last:pb-0 hover:bg-surface-alt/40 -mx-1 px-1 rounded transition-colors cursor-pointer">
+                                                        {comp.logo && <div className="w-6 h-6 rounded bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5 mt-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-xs font-semibold text-white group-hover:text-news-accent transition-colors">{comp.name}</p>
+                                                            {diff && <p className="text-sm text-news-muted leading-relaxed mt-0.5">{diff}</p>}
+                                                            <p className="text-[11px] text-news-accent/70 group-hover:text-news-accent transition-colors text-right mt-1">Compare →</p>
+                                                        </div>
+                                                    </a>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                                {relatedToolObjs.length > 0 && (
+                                    <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                        <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Often Used With</h3>
+                                        <div className="flex flex-col gap-3">
+                                            {relatedToolObjs.map((rel: any) => {
+                                                const note = (t.related_tool_note as any)?.[rel.id] || rel.short_description || null;
+                                                const inner = (
+                                                    <div className="flex items-start gap-3 group">
+                                                        {rel.logo && <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center"><img src={rel.logo} alt="" className="w-full h-full object-contain p-1" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-semibold text-white group-hover:text-news-accent transition-colors">{rel.name}</p>
+                                                            {note && <p className="text-[11px] text-news-muted leading-relaxed line-clamp-2 mt-0.5">{note}</p>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                                return rel.slug ? <a key={rel.id} href={`/tools/${rel.slug}`}>{inner}</a> : <div key={rel.id}>{inner}</div>;
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Use Cases */}
                         {tool.use_case_tags?.length > 0 && (
                             <section id="use-cases" className="scroll-mt-24">
                                 <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Use Cases</h2>
-                                <div className="flex flex-wrap gap-3 mb-4">
-                                    {tool.use_case_tags.map(uc => (
-                                        <span key={uc} className="text-xs px-3 py-1.5 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/20 font-medium">{uc}</span>
-                                    ))}
-                                </div>
-                                {Object.keys(useCaseBreakdown).length > 0 && (
-                                    <div className="space-y-4 mt-4">
-                                        {Object.entries(useCaseBreakdown).map(([useCase, breakdown]) => (
-                                            <div key={useCase} className="bg-surface-card border border-border-subtle rounded-xl p-4">
-                                                <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-1">{useCase}</p>
-                                                <p className="text-sm text-news-text leading-relaxed">{breakdown}</p>
+                                <div className="space-y-4">
+                                    {tool.use_case_tags.map((uc: string) => {
+                                        const se = ucScoresArr.find(s => s.use_case.toLowerCase() === uc.toLowerCase());
+                                        const sc = se?.score != null ? se.score : (() => { const m = (useCaseBreakdown[uc] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
+                                        const desc = se?.description || (useCaseBreakdown[uc] ? useCaseBreakdown[uc].replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);
+                                        if (!desc && sc == null) return null;
+                                        const ucAnchor = `use-case-${uc.toLowerCase().replace(/\s+/g, '-')}`;
+                                        return (
+                                            <div key={uc} id={ucAnchor} className="bg-surface-card border border-border-subtle rounded-xl p-4 scroll-mt-24">
+                                                <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-1">{uc}</p>
+                                                {sc != null && (
+                                                    <div className="flex items-center gap-1 mb-2">
+                                                        <Star size={10} className="text-news-accent fill-news-accent" />
+                                                        <span className="text-sm font-bold text-news-accent">{sc}/10</span>
+                                                    </div>
+                                                )}
+                                                {desc && <p className="text-sm text-news-text leading-relaxed">{desc}</p>}
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-                        )}
-
-                        {/* Alternative Selection */}
-                        {t.alternative_selection && (
-                            <section id="alternatives-guide" className="scroll-mt-24">
-                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">When to Choose {tool.name}</h2>
-                                <div className="bg-surface-card border border-border-subtle rounded-xl p-5">
-                                    <p className="text-sm text-news-text leading-relaxed">{linkifyCompetitors(t.alternative_selection)}</p>
-                                </div>
-                            </section>
-                        )}
-
-                        {/* How It Compares */}
-                        {competitorObjs.length > 0 && (
-                            <section id="how-it-compares" className="scroll-mt-24">
-                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">How It Compares</h2>
-                                <div className="space-y-2">
-                                    {competitorObjs.map((comp: any) => {
-                                        const diff = (t.competitor_differentiator as any)?.[comp.id] || null;
-                                        const compSlug = comp.slug || '';
-                                        const matchComp = comparisons.find((c: any) =>
-                                            c.slug === `${tool.slug}-vs-${compSlug}` || c.slug === `${compSlug}-vs-${tool.slug}`
-                                        );
-                                        const row = (
-                                            <div className="flex items-center gap-3 bg-surface-card border border-border-subtle rounded-xl px-4 py-3 hover:border-news-accent/30 transition-colors">
-                                                {comp.logo && <div className="w-7 h-7 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
-                                                <span className="text-sm font-semibold text-white flex-shrink-0">{comp.name}</span>
-                                                <span className="text-sm text-news-muted flex-1 text-right truncate">{diff || <span className="text-news-accent/70 text-xs">See full comparison →</span>}</span>
-                                            </div>
-                                        );
-                                        return matchComp ? (
-                                            <a key={comp.id} href={`/compare/${matchComp.slug}`} className="block">{row}</a>
-                                        ) : compSlug ? (
-                                            <a key={comp.id} href={`/tools/${compSlug}`} className="block">{row}</a>
-                                        ) : (
-                                            <div key={comp.id}>{row}</div>
                                         );
                                     })}
                                 </div>
                             </section>
                         )}
 
-                        {/* Integrations */}
-                        {tool.integrations?.length > 0 && (
-                            <section id="integrations" className="scroll-mt-24">
-                                <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Integrations</h2>
-                                <div className="flex flex-wrap gap-2">
-                                    {tool.integrations.map(int => (
-                                        <span key={int} className="text-xs px-3 py-1.5 rounded-full bg-surface-alt text-white border border-border-subtle shadow-sm">{int}</span>
-                                    ))}
+                        {/* Alternative Selection */}
+                        {t.alternative_selection && (
+                            <section id="alternatives-guide" className="scroll-mt-24">
+                                <div className="mb-4 border-b border-border-divider pb-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-1">Consider These Instead</p>
+                                    <h2 className="text-xl font-bold text-white">When Not To Choose {tool.name}</h2>
+                                </div>
+                                <div className="bg-surface-card border border-border-subtle rounded-xl p-5">
+                                    <p className="text-sm text-news-text leading-relaxed">{linkifyCompetitors(t.alternative_selection)}</p>
                                 </div>
                             </section>
+                        )}
+
+                        {/* ─── Mobile only: integrations + model + limitations (positions 15–17) ─── */}
+                        {(tool.integrations?.length > 0 || t.model_version || t.limitations?.length > 0) && (
+                            <div className="md:hidden space-y-4">
+                                {tool.integrations?.length > 0 && (
+                                    <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                        <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Integrations</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {tool.integrations.map(int => (
+                                                <span key={int} className="text-xs px-3 py-1.5 rounded-full bg-surface-alt text-white border border-border-subtle shadow-sm">{int}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {t.model_version && (
+                                    <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                        <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-2">Current Model</h3>
+                                        <p className="text-sm text-white font-medium">{t.model_version}</p>
+                                    </div>
+                                )}
+                                {t.limitations?.length > 0 && (
+                                    <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                        <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Known Limitations</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {t.limitations.map((lim: string) => (
+                                                <span key={lim} className="text-[10px] px-2 py-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-mono">
+                                                    {lim.replace(/_/g, ' ')}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         )}
 
                         {/* Build a Stack banner */}
@@ -566,8 +726,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         )}
                     </div>
 
-                    {/* Sidebar */}
-                    <div className="space-y-6">
+                    {/* Sidebar — desktop only; all content duplicated inline above for mobile */}
+                    <div className="hidden md:block space-y-6" aria-hidden="true">
                         {/* Pricing Card */}
                         <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6 relative overflow-hidden">
                             <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4">Pricing</h3>
@@ -599,8 +759,50 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         )}
 
-                        {/* Use Cases (Simplified in sidebar if preferred, or remove if redundant) */}
-                        {/* Removing redundant sidebar use cases as it is now a main section */}
+                        {/* Capabilities */}
+                        {(() => {
+                            const t = tool as any;
+                            const capRows: Array<{ label: string; value: string | null | undefined }> = [
+                                { label: 'Context Window', value: t.context_window },
+                                { label: 'API Pricing', value: t.api_pricing },
+                                { label: 'Image Generation', value: t.image_generation },
+                                { label: 'Memory Persistence', value: t.memory_persistence },
+                                { label: 'Computer Use', value: t.computer_use },
+                                { label: 'API Available', value: t.api_available },
+                            ];
+                            const hasAny = capRows.some(r => r.value);
+                            if (!hasAny) return null;
+                            const renderCapability = (value: string | null | undefined) => {
+                                if (value === 'yes') return <span className="flex items-center gap-1 text-news-accent text-xs font-bold">✓ Yes</span>;
+                                if (value === 'no') return <span className="text-news-muted text-xs">✗ No</span>;
+                                if (value === 'partial') return <span className="text-yellow-500 text-xs">◑ Partial</span>;
+                                return <span className="text-white text-xs font-medium">{value}</span>;
+                            };
+                            return (
+                                <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4 flex items-center gap-2">
+                                        <Zap size={12} /> Capabilities
+                                    </h3>
+                                    <div className="space-y-2.5">
+                                        {capRows.filter(r => r.value).map(r => {
+                                            const isEnum = ['yes','no','partial'].includes(r.value as string);
+                                            const isShort = isEnum || (r.value && r.value.length <= 10);
+                                            return isShort ? (
+                                                <div key={r.label} className="flex items-center justify-between gap-2">
+                                                    <span className="text-[11px] text-news-muted">{r.label}</span>
+                                                    {renderCapability(r.value)}
+                                                </div>
+                                            ) : (
+                                                <div key={r.label} className="space-y-0.5">
+                                                    <span className="text-[11px] text-news-muted block">{r.label}</span>
+                                                    <span className="text-white text-xs font-medium leading-snug block">{r.value}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Rating */}
                         {tool.rating_score > 0 && (
@@ -629,25 +831,58 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         )}
 
-                        {/* Competes With */}
+                        {/* Use Case Score Bars */}
+                        {tool.use_case_tags?.length > 0 && (() => {
+                            const ucWithScores = tool.use_case_tags.map((uc: string) => {
+                                const se = ucScoresArr.find(s => s.use_case.toLowerCase() === uc.toLowerCase());
+                                const sc = se?.score != null ? se.score : (() => { const m = (useCaseBreakdown[uc] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
+                                return { uc, sc };
+                            });
+                            return (
+                                <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4 text-center">Use Cases</h3>
+                                    <div className="space-y-2">
+                                        {ucWithScores.map(({ uc, sc }: { uc: string; sc: number | null }) => {
+                                            const ucAnchor = `use-case-${uc.toLowerCase().replace(/\s+/g, '-')}`;
+                                            return (
+                                                <a key={uc} href={`#${ucAnchor}`}
+                                                    onClick={(e: React.MouseEvent) => { e.preventDefault(); document.getElementById(ucAnchor)?.scrollIntoView({ behavior: 'smooth' }); }}
+                                                    className="block group">
+                                                    <div className="flex justify-between text-[10px] text-news-muted mb-1 group-hover:text-news-accent transition-colors">
+                                                        <span className="font-bold uppercase tracking-widest">{uc}</span>
+                                                        <span className="text-white font-bold">{sc != null ? sc.toFixed(1) : '—'}</span>
+                                                    </div>
+                                                    <div className="w-full bg-surface-alt rounded-full h-1.5">
+                                                        <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: sc != null ? `${(sc / 10) * 100}%` : '0%' }} />
+                                                    </div>
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Compares With */}
                         {competitorObjs.length > 0 && (
                             <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Competes With</h3>
-                                <div className="flex flex-col gap-2">
-                                    {competitorObjs.map((comp: any) => (
-                                        comp.slug ? (
-                                            <a key={comp.id} href={`/tools/${comp.slug}`}
-                                                className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-alt border border-border-subtle hover:border-news-accent/40 hover:text-news-accent transition-colors group">
-                                                {comp.logo && <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
-                                                <span className="text-sm text-news-text group-hover:text-news-accent transition-colors truncate">{comp.name}</span>
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Compares With</h3>
+                                <div className="divide-y divide-border-divider">
+                                    {competitorObjs.map((comp: any) => {
+                                        const diff = (t.competitor_differentiator as any)?.[comp.id] || null;
+                                        const compSlug = comp.slug || '';
+                                        return (
+                                            <a key={comp.id} href={`/compare/${tool.slug}-vs-${compSlug}`}
+                                                className="flex items-start gap-2.5 group py-3 first:pt-0 last:pb-0 hover:bg-surface-alt/40 -mx-1 px-1 rounded transition-colors cursor-pointer">
+                                                {comp.logo && <div className="w-6 h-6 rounded bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5 mt-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-semibold text-white group-hover:text-news-accent transition-colors">{comp.name}</p>
+                                                    {diff && <p className="text-sm text-news-muted leading-relaxed mt-0.5">{diff}</p>}
+                                                    <p className="text-[11px] text-news-accent/70 group-hover:text-news-accent transition-colors text-right mt-1">Compare →</p>
+                                                </div>
                                             </a>
-                                        ) : (
-                                            <div key={comp.id} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-alt border border-border-subtle">
-                                                {comp.logo && <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
-                                                <span className="text-sm text-news-text truncate">{comp.name}</span>
-                                            </div>
-                                        )
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -678,6 +913,18 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                             <div key={rel.id}>{inner}</div>
                                         );
                                     })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Integrations */}
+                        {tool.integrations?.length > 0 && (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Integrations</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {tool.integrations.map(int => (
+                                        <span key={int} className="text-xs px-3 py-1.5 rounded-full bg-surface-alt text-white border border-border-subtle shadow-sm">{int}</span>
+                                    ))}
                                 </div>
                             </div>
                         )}
