@@ -53,7 +53,10 @@ const toolSchema = new mongoose.Schema({
     rating_score: { type: Number, min: 0, max: 10, default: 0 },
     rating_breakdown: { type: mongoose.Schema.Types.Mixed },   // e.g. { Value: 8.5, Features: 7.5 }
     review_count: { type: Number, default: 0 },
-    model_version: String,   // e.g. "Grok 4 (Grok 4.1 Fast for API)"
+    model_version: String,   // e.g. "Grok 4 (Grok 4.1 Fast for API)" — legacy, retained for backward compat
+    free_tier: String,                // one sentence: what's available at no cost
+    rate_limits: String,              // multi-line: one line per plan tier showing message caps/time windows
+    model_version_by_plan: String,    // multi-line: one line per plan tier showing current model(s)
 
     // Editorial content
     best_for: [String],              // ideal user profiles
@@ -73,6 +76,21 @@ const toolSchema = new mongoose.Schema({
         score: { type: Number, min: 0, max: 10 },
         description: String
     }],
+
+    // Workflow / audience targeting
+    workflow_tags: {
+        type: [String],
+        validate: {
+            validator: function(arr) {
+                const VALID = ['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
+                               'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams'];
+                return arr.every(v => VALID.includes(v));
+            },
+            message: 'workflow_tags contains invalid value(s). Allowed: Students, Developers, Marketers, Content Creators, Startups, Small Business, Enterprise, Researchers, Designers, Sales Teams'
+        }
+    },
+    workflow_breakdown: String,               // multi-line: "[TAG]: [score]/10 — [sentence]" per line
+
     alternative_selection: String,   // when to choose this vs alternatives
     limitations: [String],           // taxonomy tags: bias_risk, reliability_risk, etc.
 

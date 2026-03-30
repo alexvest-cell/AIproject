@@ -23,21 +23,27 @@ const USE_CASES = [
     { label: 'Enterprise',    icon: Building,      hub: 'ai-tools', workflow: 'enterprise' },
 ];
 
-const STATS = [
-    { value: '200+', label: 'Tools Analyzed' },
-    { value: '50+', label: 'Direct Comparisons' },
-    { value: '500+', label: 'Ranking & Research Articles' },
-];
-
 const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
     const [stacks, setStacks] = useState<Stack[]>([]);
+    const [stats, setStats] = useState({ tools: 0, comparisons: 0, articles: 0 });
 
     useEffect(() => {
-        // Fetch published stacks for discovery block
         fetch('/api/stacks')
             .then(res => res.ok ? res.json() : [])
             .then(data => setStacks(data.slice(0, 6)))
-            .catch(err => console.error("Error fetching stacks:", err));
+            .catch(() => {});
+
+        Promise.all([
+            fetch('/api/tools').then(r => r.ok ? r.json() : []),
+            fetch('/api/comparisons').then(r => r.ok ? r.json() : []),
+            fetch('/api/articles').then(r => r.ok ? r.json() : []),
+        ]).then(([tools, comparisons, articles]) => {
+            setStats({
+                tools: Array.isArray(tools) ? tools.length : 0,
+                comparisons: Array.isArray(comparisons) ? comparisons.length : 0,
+                articles: Array.isArray(articles) ? articles.length : 0,
+            });
+        }).catch(() => {});
     }, []);
 
     const handleHub = (hub: string, workflow?: string) => {
@@ -45,7 +51,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
     };
 
     return (
-        <section className="relative w-full bg-surface-base text-white pt-32 md:pt-36 pb-0 overflow-hidden">
+        <section className="relative w-full bg-surface-base text-white pt-36 md:pt-40 pb-0 overflow-x-hidden">
 
             {/* Background grid pattern */}
             <div
@@ -60,7 +66,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
             <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-surface-base to-transparent pointer-events-none z-10" />
 
             {/* Accent glow */}
-            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[800px] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(43,212,195,0.1) 0%, transparent 60%)' }} />
+            <div className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/4 w-full h-[1000px] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(43,212,195,0.1) 0%, transparent 60%)' }} />
 
             <div className="container mx-auto px-4 md:px-8 relative z-10">
 
@@ -107,10 +113,16 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                 </div>
 
                 {/* ── Stats row */}
-                <div className="flex items-center justify-center gap-8 md:gap-16 mb-16 border-y border-white/5 py-6">
-                    {STATS.map((s, i) => (
+                <div className="hidden mb-16">
+                    {[
+                        { value: stats.tools,       label: 'Tools Analyzed'      },
+                        { value: stats.comparisons, label: 'Direct Comparisons'  },
+                        { value: stats.articles,    label: 'In-depth Reviews'    },
+                    ].map((s, i) => (
                         <div key={i} className="text-center">
-                            <div className="text-2xl md:text-3xl font-black text-white tracking-tight">{s.value}</div>
+                            <div className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                                {s.value > 0 ? `${s.value}+` : '—'}
+                            </div>
                             <div className="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest font-bold mt-0.5">{s.label}</div>
                         </div>
                     ))}
@@ -155,7 +167,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                 </div>
 
                 {/* ── Build a Complete Software Stack */}
-                {stacks.length > 0 && (
+                {false && stacks.length > 0 && (
                     <div className="mb-0 pb-16">
                         <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
                             <div>

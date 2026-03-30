@@ -90,7 +90,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
-    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', context_window: '', max_integrations: '', api_pricing: '', image_generation: '', memory_persistence: '', computer_use: '', api_available: '', use_case_breakdown: '', use_case_scores: [] as any[], rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
+    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', free_tier: '', rate_limits: '', model_version_by_plan: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', context_window: '', max_integrations: '', api_pricing: '', image_generation: '', memory_persistence: '', computer_use: '', api_available: '', use_case_breakdown: '', use_case_scores: [] as any[], workflow_tags: [] as string[], workflow_scores: [] as any[], rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
     const [toolForm, setToolForm] = useState<any>({ ...EMPTY_TOOL_FORM });
     const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
@@ -264,7 +264,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         // Integrations: 3–6
         const ints = splitComma(form.integrations);
-        if (ints.length < 3 || ints.length > 6) errors.integrations = `Must have 3–6 items (currently ${ints.length})`;
+        if (ints.length < 3 || ints.length > 8) errors.integrations = `Must have 3–8 items (currently ${ints.length})`;
 
         // Use cases: 1–5, from enum only
         const ucs: string[] = Array.isArray(form.use_case_tags) ? form.use_case_tags : splitComma(form.use_case_tags);
@@ -273,6 +273,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         else {
             const invalid = ucs.filter((u: string) => !VALID_USE_CASES.includes(u));
             if (invalid.length) errors.use_case_tags = `Invalid use case(s): ${invalid.join(', ')}`;
+        }
+
+        // Workflow tags: optional (nullable), max 4, cross-validate with workflow_scores
+        const wt: string[] = Array.isArray(form.workflow_tags) ? form.workflow_tags : [];
+        if (wt.length > 4) {
+            errors.workflow_tags = `Maximum 4 workflow tags allowed (currently ${wt.length})`;
+        } else if (wt.length > 0) {
+            const ws: any[] = Array.isArray(form.workflow_scores) ? form.workflow_scores : [];
+            const incomplete = wt.filter((tag: string) => {
+                const entry = ws.find((s: any) => s.workflow_tag === tag);
+                return !entry || !entry.score || !entry.sentence;
+            });
+            if (incomplete.length) errors.workflow_scores = `Missing score or sentence for: ${incomplete.join(', ')}`;
+            // Score format: must be decimal
+            const scoreFormatErrors: string[] = [];
+            for (const entry of ws) {
+                if (!entry.score) continue;
+                const scoreStr = String(entry.score);
+                const scoreNum = parseFloat(scoreStr);
+                if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 10) {
+                    scoreFormatErrors.push(`${entry.workflow_tag}: score must be 0.0–10.0`);
+                } else if (!scoreStr.includes('.')) {
+                    scoreFormatErrors.push(`${entry.workflow_tag}: add decimal (e.g. ${scoreStr}.0)`);
+                }
+            }
+            if (scoreFormatErrors.length && !errors.workflow_scores) errors.workflow_scores = scoreFormatErrors.join('; ');
         }
 
         return errors;
@@ -388,6 +414,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                     });
                     return obj;
                 })(),
+                workflow_tags: Array.isArray(toolForm.workflow_tags) ? toolForm.workflow_tags : [],
+                workflow_breakdown: (() => {
+                    const scores = Array.isArray(toolForm.workflow_scores) ? toolForm.workflow_scores : [];
+                    const lines = scores
+                        .filter((s: any) => s.workflow_tag)
+                        .map((s: any) => {
+                            const sc = (s.score !== '' && s.score !== null && s.score !== undefined) ? `${s.score}/10 — ` : '';
+                            return `${s.workflow_tag}: ${sc}${s.sentence || ''}`.trim();
+                        })
+                        .filter(Boolean);
+                    return lines.length ? lines.join('\n') : null;
+                })(),
                 last_updated: new Date().toISOString(),
             };
             const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
@@ -476,8 +514,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 return parsed;
             })(),
             rating_breakdown: mapToStr(t.rating_breakdown),
+            workflow_tags: Array.isArray(t.workflow_tags) ? t.workflow_tags : [],
+            workflow_scores: (() => {
+                let parsed: any[] = [];
+                if (t.workflow_breakdown && typeof t.workflow_breakdown === 'string') {
+                    parsed = t.workflow_breakdown.split('\n').filter(Boolean).map((line: string) => {
+                        const colonIdx = line.indexOf(':');
+                        if (colonIdx < 0) return null;
+                        const tagName = line.slice(0, colonIdx).trim();
+                        const rest = line.slice(colonIdx + 1).trim();
+                        const m = rest.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+                        return { workflow_tag: tagName, score: m ? m[1] : '', sentence: rest.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '').trim() };
+                    }).filter(Boolean);
+                }
+                const wTags: string[] = Array.isArray(t.workflow_tags) ? t.workflow_tags : [];
+                for (const tag of wTags) {
+                    if (!parsed.find((s: any) => s.workflow_tag === tag)) parsed.push({ workflow_tag: tag, score: '', sentence: '' });
+                }
+                return parsed;
+            })(),
             alternative_selection: t.alternative_selection || '',
             model_version: t.model_version || '',
+            free_tier: t.free_tier || '',
+            rate_limits: t.rate_limits || '',
+            model_version_by_plan: t.model_version_by_plan || '',
             primary_keyword: t.primary_keyword || '',
             review_slug: t.review_slug || '',
             last_updated: t.last_updated || '',
@@ -578,11 +638,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const limitations = parseArr(extracted['LIMITATIONS']);
         const rating_breakdown = parseRatingBreakdown(extracted['RATING_BREAKDOWN']);
         const model_version = extracted['MODEL_VERSION'] || null;
+        const free_tier = extracted['FREE_TIER'] || null;
+        const rate_limits = extracted['RATE_LIMITS'] || null;
+        const model_version_by_plan = extracted['MODEL_VERSION_BY_PLAN'] || null;
         const primary_keyword = extracted['PRIMARY_KEYWORD'] || null;
         const alternative_keywords = parseArr(extracted['ALTERNATIVE_KEYWORDS']);
         const review_slug = extracted['REVIEW_SLUG'] || null;
         const competitor_differentiator_raw = parseKeyValueStr(extracted['COMPETITOR_DIFFERENTIATORS']);
         const related_tool_note_raw = parseKeyValueStr(extracted['RELATED_TOOL_NOTES']);
+
+        const WORKFLOW_TAG_OPTS = ['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
+            'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams'];
+        const rawWT = parseArr(extracted['WORKFLOW_TAGS']);
+        const workflow_tags = rawWT
+            .map(w => WORKFLOW_TAG_OPTS.find(v => v.toLowerCase() === w.toLowerCase()))
+            .filter(Boolean) as string[];
+        const invalidWTs = rawWT.filter(w => !WORKFLOW_TAG_OPTS.some(v => v.toLowerCase() === w.toLowerCase()));
+        const workflow_breakdown_raw = extracted['WORKFLOW_BREAKDOWN'] || null;
 
         // Capability fields
         const context_window = extracted['CONTEXT_WINDOW'] || null;
@@ -616,7 +688,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (key_features.length < 4 || key_features.length > 6) errors.push(`KEY_FEATURES must have 4–6 items (got ${key_features.length})`);
         if (pros.length < 3 || pros.length > 5) errors.push(`PROS must have 3–5 items (got ${pros.length})`);
         if (cons.length < 2 || cons.length > 4) errors.push(`CONS must have 2–4 items (got ${cons.length})`);
-        if (integrations.length < 3 || integrations.length > 6) errors.push(`INTEGRATIONS must have 3–6 items (got ${integrations.length})`);
+        if (integrations.length < 3 || integrations.length > 8) errors.push(`INTEGRATIONS must have 3–8 items (got ${integrations.length})`);
         if (use_case_tags.length < 1 || use_case_tags.length > 5) errors.push(`USE_CASES must have 1–5 valid items (got ${use_case_tags.length})`);
         if (catRaw && !category_primary) errors.push(`CATEGORY_PRIMARY "${catRaw}" is not valid. Options: ${CATEGORY_PRIMARY_OPTS.join(', ')}`);
         if (invalidUC.length) errors.push(`USE_CASES has unrecognised values: ${invalidUC.join(', ')}`);
@@ -625,9 +697,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (compUseRaw && !computer_use) errors.push(`COMPUTER_USE must be yes, no, or partial (got "${compUseRaw}")`);
         if (apiAvailRaw && !api_available) errors.push(`API_AVAILABLE must be yes or no (got "${apiAvailRaw}")`);
 
+        // WORKFLOW_TAGS / WORKFLOW_BREAKDOWN cross-validation
+        if (invalidWTs.length) errors.push(`WORKFLOW_TAGS has unrecognised values: ${invalidWTs.join(', ')}. Allowed: ${WORKFLOW_TAG_OPTS.join(', ')}`);
+        if (workflow_tags.length > 4) errors.push(`WORKFLOW_TAGS must have 1–4 items (got ${workflow_tags.length})`);
+        if (workflow_tags.length > 0 && workflow_breakdown_raw) {
+            const wbLines = workflow_breakdown_raw.split('\n').map((l: string) => l.trim()).filter(Boolean);
+            if (wbLines.length !== workflow_tags.length) {
+                errors.push(`WORKFLOW_BREAKDOWN has ${wbLines.length} entries but WORKFLOW_TAGS has ${workflow_tags.length} — counts must match`);
+            } else {
+                const wbNames = wbLines.map((l: string) => { const idx = l.indexOf(':'); return idx > 0 ? l.slice(0, idx).trim() : ''; });
+                for (const tag of workflow_tags) {
+                    if (!wbNames.some((n: string) => n.toLowerCase() === tag.toLowerCase()))
+                        errors.push(`WORKFLOW_BREAKDOWN is missing an entry for tag "${tag}"`);
+                }
+                for (const name of wbNames) {
+                    if (!workflow_tags.some((t: string) => t.toLowerCase() === name.toLowerCase()))
+                        errors.push(`WORKFLOW_BREAKDOWN entry "${name}" does not match any tag in WORKFLOW_TAGS`);
+                }
+                for (const line of wbLines) {
+                    const sm = line.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+                    if (!sm) {
+                        errors.push(`WORKFLOW_BREAKDOWN line "${line.slice(0, 50)}" is missing a score in X.X/10 format`);
+                    } else {
+                        const sc = parseFloat(sm[1]);
+                        if (sc < 0 || sc > 10) errors.push(`WORKFLOW_BREAKDOWN score ${sm[1]}/10 is out of range (0.0–10.0)`);
+                    }
+                }
+            }
+        }
+
         if (errors.length) return { status: 'error' as const, errors };
 
-        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated, context_window, max_integrations, api_pricing, image_generation, memory_persistence, computer_use, api_available } };
+        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, free_tier, rate_limits, model_version_by_plan, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated, context_window, max_integrations, api_pricing, image_generation, memory_persistence, computer_use, api_available, workflow_tags, workflow_breakdown_raw } };
     };
 
     const handleParseInput = () => {
@@ -691,6 +792,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 limitations: d.limitations?.length ? d.limitations.join(', ') : (isEditing ? prev.limitations : ''),
                 rating_breakdown: Object.keys(d.rating_breakdown || {}).length ? Object.entries(d.rating_breakdown).map(([k, v]) => `${k}: ${v}`).join('\n') : (isEditing ? prev.rating_breakdown : ''),
                 model_version: d.model_version || (isEditing ? prev.model_version : ''),
+                free_tier: d.free_tier || (isEditing ? prev.free_tier : ''),
+                rate_limits: d.rate_limits || (isEditing ? prev.rate_limits : ''),
+                model_version_by_plan: d.model_version_by_plan || (isEditing ? prev.model_version_by_plan : ''),
                 primary_keyword: d.primary_keyword || (isEditing ? prev.primary_keyword : ''),
                 alternative_keywords: d.alternative_keywords?.length ? d.alternative_keywords.join(', ') : (isEditing ? prev.alternative_keywords : ''),
                 review_slug: d.review_slug || (isEditing ? prev.review_slug : ''),
@@ -704,6 +808,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 memory_persistence: d.memory_persistence || (isEditing ? prev.memory_persistence : ''),
                 computer_use: d.computer_use || (isEditing ? prev.computer_use : ''),
                 api_available: d.api_available || (isEditing ? prev.api_available : ''),
+                workflow_tags: d.workflow_tags?.length ? d.workflow_tags : (isEditing ? prev.workflow_tags : []),
+                workflow_scores: (() => {
+                    const raw: string = d.workflow_breakdown_raw || '';
+                    if (!raw) return isEditing ? prev.workflow_scores : [];
+                    const parsed = raw.split('\n').filter(Boolean).map((line: string) => {
+                        const colonIdx = line.indexOf(':'); if (colonIdx < 0) return null;
+                        const tagName = line.slice(0, colonIdx).trim();
+                        const rest = line.slice(colonIdx + 1).trim();
+                        const m = rest.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+                        return { workflow_tag: tagName, score: m ? m[1] : '', sentence: rest.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '').trim() };
+                    }).filter(Boolean);
+                    return parsed.length ? parsed : (isEditing ? prev.workflow_scores : []);
+                })(),
             }));
             setUnresolvedRelated((d.related_tool_names || []).filter((n: string) => !tools.some((t: any) => t.name.toLowerCase() === n.toLowerCase())));
             setUnresolvedCompetitors((d.competitor_names || []).filter((n: string) => !tools.some((t: any) => t.name.toLowerCase() === n.toLowerCase())));
@@ -3133,6 +3250,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                     </div>
                                 </div>
 
+                                {/* PLANS & MODELS */}
+                                <div className="rounded-lg border border-white/10 p-4 space-y-3">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-0.5">Plans & Models</p>
+                                        <p className="text-[11px] text-gray-500">These fields answer high-volume search queries about free access, usage limits, and which models are available on each plan.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Free Tier</label>
+                                        <input value={toolForm.free_tier || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setToolForm((p: any) => ({ ...p, free_tier: e.target.value }))}
+                                            maxLength={200}
+                                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="e.g. GPT-4o mini unlimited, GPT-4o limited to 10 messages/3 hours, voice and image require Plus" />
+                                        <p className="text-[10px] text-gray-600 mt-0.5">One sentence. Include model name, usage limits, and what requires a paid plan. Write None if no free tier exists.</p>
+                                        {toolForm.free_tier && toolForm.free_tier.length > 180 && <p className="text-[10px] text-yellow-500 mt-0.5">{toolForm.free_tier.length}/200 characters</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Rate Limits by Plan <span className="text-gray-600">(one line per tier)</span></label>
+                                        <textarea value={toolForm.rate_limits || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setToolForm((p: any) => ({ ...p, rate_limits: e.target.value }))}
+                                            rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Free: 10 GPT-4o messages/3 hours, unlimited GPT-4o mini\nPlus: 80 messages/3 hours\nPro: Unlimited all models"} />
+                                        <p className="text-[10px] text-gray-600 mt-0.5">One line per plan tier. Format: Plan name: limits. Write Not publicly disclosed if unknown for a tier.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Models by Plan <span className="text-gray-600">(one line per tier)</span></label>
+                                        <textarea value={toolForm.model_version_by_plan || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setToolForm((p: any) => ({ ...p, model_version_by_plan: e.target.value }))}
+                                            rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Free: Claude Sonnet 4.6 (limited)\nPro: Claude Sonnet 4.6 (unlimited), Claude Opus 4.6\nTeam: All Pro models plus admin controls"} />
+                                        <p className="text-[10px] text-gray-600 mt-0.5">One line per plan tier. Format: Plan name: model name(s). Reflects current models as of Last Updated date.</p>
+                                    </div>
+                                </div>
+
                                 {/* Links */}
                                 <div className="grid grid-cols-2 gap-3">
                                     {[['website_url', 'Website URL'], ['affiliate_url', 'Affiliate URL']].map(([key, label]) => (
@@ -3397,6 +3542,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                     <label className="block text-xs text-gray-400 mb-1">Model Version</label>
                                     <input value={toolForm.model_version || ''} onChange={e => setToolForm((p: any) => ({ ...p, model_version: e.target.value }))}
                                         className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent" placeholder="e.g. Grok 4 (Grok 4.1 Fast for API)" />
+                                    <p className="text-[10px] text-gray-600 mt-0.5">Legacy field — use Models by Plan (Plans & Models section) for new entries. Retained for tools not yet regenerated.</p>
                                 </div>
                                 <div>
                                     <label className="block text-xs text-gray-400 mb-1">Best For <span className="text-gray-600">(one per line)</span></label>
@@ -3452,6 +3598,115 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         </div>
                                     )}
                                 </div>
+                                {/* ── WORKFLOW & AUDIENCE ─────────────────────────────────────── */}
+                                <div className="pt-4 border-t border-white/5">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-1">Workflow &amp; Audience</p>
+                                    <p className="text-xs text-gray-500 mb-4">These fields power the workflow filter cards on the AI Tools hub and the role-based ranking pages on the Best Software hub. Assign 1–4 workflow tags and provide a score and specific evidence sentence for each.</p>
+
+                                    {/* Workflow Tags checkbox grid */}
+                                    <div className="mb-4">
+                                        <label className="block text-xs text-gray-400 mb-1">Workflow Tags <span className="text-gray-600">(select 1–4)</span></label>
+                                        <p className="text-[11px] text-gray-500 mb-3">Select 1–4 workflow types this tool is built for or well suited to.</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {(['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups', 'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams'] as const).map(tag => {
+                                                const selected: string[] = Array.isArray(toolForm.workflow_tags) ? toolForm.workflow_tags : [];
+                                                const isSelected = selected.includes(tag);
+                                                const atMax = selected.length >= 4;
+                                                const toggleTag = () => {
+                                                    if (isSelected) {
+                                                        const scores: any[] = Array.isArray(toolForm.workflow_scores) ? toolForm.workflow_scores : [];
+                                                        const entry = scores.find((s: any) => s.workflow_tag === tag);
+                                                        if (entry && (entry.score || entry.sentence)) {
+                                                            if (!confirm(`Remove "${tag}"? This will delete its score (${entry.score}/10) and evidence sentence.`)) return;
+                                                        }
+                                                        setToolForm((p: any) => ({
+                                                            ...p,
+                                                            workflow_tags: selected.filter((t: string) => t !== tag),
+                                                            workflow_scores: (Array.isArray(p.workflow_scores) ? p.workflow_scores : []).filter((s: any) => s.workflow_tag !== tag),
+                                                        }));
+                                                    } else {
+                                                        if (atMax) return;
+                                                        setToolForm((p: any) => ({
+                                                            ...p,
+                                                            workflow_tags: [...selected, tag],
+                                                            workflow_scores: [...(Array.isArray(p.workflow_scores) ? p.workflow_scores : []), { workflow_tag: tag, score: '', sentence: '' }],
+                                                        }));
+                                                    }
+                                                };
+                                                return (
+                                                    <button key={tag} type="button" onClick={toggleTag} disabled={!isSelected && atMax}
+                                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-colors ${isSelected ? 'border-news-accent/50 bg-news-accent/10 text-news-accent' : atMax ? 'border-white/5 bg-black/20 text-gray-600 cursor-not-allowed opacity-50' : 'border-white/10 bg-black/30 text-gray-400 hover:border-white/20'}`}>
+                                                        <span className={`w-3.5 h-3.5 rounded flex-shrink-0 border flex items-center justify-center ${isSelected ? 'bg-news-accent border-news-accent' : 'border-white/30'}`}>
+                                                            {isSelected && <svg className="w-2.5 h-2.5 text-black" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}
+                                                        </span>
+                                                        <span className="text-xs font-medium">{tag}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        {Array.isArray(toolForm.workflow_tags) && toolForm.workflow_tags.length >= 4 && (
+                                            <p className="text-[11px] text-amber-500/80 mt-2">Maximum 4 tags selected.</p>
+                                        )}
+                                        {toolErrors.workflow_tags && <p className="text-xs text-red-400 mt-1">{toolErrors.workflow_tags}</p>}
+                                    </div>
+
+                                    {/* Workflow Breakdown rows */}
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Workflow Breakdown <span className="text-gray-600">(one row per selected tag)</span></label>
+                                        <p className="text-[11px] text-gray-500 mb-3">For each workflow tag, provide a score and a specific sentence explaining why. Cite pricing, features, or limitations as evidence — not generic claims.</p>
+                                        {(!Array.isArray(toolForm.workflow_tags) || toolForm.workflow_tags.length === 0) ? (
+                                            <p className="text-xs text-gray-600 italic">Select workflow tags above to fill in breakdown scores.</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {(Array.isArray(toolForm.workflow_tags) ? toolForm.workflow_tags : []).map((tag: string) => {
+                                                    const scores: any[] = Array.isArray(toolForm.workflow_scores) ? toolForm.workflow_scores : [];
+                                                    const entry = scores.find((s: any) => s.workflow_tag === tag) || { workflow_tag: tag, score: '', sentence: '' };
+                                                    const updateEntry = (field: string, value: string) => setToolForm((p: any) => {
+                                                        const cur: any[] = Array.isArray(p.workflow_scores) ? p.workflow_scores : [];
+                                                        const idx = cur.findIndex((s: any) => s.workflow_tag === tag);
+                                                        const updated = idx >= 0
+                                                            ? cur.map((s: any, i: number) => i === idx ? { ...s, [field]: value } : s)
+                                                            : [...cur, { workflow_tag: tag, score: '', sentence: '', [field]: value }];
+                                                        return { ...p, workflow_scores: updated };
+                                                    });
+                                                    const scoreNum = parseFloat(String(entry.score));
+                                                    const scoreValid = entry.score === '' || (!isNaN(scoreNum) && scoreNum >= 0 && scoreNum <= 10);
+                                                    const needsDecimal = entry.score !== '' && !String(entry.score).includes('.');
+                                                    const isIncomplete = toolErrors.workflow_scores && (!entry.score || !entry.sentence);
+                                                    return (
+                                                        <div key={tag} className={`bg-black/30 border rounded-lg p-3 transition-colors ${isIncomplete ? 'border-red-500/40' : 'border-white/10'}`}>
+                                                            <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-2">{tag}</p>
+                                                            <div className="flex gap-2 items-start">
+                                                                <div className="w-20 flex-shrink-0">
+                                                                    <label className="text-[10px] text-gray-500 block mb-1">Score /10</label>
+                                                                    <input type="number" min="0" max="10" step="0.1" value={entry.score}
+                                                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateEntry('score', e.target.value)}
+                                                                        className={`w-full bg-black/40 border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-news-accent ${scoreValid && !needsDecimal ? 'border-white/10' : 'border-amber-500/60'}`}
+                                                                        placeholder="8.5" />
+                                                                    {!scoreValid && <p className="text-[10px] text-red-400 mt-0.5">0–10</p>}
+                                                                    {scoreValid && needsDecimal && <p className="text-[10px] text-amber-400 mt-0.5">Add .0 (e.g. {entry.score}.0)</p>}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <label className="text-[10px] text-gray-500 block mb-1">Evidence sentence <span className="text-gray-600">(max 200 chars)</span></label>
+                                                                    <textarea value={entry.sentence}
+                                                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateEntry('sentence', e.target.value)}
+                                                                        rows={2} maxLength={200}
+                                                                        className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-news-accent resize-none"
+                                                                        placeholder={`Specific evidence for ${tag}…`} />
+                                                                    {entry.sentence && entry.sentence.length > 160 && (
+                                                                        <p className="text-[10px] text-gray-500 text-right">{entry.sentence.length}/200</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        {toolErrors.workflow_scores && <p className="text-xs text-red-400 mt-2">{toolErrors.workflow_scores}</p>}
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs text-gray-400 mb-1">Limitations <span className="text-gray-600">(comma-separated tags)</span></label>
                                     <input value={toolForm.limitations || ''} onChange={e => setToolForm((p: any) => ({ ...p, limitations: e.target.value }))}
@@ -3548,9 +3803,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                             <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
                                 {tools.map(t => (
                                     <div key={t.id || t._id} className="flex items-center justify-between bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 hover:border-white/10 transition-colors">
-                                        <div className="min-w-0">
-                                            <p className="font-bold text-sm text-white truncate">{t.name}</p>
-                                            <p className="text-xs text-gray-500">{t.pricing_model} · {t.slug}</p>
+                                        <div className="min-w-0 flex items-start gap-2">
+                                            <div
+                                                title={t.workflow_tags?.length ? `Workflow tags populated (${(t.workflow_tags as string[]).join(', ')})` : 'Workflow tags missing — regenerate this tool.'}
+                                                className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${t.workflow_tags?.length ? 'bg-news-accent' : 'bg-gray-600'}`}
+                                            />
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-sm text-white truncate">{t.name}</p>
+                                                <p className="text-xs text-gray-500">{t.pricing_model} · {t.slug}</p>
+                                            </div>
                                         </div>
                                         <div className="flex gap-2 flex-shrink-0 ml-3">
                                             <button onClick={() => {

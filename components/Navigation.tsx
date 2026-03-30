@@ -41,6 +41,19 @@ interface MegaMenuColumn {
   }[];
 }
 
+const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
+  'AI Writing': PenLine,
+  'AI Chatbots': Sparkles,
+  'Productivity': Layers,
+  'Automation': Zap,
+  'Design': ImageIcon,
+  'Development': Code2,
+  'Marketing': Megaphone,
+  'Data Analysis': LayoutGrid,
+  'Customer Support': Users,
+  'Other': LayoutGrid,
+};
+
 const MEGA_MENUS: Record<string, MegaMenuColumn[]> = {
   'ai-tools': [
     {
@@ -286,6 +299,64 @@ const Navigation: React.FC<NavigationProps> = ({
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [mobileSubExpanded, setMobileSubExpanded] = useState<string | null>(null);
 
+  // Dynamic AI tools menu data
+  const [navTools, setNavTools] = useState<any[]>([]);
+  useEffect(() => {
+    fetch('/api/tools').then(r => r.json()).then(setNavTools).catch(() => {});
+  }, []);
+
+  const aiToolsColumns = React.useMemo((): MegaMenuColumn[] => {
+    if (!navTools.length) return MEGA_MENUS['ai-tools'];
+
+    // Column 1: Browse by Category
+    const catFreq: Record<string, number> = {};
+    navTools.forEach(t => { if (t.category_primary) catFreq[t.category_primary] = (catFreq[t.category_primary] || 0) + 1; });
+    const catItems = Object.entries(catFreq)
+      .sort((a, b) => b[1] - a[1]).slice(0, 8)
+      .map(([cat, count]) => ({
+        label: cat, href: `/ai-tools?category=${encodeURIComponent(cat)}`,
+        hub: 'ai-tools', category: cat,
+        description: `${count} tools`,
+        icon: CATEGORY_ICON_MAP[cat],
+      }));
+
+    // Column 2: Filter by Pricing
+    const priceFreq: Record<string, number> = {};
+    navTools.forEach(t => { if (t.pricing_model) priceFreq[t.pricing_model] = (priceFreq[t.pricing_model] || 0) + 1; });
+    const priceItems = Object.entries(priceFreq)
+      .sort((a, b) => b[1] - a[1])
+      .map(([model, count]) => ({
+        label: model, href: `/ai-tools?pricing=${encodeURIComponent(model)}`,
+        hub: 'ai-tools', description: `${count} tools`,
+      }));
+
+    // Column 3: Filter by Use Case
+    const useCaseFreq: Record<string, number> = {};
+    navTools.forEach(t => (t.use_case_tags || []).forEach((u: string) => { useCaseFreq[u] = (useCaseFreq[u] || 0) + 1; }));
+    const useCaseItems = Object.entries(useCaseFreq)
+      .sort((a, b) => b[1] - a[1]).slice(0, 7)
+      .map(([uc, count]) => ({
+        label: uc, href: `/ai-tools?use_case=${encodeURIComponent(uc)}`,
+        hub: 'ai-tools', description: `${count} tools`,
+      }));
+
+    // Column 4: Featured Tools (top 6 by rating)
+    const featuredItems = [...navTools]
+      .sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6)
+      .map(t => ({
+        label: t.name, href: `/tools/${t.slug}`,
+        logo: t.logo || undefined,
+        description: t.category_primary || undefined,
+      }));
+
+    return [
+      { heading: 'Browse by Category', items: catItems },
+      { heading: 'Filter by Pricing', items: priceItems },
+      { heading: 'Filter by Use Case', items: useCaseItems },
+      { heading: 'Featured Tools', items: featuredItems },
+    ];
+  }, [navTools]);
+
   // ── Viewport listener ──────────────────────────────────────────────────────
   useEffect(() => {
     const handleResize = () => {
@@ -425,75 +496,64 @@ const Navigation: React.FC<NavigationProps> = ({
       <div className={`w-full border-b border-border-divider overflow-visible transition-all duration-300 ${isScrolled ? 'h-14' : 'h-16'}`}>
         <div className="container mx-auto px-4 md:px-8 h-full flex items-center overflow-visible">
 
-          {/* Mobile row: Logo + actions */}
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center">
-              <div
-                className="flex items-center gap-3 cursor-pointer group"
-                onClick={() => onCategorySelect('All')}
-              >
-                <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'h-7 md:h-8' : 'h-8 md:h-10'}`}>
-                  <img
-                    src="/logo.png"
-                    alt="toolcurrent"
-                    className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300"
-                  />
-                </div>
+          {/* Mobile: logo left, actions right */}
+          <div className="flex md:hidden items-center justify-between w-full">
+            <div
+              className="flex items-center gap-3 cursor-pointer group"
+              onClick={() => onCategorySelect('All')}
+            >
+              <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'h-7' : 'h-8'}`}>
+                <img src="/logo.png" alt="toolcurrent" className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300" />
               </div>
             </div>
-
-            {/* Mobile right actions */}
-            <div className="flex md:hidden items-center gap-5">
-              <button 
-                onClick={toggleSearch} 
-                className={`transition-colors ${isSearchOpen ? 'text-news-accent' : 'text-gray-400 hover:text-white'}`} 
-                aria-label="Search"
-              >
+            <div className="flex items-center gap-5">
+              <button onClick={toggleSearch} className={`transition-colors ${isSearchOpen ? 'text-news-accent' : 'text-gray-400 hover:text-white'}`} aria-label="Search">
                 <Search size={22} />
               </button>
-              <button
-                className="text-white p-1 -mr-1"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                aria-expanded={isMobileMenuOpen}
-              >
+              <button className="text-white p-1 -mr-1" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={isMobileMenuOpen}>
                 {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
               </button>
             </div>
           </div>
 
-          {/* Desktop right actions */}
-          <div className="hidden md:flex items-center gap-4 ml-auto overflow-visible">
-            {isSearchOpen ? (
-              <div ref={searchContainerRef} className="flex items-center bg-surface-card border border-border-subtle shadow-elevation rounded-full px-3 py-1.5 animate-fade-in relative w-48 md:w-64">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchValue}
-                  onChange={handleSearchChange}
-                  placeholder="Search..."
-                  className="bg-transparent border-none focus:outline-none text-white text-base w-full placeholder:text-gray-500"
-                  onKeyDown={(e) => e.key === 'Enter' && onSearch(searchValue)}
-                  aria-label="Search"
-                />
-                <button onClick={toggleSearch} className="text-news-accent hover:text-white" aria-label="Close search">
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <button onClick={toggleSearch} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group" aria-label="Open search">
-                <Search size={18} />
-                <span className="text-xs font-bold uppercase tracking-widest hidden md:block group-hover:underline decoration-news-accent underline-offset-4">Search</span>
-              </button>
-            )}
-
-            <button
-              onClick={onSubscribeClick}
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-              aria-label="Subscribe"
+          {/* Desktop: 3-column — left spacer | centered logo | right actions */}
+          <div className="hidden md:flex items-center w-full">
+            {/* Left: spacer matching right column width */}
+            <div className="flex-1" />
+            {/* Center: logo */}
+            <div
+              className="flex items-center gap-3 cursor-pointer group"
+              onClick={() => onCategorySelect('All')}
             >
-              <Bell size={18} />
-            </button>
+              <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'h-8' : 'h-10'}`}>
+                <img src="/logo.png" alt="toolcurrent" className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300" />
+              </div>
+            </div>
+            {/* Right: search */}
+            <div className="flex-1 flex justify-end overflow-visible">
+              {isSearchOpen ? (
+                <div ref={searchContainerRef} className="flex items-center bg-surface-card border border-border-subtle shadow-elevation rounded-full px-3 py-1.5 animate-fade-in relative w-48 md:w-64">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchValue}
+                    onChange={handleSearchChange}
+                    placeholder="Search..."
+                    className="bg-transparent border-none focus:outline-none text-white text-base w-full placeholder:text-gray-500"
+                    onKeyDown={(e) => e.key === 'Enter' && onSearch(searchValue)}
+                    aria-label="Search"
+                  />
+                  <button onClick={toggleSearch} className="text-news-accent hover:text-white" aria-label="Close search">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={toggleSearch} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group" aria-label="Open search">
+                  <Search size={18} />
+                  <span className="text-xs font-bold uppercase tracking-widest group-hover:underline decoration-news-accent underline-offset-4">Search</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -517,7 +577,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
       {/* ── Secondary Nav Bar (Desktop Only) ─────────────────────────────────────────────── */}
       <div className={`w-full border-b border-border-divider transition-all duration-300 ${isScrolled ? 'h-10' : 'h-12'} relative hidden md:block`}>
-        <div className="container mx-auto px-4 md:px-8 h-full flex items-center overflow-x-auto hide-scrollbar">
+        <div className="container mx-auto px-4 md:px-8 h-full flex items-center justify-center overflow-x-auto hide-scrollbar">
           <div className="flex items-center gap-6 md:gap-8 min-w-max">
             {navCategories.map(cat => {
               const hasMega = !!MEGA_MENUS[cat.slug];
@@ -558,10 +618,10 @@ const Navigation: React.FC<NavigationProps> = ({
       </div>
 
       {/* ── Desktop Mega Menu Panel (portal, desktop ≥1024px only) ─────────── */}
-      {isDesktop && activeDropdown && MEGA_MENUS[activeDropdown] && (
+      {isDesktop && activeDropdown && (MEGA_MENUS[activeDropdown] || activeDropdown === 'ai-tools') && (
         <MegaMenuPanel
           slug={activeDropdown}
-          columns={MEGA_MENUS[activeDropdown]}
+          columns={activeDropdown === 'ai-tools' ? aiToolsColumns : MEGA_MENUS[activeDropdown]}
           anchorRect={anchorRect}
           onItemClick={handleMegaItemClick}
           onMouseEnter={cancelClose}
@@ -619,21 +679,22 @@ const Navigation: React.FC<NavigationProps> = ({
                     {/* AI Tools Sub-sections */}
                     {mobileExpanded === 'ai-tools' && (
                       <div className="pl-4 mt-2 space-y-2 animate-fade-in border-l-2 border-border-divider ml-7">
-                        {MEGA_MENUS['ai-tools'].map((col, ci) => {
+                        {aiToolsColumns.map((col, ci) => {
                           const colKey = `ai-tools-${ci}`;
                           const isSubExpanded = mobileSubExpanded === colKey;
+                          const isFeatured = col.heading === 'Featured Tools';
                           return (
                             <div key={ci} className="flex flex-col gap-1">
-                              <button 
+                              <button
                                 onClick={() => setMobileSubExpanded(isSubExpanded ? null : colKey)}
                                 className="flex items-center justify-between py-2 px-3 text-xs font-bold uppercase tracking-widest text-news-accent hover:bg-surface-hover/50 rounded-lg transition-colors"
                               >
                                 {col.heading}
                                 <ChevronDown size={12} className={`text-gray-600 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
                               </button>
-                              
+
                               {isSubExpanded && (
-                                <div className="grid gap-1 pl-3 py-1">
+                                <div className={`pl-3 py-1 ${isFeatured ? 'grid grid-cols-2 gap-1' : 'grid gap-1'}`}>
                                   {col.items.map((item, ii) => (
                                     <button
                                       key={ii}
@@ -646,11 +707,16 @@ const Navigation: React.FC<NavigationProps> = ({
                                             <img src={item.logo} alt={item.label} className="w-full h-full object-contain" />
                                           </div>
                                         ) : item.icon ? (
-                                          <item.icon size={14} className="text-gray-500 group-hover:text-news-accent" />
+                                          <item.icon size={14} className="text-gray-500 group-hover:text-news-accent flex-shrink-0" />
                                         ) : null}
-                                        <span className="text-sm font-medium truncate">{item.label}</span>
+                                        <div className="min-w-0">
+                                          <span className="text-sm font-medium truncate block">{item.label}</span>
+                                          {item.description && !isFeatured && (
+                                            <span className="text-[10px] text-gray-600 truncate block">{item.description}</span>
+                                          )}
+                                        </div>
                                       </div>
-                                      <ChevronRight size={12} className="text-gray-700 opacity-0 group-hover:opacity-100 transition-all" />
+                                      <ChevronRight size={12} className="text-gray-700 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0" />
                                     </button>
                                   ))}
                                 </div>
@@ -744,47 +810,6 @@ const Navigation: React.FC<NavigationProps> = ({
                 </div>
               </div>
 
-              {/* Workflows Group */}
-              <div className="space-y-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Workflows</p>
-                <div className="grid gap-2">
-                  <button 
-                    onClick={() => { onHubClick?.('use-cases'); setIsMobileMenuOpen(false); }}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
-                  >
-                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Use Cases</span>
-                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
-                  </button>
-                  <button 
-                    onClick={() => { onHubClick?.('stacks'); setIsMobileMenuOpen(false); }}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
-                  >
-                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Stacks</span>
-                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Learn Group */}
-              <div className="space-y-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Learn</p>
-                <div className="grid gap-2">
-                  <button 
-                    onClick={() => { onHubClick?.('guides'); setIsMobileMenuOpen(false); }}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
-                  >
-                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Guides</span>
-                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
-                  </button>
-                  <button 
-                    onClick={() => { onCategorySelect('All'); setIsMobileMenuOpen(false); }}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
-                  >
-                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">News</span>
-                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -795,12 +820,6 @@ const Navigation: React.FC<NavigationProps> = ({
               className="w-full py-3 rounded-xl bg-surface-card border border-border-subtle text-xs font-bold uppercase tracking-widest text-white hover:bg-surface-hover transition-all"
             >
               About ToolCurrent
-            </button>
-            <button 
-              onClick={() => { onSubscribeClick(); setIsMobileMenuOpen(false); }}
-              className="w-full py-3 rounded-xl bg-news-accent text-xs font-black uppercase tracking-widest text-black hover:bg-white transition-all shadow-[0_8px_24px_rgba(255,100,50,0.3)]"
-            >
-              Subscribe
             </button>
           </div>
         </div>

@@ -1800,11 +1800,15 @@ app.put('/api/tools/:id', requireAuth, async (req, res) => {
     if (!existing) { console.log('PUT tool: NOT FOUND id=', req.params.id); return res.status(404).json({ error: 'Tool not found' }); }
 
     const { _id, __v, createdAt, ...rawBody } = req.body;
+    // Fields allowed to clear/reset to empty — exempted from the blank-value filter
+    const CLEARABLE_ARRAYS = ['screenshots', 'workflow_tags'];
+    const CLEARABLE_STRINGS = ['workflow_breakdown'];
     // Strip empty/blank values — never overwrite real DB content with blank form fields
     const safeBody = Object.fromEntries(
       Object.entries(rawBody).filter(([k, v]) => {
-        if (v === null || v === undefined || v === '') return false;
-        if (Array.isArray(v) && v.length === 0 && k !== 'screenshots') return false;
+        if ((v === null || v === undefined) && !CLEARABLE_STRINGS.includes(k)) return false;
+        if (v === '') return false;
+        if (Array.isArray(v) && v.length === 0 && !CLEARABLE_ARRAYS.includes(k)) return false;
         if (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0) return false;
         return true;
       })

@@ -65,7 +65,11 @@ function App() {
     return 'home';
   });
   // Hub/Tool/Comparison slug routing
-  const [activeHub, setActiveHub] = useState<string>('');
+  const [activeHub, setActiveHub] = useState<string>(() => {
+    const path = window.location.pathname;
+    const hubPaths = ['/ai-tools', '/best-software', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
+    return hubPaths.includes(path) ? path.replace('/', '') : '';
+  });
   const [activeToolSlug, setActiveToolSlug] = useState<string>('');
   const [activeComparisonSlug, setActiveComparisonSlug] = useState<string>();
   const [activeComparisonUseCase, setActiveComparisonUseCase] = useState<string>('');

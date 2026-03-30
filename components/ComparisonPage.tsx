@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Comparison, Tool } from '../types';
-import { ArrowRight, Trophy, Check, X, TrendingUp, Target, Star, Zap, Medal } from 'lucide-react';
+import { ArrowRight, Trophy, Check, X, TrendingUp, Target, Star, Zap, Medal, ChevronDown } from 'lucide-react';
 import { ArticleFAQ } from './article-layouts/SharedModules';
 import { RelatedContent } from './RelatedContent';
 import type { GeneratedComparison } from '../utils/compareEngine';
@@ -88,6 +88,15 @@ function buildTableRows(
                 {toolsArr.map(t => <td key={t.slug} className={colPad}>{renderCell(String((t as any).rating_score ?? '—'), t.slug === winnerSlug)}</td>)}
             </tr>
             <tr className={tr}><td className={th}>Pricing Model</td>{toolsArr.map(t => <td key={t.slug} className={colPad}>{renderCell(t.pricing_model || '—', t.slug === winnerSlug)}</td>)}</tr>
+            <tr className={tr}>
+                <td className={th}>Free Tier</td>
+                {toolsArr.map(t => {
+                    const val = (t as any).free_tier as string | null | undefined;
+                    if (!val) return <td key={t.slug} className={colPad}><span className="text-news-muted">—</span></td>;
+                    if (val.toLowerCase() === 'none') return <td key={t.slug} className={`${colPad} text-xs text-news-muted`}>Not available</td>;
+                    return <td key={t.slug} className={`${colPad} text-xs text-news-text leading-snug max-w-[200px]`}>{val}</td>;
+                })}
+            </tr>
             <tr className={tr}><td className={th}>Context Window</td>{toolsArr.map(t => <td key={t.slug} className={colPad}>{renderCell((t as any).context_window || 'N/A', t.slug === winnerSlug)}</td>)}</tr>
             <tr className={tr}><td className={th}>API Pricing</td>{toolsArr.map(t => <td key={t.slug} className={`${colPad} text-xs text-news-text max-w-[180px]`}>{(t as any).api_pricing || 'N/A'}</td>)}</tr>
             {enumRows.map(({ key, label }) => (
@@ -142,6 +151,373 @@ const ScoreBadge: React.FC<{ score: number; accent?: boolean }> = ({ score, acce
         </span>
     </div>
 );
+
+// ── Plan data helpers ──────────────────────────────────────────────────────────
+
+type PriceBand = 'free' | 'entry' | 'mid' | 'premium' | 'enterprise';
+
+const PRICE_BANDS: { id: PriceBand; label: string; range: string }[] = [
+    { id: 'free',       label: 'Free',       range: '$0'            },
+    { id: 'entry',      label: 'Entry',      range: '$1–$25/mo'     },
+    { id: 'mid',        label: 'Mid',        range: '$26–$100/mo'   },
+    { id: 'premium',    label: 'Premium',    range: '$101–$250/mo'  },
+    { id: 'enterprise', label: 'Enterprise', range: 'Custom'        },
+];
+
+interface PlanData {
+    name: string;
+    price: string;
+    priceMonthly: number | null;
+    isEnterprise: boolean;
+    models: string;
+    limits: string;
+}
+
+function parsePlanMap(tool: Tool): Record<string, { models: string; limits: string }> {
+    const mvbp = (tool as any).model_version_by_plan as string | null | undefined;
+    if (!mvbp) return {};
+    const map: Record<string, { models: string; limits: string }> = {};
+    mvbp.split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+        const ci = line.indexOf(':');
+        const plan = ci > 0 ? line.slice(0, ci).trim() : line.trim();
+        map[plan] = { models: ci > 0 ? line.slice(ci + 1).trim() : '', limits: '' };
+    });
+    const rl = (tool as any).rate_limits as string | null | undefined;
+    if (rl) {
+        rl.split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+            const ci = line.indexOf(':');
+            if (ci > 0) {
+                const planRaw = line.slice(0, ci).trim();
+                const limit = line.slice(ci + 1).trim();
+                const key = Object.keys(map).find(k => k.toLowerCase() === planRaw.toLowerCase());
+                if (key) map[key].limits = limit.toLowerCase().includes('not publicly disclosed') ? '' : limit;
+            }
+        });
+    }
+    return map;
+}
+
+// Build { planNameLower → priceString } from starting_price field
+function parsePriceMap(tool: Tool): Record<string, string> {
+    const sp = (tool as any).starting_price as string | null | undefined;
+    if (!sp) return {};
+    const match = sp.match(/^([^(]+)\(([^)]+)\)$/);
+    if (!match) return {};
+    const base = match[1].trim();
+    const map: Record<string, string> = { free: base };
+    match[2].split(';').forEach(s => {
+        const ci = s.indexOf(':');
+        if (ci < 0) return;
+        map[s.slice(0, ci).trim().toLowerCase()] = s.slice(ci + 1).trim();
+    });
+    return map;
+}
+
+function extractMonthlyPrice(priceStr: string): number | null {
+    if (!priceStr) return null;
+    const lower = priceStr.toLowerCase();
+    if (lower.includes('custom') || lower.includes('contact') || lower.includes('not publicly')) return null;
+    if (lower === '$0' || lower === '$0/mo' || lower === 'free') return 0;
+    const m = priceStr.match(/\$(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : null;
+}
+
+function priceToBand(price: number | null, name: string): PriceBand {
+    const lower = name.toLowerCase();
+    if (lower === 'enterprise' || lower.includes('enterprise')) return 'enterprise';
+    if (price === null) return 'enterprise';
+    if (price === 0) return 'free';
+    if (price <= 25) return 'entry';
+    if (price <= 100) return 'mid';
+    if (price <= 250) return 'premium';
+    return 'enterprise';
+}
+
+function buildBandData(tool: Tool): Record<PriceBand, PlanData[]> {
+    const planMap = parsePlanMap(tool);
+    const priceMap = parsePriceMap(tool);
+    const result: Record<PriceBand, PlanData[]> = { free: [], entry: [], mid: [], premium: [], enterprise: [] };
+    for (const [planName, { models, limits }] of Object.entries(planMap)) {
+        const lower = planName.toLowerCase();
+        const priceStr = priceMap[lower] || '';
+        const isEnterprise =
+            lower === 'enterprise' || lower.includes('enterprise') ||
+            priceStr.toLowerCase().includes('custom') ||
+            priceStr.toLowerCase().includes('not publicly');
+        const priceNum = isEnterprise ? null : extractMonthlyPrice(priceStr);
+        const band = priceToBand(priceNum, planName);
+        result[band].push({ name: planName, price: priceStr, priceMonthly: priceNum, isEnterprise, models, limits });
+    }
+    // Sort each band highest price first so the primary (plans[0]) is the highest-featured
+    for (const band of Object.keys(result) as PriceBand[]) {
+        result[band].sort((a, b) => (b.priceMonthly ?? -1) - (a.priceMonthly ?? -1));
+    }
+    return result;
+}
+
+const PlanComparisonTable: React.FC<{ tools: Tool[] }> = ({ tools }) => {
+    const [expandedBands, setExpandedBands] = useState<Set<PriceBand>>(new Set(['free', 'entry']));
+    const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
+
+    const bandDataPerTool = useMemo(() => tools.map(t => buildBandData(t)), [tools]);
+
+    // Cross-category: different category_primary values
+    const crossCategory = useMemo(() => {
+        const cats = new Set(tools.map(t => (t as any).category_primary as string | undefined).filter(Boolean));
+        return cats.size > 1;
+    }, [tools]);
+
+    // 60% empty-cell threshold — only trigger stacked layout for cross-category comparisons
+    const useBandTable = useMemo(() => {
+        if (!crossCategory) return true;
+        const totalCells = PRICE_BANDS.length * tools.length;
+        const emptyCells = PRICE_BANDS.reduce(
+            (acc, band) => acc + tools.filter((_, ti) => bandDataPerTool[ti][band.id].length === 0).length,
+            0
+        );
+        return emptyCells / totalCells <= 0.6;
+    }, [crossCategory, tools, bandDataPerTool]);
+
+    const toggleBand = (band: PriceBand) => setExpandedBands(prev => {
+        const next = new Set(prev);
+        next.has(band) ? next.delete(band) : next.add(band);
+        return next;
+    });
+
+    const toggleCell = (key: string) => setExpandedCells(prev => {
+        const next = new Set(prev);
+        next.has(key) ? next.delete(key) : next.add(key);
+        return next;
+    });
+
+    // Renders a single plan's content block
+    const PlanBlock: React.FC<{ plan: PlanData; tool: Tool; dimmed?: boolean }> = ({ plan, tool, dimmed }) => (
+        <div className={dimmed ? 'opacity-75' : ''}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-0.5">{plan.name}</p>
+            {plan.isEnterprise ? (
+                <>
+                    <p className="text-news-muted italic text-xs">Custom</p>
+                    {tool.website_url && (
+                        <a href={tool.website_url} target="_blank" rel="noopener noreferrer"
+                            className="text-[10px] text-news-accent hover:underline">Contact sales →</a>
+                    )}
+                </>
+            ) : plan.price ? (
+                <p className="text-white font-medium text-xs">{plan.price}</p>
+            ) : tool.website_url ? (
+                <a href={tool.website_url} target="_blank" rel="noopener noreferrer"
+                    className="text-[10px] text-news-accent hover:underline">See pricing →</a>
+            ) : null}
+            {plan.models && <p className="text-news-text text-xs leading-snug mt-1">{plan.models}</p>}
+            {plan.limits && <p className="text-news-muted text-[11px] leading-snug mt-0.5">{plan.limits}</p>}
+        </div>
+    );
+
+    // Renders a table cell for a given band + tool
+    const BandCell: React.FC<{ plans: PlanData[]; tool: Tool; band: PriceBand; cellKey: string }> = ({ plans, tool, band, cellKey }) => {
+        if (plans.length === 0) return <td className="px-4 py-4 text-news-muted align-top">—</td>;
+        const primary = plans[0];
+        const extras = plans.slice(1);
+        const isExpanded = expandedCells.has(cellKey);
+        return (
+            <td className="px-4 py-4 align-top">
+                <PlanBlock plan={primary} tool={tool} />
+                {extras.length > 0 && (
+                    <div className="mt-2">
+                        <button onClick={() => toggleCell(cellKey)}
+                            className="text-[10px] text-news-accent hover:underline flex items-center gap-0.5">
+                            {isExpanded ? '− Hide' : `+ ${extras.length} more plan${extras.length > 1 ? 's' : ''}`}
+                        </button>
+                        {isExpanded && (
+                            <div className="mt-2 space-y-3">
+                                {extras.map((plan, i) => (
+                                    <div key={i} className="pt-2 border-t border-border-subtle">
+                                        <PlanBlock plan={plan} tool={tool} dimmed />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </td>
+        );
+    };
+
+    // ── Cross-category stacked layout ─────────────────────────────────────────
+    if (!useBandTable) {
+        return (
+            <div className="space-y-6">
+                <p className="text-xs text-news-muted italic border border-border-subtle rounded-lg px-4 py-3">
+                    These tools have different pricing structures — plans are shown individually.
+                </p>
+                {tools.map(tool => {
+                    const planMap = parsePlanMap(tool);
+                    const priceMap = parsePriceMap(tool);
+                    const allPlans = Object.entries(planMap);
+                    if (allPlans.length === 0) return (
+                        <div key={tool.slug} className="rounded-xl border border-border-subtle p-5">
+                            <div className="flex items-center gap-2 mb-3">
+                                <ToolLogo tool={tool} size={6} />
+                                <span className="font-bold text-white text-sm">{tool.name}</span>
+                            </div>
+                            <p className="text-xs text-news-muted">Plan details not yet available.</p>
+                        </div>
+                    );
+                    return (
+                        <div key={tool.slug} className="rounded-xl border border-border-subtle overflow-hidden">
+                            <div className="flex items-center gap-2 bg-surface-card px-4 py-3 border-b border-border-subtle">
+                                <ToolLogo tool={tool} size={6} />
+                                <span className="font-bold text-white text-sm">{tool.name}</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs min-w-[400px]">
+                                    <thead>
+                                        <tr className="bg-surface-card/60 border-b border-border-subtle">
+                                            {['Plan', 'Price', 'Model', 'Usage Limits'].map(h => (
+                                                <th key={h} className="text-left px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-news-accent">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {allPlans.map(([planName, { models, limits }], i) => {
+                                            const lower = planName.toLowerCase();
+                                            const priceStr = priceMap[lower] || '';
+                                            const isEnt = lower === 'enterprise' || lower.includes('enterprise') ||
+                                                priceStr.toLowerCase().includes('custom') || priceStr.toLowerCase().includes('not publicly');
+                                            const isFree = lower === 'free';
+                                            return (
+                                                <tr key={i} className={`border-b border-border-subtle last:border-0 ${i % 2 === 0 ? 'bg-surface-base' : 'bg-surface-card/40'} ${isFree ? 'border-l-2 border-news-accent' : ''}`}>
+                                                    <td className="px-4 py-3 font-medium text-white whitespace-nowrap align-top">{planName}</td>
+                                                    <td className="px-4 py-3 align-top">
+                                                        {isEnt
+                                                            ? <span className="text-news-muted italic">Custom</span>
+                                                            : priceStr
+                                                                ? <span className="text-white font-medium">{priceStr}</span>
+                                                                : tool.website_url
+                                                                    ? <a href={tool.website_url} target="_blank" rel="noopener noreferrer" className="text-news-accent hover:underline">See pricing →</a>
+                                                                    : <span className="text-news-muted">—</span>
+                                                        }
+                                                    </td>
+                                                    <td className="px-4 py-3 text-news-text leading-snug align-top">{models || '—'}</td>
+                                                    <td className="px-4 py-3 text-news-muted leading-snug align-top">{limits || '—'}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    // ── Unified price-band table ───────────────────────────────────────────────
+    return (
+        <>
+            {/* Desktop */}
+            <div className="hidden md:block rounded-xl border border-border-subtle overflow-x-auto">
+                <table className="w-full text-xs min-w-[500px]">
+                    <thead>
+                        <tr className="bg-surface-card border-b border-border-subtle">
+                            <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-news-accent w-36">Plan</th>
+                            {tools.map(tool => (
+                                <th key={tool.slug} className="text-left px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <ToolLogo tool={tool} size={5} />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent">{tool.name}</span>
+                                    </div>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {PRICE_BANDS.map((band, i) => (
+                            <tr key={band.id} className={`border-b border-border-subtle last:border-0 ${i % 2 === 0 ? 'bg-surface-base' : 'bg-surface-card/40'} ${band.id === 'free' ? 'border-l-2 border-news-accent' : ''}`}>
+                                <td className="px-4 py-4 align-top whitespace-nowrap">
+                                    <p className="font-bold text-white text-xs">{band.label}</p>
+                                    <p className="text-[10px] text-news-muted mt-0.5">{band.range}</p>
+                                </td>
+                                {tools.map((tool, ti) => (
+                                    <BandCell
+                                        key={tool.slug}
+                                        plans={bandDataPerTool[ti][band.id]}
+                                        tool={tool}
+                                        band={band.id}
+                                        cellKey={`${tool.slug}-${band.id}`}
+                                    />
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Mobile accordion */}
+            <div className="md:hidden space-y-2">
+                {PRICE_BANDS.map(band => {
+                    const isExpanded = expandedBands.has(band.id);
+                    return (
+                        <div key={band.id} className={`rounded-xl border overflow-hidden ${band.id === 'free' ? 'border-news-accent/40' : 'border-border-subtle'}`}>
+                            <button onClick={() => toggleBand(band.id)}
+                                className="w-full flex items-center justify-between px-4 py-3 bg-surface-card text-left">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="font-bold text-white text-sm">{band.label}</span>
+                                    <span className="text-[10px] text-news-muted">{band.range}</span>
+                                </div>
+                                <ChevronDown size={14} className={`text-news-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isExpanded && (
+                                <div className="divide-y divide-border-subtle bg-surface-base">
+                                    {tools.map((tool, ti) => {
+                                        const plans = bandDataPerTool[ti][band.id];
+                                        const primary = plans[0];
+                                        const extras = plans.slice(1);
+                                        const cellKey = `mob-${tool.slug}-${band.id}`;
+                                        const isCellExp = expandedCells.has(cellKey);
+                                        return (
+                                            <div key={tool.slug} className="px-4 py-3">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <ToolLogo tool={tool} size={5} />
+                                                    <span className="text-xs font-bold text-white">{tool.name}</span>
+                                                </div>
+                                                {!primary ? (
+                                                    <p className="text-news-muted text-xs pl-1">—</p>
+                                                ) : (
+                                                    <div className="pl-1">
+                                                        <PlanBlock plan={primary} tool={tool} />
+                                                        {extras.length > 0 && (
+                                                            <div className="mt-2">
+                                                                <button onClick={() => toggleCell(cellKey)}
+                                                                    className="text-[10px] text-news-accent hover:underline">
+                                                                    {isCellExp ? '− Hide' : `+ ${extras.length} more plan${extras.length > 1 ? 's' : ''}`}
+                                                                </button>
+                                                                {isCellExp && (
+                                                                    <div className="mt-2 space-y-3">
+                                                                        {extras.map((plan, ei) => (
+                                                                            <div key={ei} className="pt-2 border-t border-border-subtle">
+                                                                                <PlanBlock plan={plan} tool={tool} dimmed />
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </>
+    );
+};
 
 // ── Use-case score helpers ─────────────────────────────────────────────────────
 // Option A: numeric "X/10" in use_case_breakdown text → use it.
@@ -338,32 +714,38 @@ const Comparison1v1: React.FC<{
             </Sec>
 
             {/* ── Pricing Comparison A vs B ──────────────────────── */}
-            <Sec label="PRICING" title="Pricing Breakdown">
-                <div className="grid md:grid-cols-2 gap-4">
-                    {tools.map(tool => {
-                        const p = gen.pricing[tool.slug];
-                        const isWinner = tool.slug === gen.quick_verdict.winner_slug;
-                        return (
-                            <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <ToolLogo tool={tool} size={8} />
-                                    <span className="font-bold text-white">{tool.name}</span>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-news-muted">Model</span>
-                                        <span className={`font-bold px-2 py-0.5 rounded-full border text-xs ${PRICING_COLORS[p?.model] || 'bg-surface-alt text-news-muted border-border-subtle'}`}>{p?.model || '—'}</span>
+            {tools.some(t => t.model_version_by_plan) ? (
+                <Sec label="PRICING" title="Plans">
+                    <PlanComparisonTable tools={tools} />
+                </Sec>
+            ) : (
+                <Sec label="PRICING" title="Pricing Breakdown">
+                    <div className="grid md:grid-cols-2 gap-4">
+                        {tools.map(tool => {
+                            const p = gen.pricing[tool.slug];
+                            const isWinner = tool.slug === gen.quick_verdict.winner_slug;
+                            return (
+                                <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <ToolLogo tool={tool} size={8} />
+                                        <span className="font-bold text-white">{tool.name}</span>
                                     </div>
-                                    <div className="text-sm pt-1">
-                                        <span className="text-news-muted text-xs">Starting at</span>
-                                        <p className="text-white font-bold mt-0.5 leading-snug">{p?.starting_price || 'N/A'}</p>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-news-muted">Model</span>
+                                            <span className={`font-bold px-2 py-0.5 rounded-full border text-xs ${PRICING_COLORS[p?.model] || 'bg-surface-alt text-news-muted border-border-subtle'}`}>{p?.model || '—'}</span>
+                                        </div>
+                                        <div className="text-sm pt-1">
+                                            <span className="text-news-muted text-xs">Starting at</span>
+                                            <p className="text-white font-bold mt-0.5 leading-snug">{p?.starting_price || 'N/A'}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </Sec>
+                            );
+                        })}
+                    </div>
+                </Sec>
+            )}
 
             {/* ── Use Case Section ──────────────────────────────── */}
             {activeUseCase ? (
@@ -669,32 +1051,38 @@ const ComparisonMulti: React.FC<{
             </Sec>
 
             {/* ── Pricing Comparison (multi-tool) ───────────────── */}
-            <Sec label="PRICING" title="Pricing Breakdown">
-                <div className="grid md:grid-cols-3 gap-4">
-                    {sorted.map(tool => {
-                        const p = gen.pricing[tool.slug];
-                        const isWinner = tool.slug === winner.slug;
-                        return (
-                            <div key={tool.slug} className={`rounded-xl p-4 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <ToolLogo tool={tool} size={7} />
-                                    <span className="font-bold text-sm text-white">{tool.name}</span>
-                                </div>
-                                <div className="space-y-1.5 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-news-muted text-xs">Model</span>
-                                        <span className={`font-bold px-2 py-0.5 rounded-full border text-xs ${PRICING_COLORS[p?.model] || 'bg-surface-alt text-news-muted border-border-subtle'}`}>{p?.model || '—'}</span>
+            {sorted.some(t => t.model_version_by_plan) ? (
+                <Sec label="PRICING" title="Plans">
+                    <PlanComparisonTable tools={sorted} />
+                </Sec>
+            ) : (
+                <Sec label="PRICING" title="Pricing Breakdown">
+                    <div className="grid md:grid-cols-3 gap-4">
+                        {sorted.map(tool => {
+                            const p = gen.pricing[tool.slug];
+                            const isWinner = tool.slug === winner.slug;
+                            return (
+                                <div key={tool.slug} className={`rounded-xl p-4 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <ToolLogo tool={tool} size={7} />
+                                        <span className="font-bold text-sm text-white">{tool.name}</span>
                                     </div>
-                                    <div className="pt-0.5">
-                                        <span className="text-news-muted text-xs">Starting at</span>
-                                        <p className="text-white font-bold text-xs mt-0.5 leading-snug">{p?.starting_price || 'N/A'}</p>
+                                    <div className="space-y-1.5 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-news-muted text-xs">Model</span>
+                                            <span className={`font-bold px-2 py-0.5 rounded-full border text-xs ${PRICING_COLORS[p?.model] || 'bg-surface-alt text-news-muted border-border-subtle'}`}>{p?.model || '—'}</span>
+                                        </div>
+                                        <div className="pt-0.5">
+                                            <span className="text-news-muted text-xs">Starting at</span>
+                                            <p className="text-white font-bold text-xs mt-0.5 leading-snug">{p?.starting_price || 'N/A'}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </Sec>
+                            );
+                        })}
+                    </div>
+                </Sec>
+            )}
 
             {/* ── Use Case Breakdown ─────────────────────────────── */}
             {allUCs.length > 0 && (

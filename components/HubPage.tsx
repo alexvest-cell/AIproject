@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Article, Tool, Comparison, Stack } from '../types';
-import { ArrowRight, Star, Filter, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2 } from 'lucide-react';
+import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2 } from 'lucide-react';
 
 type HubType = 'ai-tools' | 'best-software' | 'reviews' | 'comparisons' | 'use-cases' | 'guides' | 'news';
 
@@ -147,21 +147,32 @@ const HScrollRow: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 // ─── AI Tools Hub ─────────────────────────────────────────────────────────────
 const TOOLS_PER_PAGE = 24;
 
-const CATEGORY_EXPLORER = [
-    { label: 'AI Writing',          icon: PenLine,      filter: 'AI Writing' },
-    { label: 'AI Coding',           icon: Code2,        filter: 'Developer Tools' },
-    { label: 'AI Image',            icon: ImageIcon,    filter: 'AI Image' },
-    { label: 'Automation',          icon: Zap,          filter: 'Automation' },
-    { label: 'Productivity',        icon: Layers,       filter: 'Productivity' },
-    { label: 'Project Management',  icon: LayoutGrid,   filter: 'Project Management' },
-    { label: 'CRM',                 icon: Users,        filter: 'CRM' },
-    { label: 'Marketing',           icon: Megaphone,    filter: 'Marketing' },
-];
+const CATEGORY_META: Record<string, { label: string; icon: React.ElementType }> = {
+    'AI Chatbots':      { label: 'AI CHATBOTS',      icon: Brain },
+    'AI Writing':       { label: 'AI WRITING',        icon: PenLine },
+    'Productivity':     { label: 'PRODUCTIVITY',      icon: Layers },
+    'Automation':       { label: 'AUTOMATION',        icon: Zap },
+    'Design':           { label: 'DESIGN',            icon: ImageIcon },
+    'Development':      { label: 'DEVELOPMENT',       icon: Code2 },
+    'Marketing':        { label: 'MARKETING',         icon: Megaphone },
+    'Data Analysis':    { label: 'DATA ANALYSIS',     icon: BarChart2 },
+    'Customer Support': { label: 'CUSTOMER SUPPORT',  icon: Headphones },
+    'Other':            { label: 'OTHER',             icon: LayoutGrid },
+};
 
-const PRICING_OPTIONS = ['All', 'Free', 'Freemium', 'Paid'];
+const WORKFLOW_KEYWORDS: Record<string, string[]> = {
+    students:         ['student', 'academic', 'education'],
+    developers:       ['developer', 'development', 'coding', 'engineer'],
+    marketing:        ['market', 'marketing', 'content team', 'agency'],
+    startups:         ['startup', 'start-up', 'founder'],
+    creators:         ['creator', 'creative', 'writer', 'freelance'],
+    'small-business': ['small business', 'smb', 'small team'],
+};
+
+const PRICING_OPTIONS = ['All', 'Free', 'Freemium', 'Paid', 'Enterprise', 'Trial'];
 const PLATFORM_OPTIONS = ['All', 'Web', 'Mobile', 'Desktop', 'API'];
-const CAT_FILTERS = ['All', 'AI Writing', 'Productivity', 'Automation', 'Developer Tools', 'Marketing Tools', 'CRM', 'AI Image'];
-const USE_CASE_FILTERS = ['All', 'Content Creation', 'Coding', 'Workflow Automation', 'Note Taking', 'Customer Support'];
+const dynCatFilters = ['All', 'AI Writing', 'Productivity', 'Automation', 'Developer Tools', 'Marketing Tools', 'CRM', 'AI Image'];
+const dynUseCaseFilters = ['All', 'Content Creation', 'Coding', 'Workflow Automation', 'Note Taking', 'Customer Support'];
 
 const SUGGESTED_QUERIES = [
     'writing assistant', 'code generation', 'image generation',
@@ -223,7 +234,6 @@ const AIToolsHub: React.FC<{
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [pricingFilter, setPricingFilter] = useState('All');
     const [platformFilter, setPlatformFilter] = useState('All');
-    const [filterModalOpen, setFilterModalOpen] = useState(false);
     const wfConfig = workflowFilter ? WORKFLOW_CONFIG[workflowFilter] : null;
     const [catFilter, setCatFilter] = useState(wfConfig?.catFilter || 'All');
     const [useCaseFilter, setUseCaseFilter] = useState('All');
@@ -266,6 +276,9 @@ const AIToolsHub: React.FC<{
         } else {
             setPricingFilter('All');
         }
+
+        const useCase = params.get('use_case');
+        setUseCaseFilter(useCase ? decodeURIComponent(useCase) : 'All');
     }, [queryString, workflowFilter]);
 
     useEffect(() => {
@@ -312,7 +325,7 @@ const AIToolsHub: React.FC<{
             t.category_tags?.some(c => c.toLowerCase().includes(q)) ||
             t.use_case_tags?.some(u => u.toLowerCase().includes(q));
         const matchPrice    = pricingFilter === 'All' || t.pricing_model === pricingFilter;
-        const matchCat      = catFilter === 'All' || t.category_tags?.some(c => c.toLowerCase().includes(catFilter.toLowerCase()));
+        const matchCat      = catFilter === 'All' || t.category_primary === catFilter || t.category_tags?.some(c => c.toLowerCase().includes(catFilter.toLowerCase()));
         const matchUse      = useCaseFilter === 'All' || t.use_case_tags?.some(u => u.toLowerCase().includes(useCaseFilter.toLowerCase()));
         const matchPlatform = platformFilter === 'All' || t.supported_platforms?.some(p => p.toLowerCase().includes(platformFilter.toLowerCase()));
         return matchSearch && matchPrice && matchCat && matchUse && matchPlatform;
@@ -334,6 +347,18 @@ const AIToolsHub: React.FC<{
     const activeFilterCount = (pricingFilter !== 'All' ? 1 : 0) + (catFilter !== 'All' ? 1 : 0) + (useCaseFilter !== 'All' ? 1 : 0) + (platformFilter !== 'All' ? 1 : 0);
 
     const clearAllFilters = () => { setSearch(''); setPricingFilter('All'); setCatFilter('All'); setUseCaseFilter('All'); setPlatformFilter('All'); };
+
+    const dynCatFilters = React.useMemo(() => {
+        const freq: Record<string, number> = {};
+        tools.forEach(t => { if (t.category_primary) freq[t.category_primary] = (freq[t.category_primary] || 0) + 1; });
+        return ['All', ...Object.entries(freq).sort((a, b) => b[1] - a[1]).map(([k]) => k)];
+    }, [tools]);
+
+    const dynUseCaseFilters = React.useMemo(() => {
+        const freq: Record<string, number> = {};
+        tools.forEach(t => t.use_case_tags?.forEach(u => { freq[u] = (freq[u] || 0) + 1; }));
+        return ['All', ...Object.entries(freq).sort((a, b) => b[1] - a[1]).map(([k]) => k)];
+    }, [tools]);
 
     if (loading) return <div className="flex items-center justify-center py-24 text-gray-500"><div className="w-6 h-6 border-2 border-news-accent border-t-transparent rounded-full animate-spin mr-3" /> Loading tools…</div>;
 
@@ -448,7 +473,12 @@ const AIToolsHub: React.FC<{
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         {EXPLORE_BY_WORKFLOW.map(({ label, icon: Icon, key, color, bg }) => {
                             const cfg = WORKFLOW_CONFIG[key];
-                            const count = cfg ? tools.filter(t => t.category_tags?.some(c => c.toLowerCase().includes(cfg.catFilter.toLowerCase()))).length : 0;
+                            const keywords = WORKFLOW_KEYWORDS[key] || [key];
+                            const count = tools.filter(t => t.best_for?.some(b => {
+                                const lower = b.toLowerCase();
+                                return keywords.some(kw => lower.includes(kw.toLowerCase()));
+                            })).length;
+                            if (count === 0) return null;
                             return (
                                 <button key={key} onClick={() => setCatFilter(cfg?.catFilter || 'All')}
                                     className={`group flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all text-center hover:-translate-y-0.5 ${bg}`}
@@ -470,21 +500,46 @@ const AIToolsHub: React.FC<{
                         <LayoutGrid size={20} className="text-news-accent" /> Browse by Category
                     </h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                        {CATEGORY_EXPLORER.map(({ label, icon: Icon, filter }) => {
-                            const count = tools.filter(t => t.category_tags?.some(c => c.toLowerCase().includes(filter.toLowerCase()))).length;
+                        {Object.entries(
+                            tools.reduce((acc, t) => {
+                                if (t.category_primary) acc[t.category_primary] = (acc[t.category_primary] || 0) + 1;
+                                return acc;
+                            }, {} as Record<string, number>)
+                        )
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([cat, count]) => {
+                            const meta = CATEGORY_META[cat];
+                            if (!meta) return null;
+                            const Icon = meta.icon;
                             return (
-                                <button key={label} onClick={() => setCatFilter(filter)}
+                                <button key={cat} onClick={() => setCatFilter(cat)}
                                     className="group flex flex-col items-center justify-center p-4 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/50 hover:bg-surface-hover hover:-translate-y-0.5 transition-all"
                                 >
                                     <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <Icon className="text-news-accent" size={18} />
                                     </div>
-                                    <span className="text-[10px] font-black text-white uppercase tracking-wide text-center mb-1 group-hover:text-news-accent transition-colors leading-tight">{label}</span>
+                                    <span className="text-[10px] font-black text-white uppercase tracking-wide text-center mb-1 group-hover:text-news-accent transition-colors leading-tight">{meta.label}</span>
                                     <span className="text-[9px] text-news-muted">{count}</span>
                                 </button>
                             );
                         })}
                     </div>
+                </section>
+            )}
+
+            {/* ── Best Software CTA ────────────────────────────────────── */}
+            {!wfConfig && !hasActiveFilters && (
+                <section className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-7 flex flex-col md:flex-row items-center gap-6 justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 mb-2">Curated Rankings</p>
+                        <h3 className="text-lg font-black text-white mb-2">Looking for the Best Tools?</h3>
+                        <p className="text-sm text-news-muted max-w-md leading-relaxed">AI Tools is your exploration layer. For curated rankings, head-to-head comparisons, and expert recommendations, visit Best Software.</p>
+                    </div>
+                    <a href="/best-software"
+                        className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-black hover:bg-yellow-500/20 transition-colors whitespace-nowrap"
+                    >
+                        Best Software Hub <ArrowRight size={14} />
+                    </a>
                 </section>
             )}
 
@@ -549,129 +604,68 @@ const AIToolsHub: React.FC<{
 
             {/* ── Filter bar ───────────────────────────────────────────── */}
             <section>
-                {/* Desktop filter panel */}
-                <div className="hidden md:block p-4 bg-surface-card rounded-2xl border border-border-subtle space-y-3 mb-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-news-muted w-16 flex-shrink-0">Category</span>
-                        {CAT_FILTERS.map(c => (
-                            <button key={c} onClick={() => setCatFilter(c)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${catFilter === c ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'}`}
-                            >{c}</button>
-                        ))}
-                    </div>
-                    <div className="h-px bg-border-divider" />
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-news-muted w-16 flex-shrink-0">Pricing</span>
-                        {PRICING_OPTIONS.map(p => (
-                            <button key={p} onClick={() => setPricingFilter(p)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${pricingFilter === p ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'}`}
-                            >{p}</button>
-                        ))}
-                    </div>
-                    <div className="h-px bg-border-divider" />
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-news-muted w-16 flex-shrink-0">Platform</span>
-                        {PLATFORM_OPTIONS.map(p => (
-                            <button key={p} onClick={() => setPlatformFilter(p)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${platformFilter === p ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'}`}
-                            >{p}</button>
-                        ))}
-                    </div>
-                    <div className="h-px bg-border-divider" />
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-news-muted w-16 flex-shrink-0">Use Case</span>
-                        {USE_CASE_FILTERS.map(u => (
-                            <button key={u} onClick={() => setUseCaseFilter(u)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${useCaseFilter === u ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'}`}
-                            >{u}</button>
-                        ))}
-                    </div>
-                    {hasActiveFilters && (
-                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-divider">
-                            <span className="text-[9px] text-news-muted">Active:</span>
-                            {[
-                                search && { label: `"${search}"`, clear: () => setSearch('') },
-                                pricingFilter !== 'All' && { label: pricingFilter, clear: () => setPricingFilter('All') },
-                                catFilter !== 'All' && { label: catFilter, clear: () => setCatFilter('All') },
-                                platformFilter !== 'All' && { label: platformFilter, clear: () => setPlatformFilter('All') },
-                                useCaseFilter !== 'All' && { label: useCaseFilter, clear: () => setUseCaseFilter('All') },
-                            ].filter(Boolean).map((chip: any) => (
-                                <span key={chip.label} className="flex items-center gap-1 text-[10px] bg-news-accent/15 text-news-accent border border-news-accent/30 rounded-full px-2.5 py-0.5">
-                                    {chip.label} <button onClick={chip.clear}><X size={9} /></button>
-                                </span>
-                            ))}
-                            <button onClick={clearAllFilters} className="text-[10px] font-bold text-news-muted hover:text-white transition-colors ml-1">× Clear all</button>
-                        </div>
-                    )}
+                {/* Filter dropdowns — shared desktop + mobile */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    {([
+                        { label: 'Category', opts: dynCatFilters,    value: catFilter,     set: setCatFilter },
+                        { label: 'Pricing',  opts: PRICING_OPTIONS,  value: pricingFilter, set: setPricingFilter },
+                        { label: 'Platform', opts: PLATFORM_OPTIONS, value: platformFilter, set: setPlatformFilter },
+                        { label: 'Use Case', opts: dynUseCaseFilters, value: useCaseFilter,  set: setUseCaseFilter },
+                    ] as const).map(({ label, opts, value, set }) => {
+                        const isActive = value !== 'All';
+                        return (
+                            <div key={label} className="relative">
+                                <select
+                                    value={value}
+                                    onChange={e => (set as (v: string) => void)(e.target.value)}
+                                    className={`w-full appearance-none pl-3 pr-8 py-2.5 rounded-xl text-xs font-bold border transition-all focus:outline-none cursor-pointer ${
+                                        isActive
+                                            ? 'bg-news-accent/10 border-news-accent/50 text-news-accent'
+                                            : 'bg-surface-card border-border-subtle text-news-muted hover:border-border-divider hover:text-white'
+                                    }`}
+                                >
+                                    <option value="All">{label}</option>
+                                    {opts.filter(o => o !== 'All').map(o => (
+                                        <option key={o} value={o}>{o}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown size={11} className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${isActive ? 'text-news-accent' : 'text-news-muted'}`} />
+                            </div>
+                        );
+                    })}
                 </div>
 
-                {/* Mobile: filter modal trigger */}
-                <div className="md:hidden mb-4 flex gap-2">
-                    <button onClick={() => setFilterModalOpen(true)}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-card border border-border-subtle rounded-xl text-xs font-bold text-white"
-                    >
-                        <Filter size={13} /> Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
-                    </button>
+                {/* Count + sort + clear row */}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <p className="text-xs text-news-muted uppercase tracking-widest">{filtered.length} Tools</p>
+                        {hasActiveFilters && (
+                            <div className="flex flex-wrap gap-1.5">
+                                {[
+                                    search && { label: `"${search}"`, clear: () => setSearch('') },
+                                    catFilter !== 'All' && { label: catFilter, clear: () => setCatFilter('All') },
+                                    pricingFilter !== 'All' && { label: pricingFilter, clear: () => setPricingFilter('All') },
+                                    platformFilter !== 'All' && { label: platformFilter, clear: () => setPlatformFilter('All') },
+                                    useCaseFilter !== 'All' && { label: useCaseFilter, clear: () => setUseCaseFilter('All') },
+                                ].filter(Boolean).map((chip: any) => (
+                                    <span key={chip.label} className="flex items-center gap-1 text-[10px] bg-news-accent/15 text-news-accent border border-news-accent/30 rounded-full px-2 py-0.5">
+                                        {chip.label} <button onClick={chip.clear} className="hover:text-white transition-colors"><X size={9} /></button>
+                                    </span>
+                                ))}
+                                <button onClick={clearAllFilters} className="text-[10px] font-bold text-news-muted hover:text-white transition-colors">× Clear all</button>
+                            </div>
+                        )}
+                    </div>
                     <div className="relative flex-shrink-0">
                         <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-                            className="h-full appearance-none bg-surface-card border border-border-subtle text-news-muted text-xs font-bold rounded-xl px-3 py-2.5 pr-7 focus:outline-none"
+                            className="appearance-none bg-surface-card border border-border-subtle text-news-muted text-xs font-bold rounded-xl pl-3 py-2 pr-7 focus:outline-none focus:border-news-accent cursor-pointer hover:text-white hover:border-border-divider transition-colors"
                         >
                             <option value="most-used">Most Used</option>
                             <option value="popular">Most Popular</option>
                             <option value="newest">Newest</option>
                             <option value="price">Lowest Price</option>
                         </select>
-                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
-                    </div>
-                </div>
-
-                {/* Mobile filter modal */}
-                {filterModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-end md:hidden" onClick={() => setFilterModalOpen(false)}>
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <div className="relative w-full bg-surface-card border-t border-border-divider rounded-t-2xl p-6 space-y-5 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-2">
-                                <p className="font-black text-white">Filters</p>
-                                <button onClick={() => setFilterModalOpen(false)}><X size={18} className="text-news-muted" /></button>
-                            </div>
-                            {[
-                                { label: 'Category', opts: CAT_FILTERS, value: catFilter, set: setCatFilter },
-                                { label: 'Pricing',  opts: PRICING_OPTIONS, value: pricingFilter, set: setPricingFilter },
-                                { label: 'Platform', opts: PLATFORM_OPTIONS, value: platformFilter, set: setPlatformFilter },
-                                { label: 'Use Case', opts: USE_CASE_FILTERS, value: useCaseFilter, set: setUseCaseFilter },
-                            ].map(({ label, opts, value, set }) => (
-                                <div key={label}>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-2">{label}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {opts.map(o => (
-                                            <button key={o} onClick={() => set(o)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${value === o ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-alt border-border-subtle text-news-muted'}`}
-                                            >{o}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                            <div className="flex gap-3 pt-2">
-                                <button onClick={clearAllFilters} className="flex-1 py-2.5 rounded-xl border border-border-subtle text-xs font-bold text-news-muted hover:text-white transition-colors">Clear All</button>
-                                <button onClick={() => setFilterModalOpen(false)} className="flex-1 py-2.5 rounded-xl bg-news-accent text-black text-xs font-black">Apply</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Count + Sort (desktop) */}
-                <div className="flex items-center justify-between mb-5">
-                    <p className="text-xs text-news-muted uppercase tracking-widest">{filtered.length} Tools</p>
-                    <div className="relative hidden md:block">
-                        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-                            className="appearance-none bg-surface-card border border-border-subtle text-news-muted text-xs font-bold rounded-xl px-3 py-2 pr-7 focus:outline-none focus:border-news-accent cursor-pointer"
-                        >
-                            <option value="most-used">Most Used</option>
-                            <option value="popular">Most Popular</option>
-                            <option value="newest">Newest</option>
-                            <option value="price">Lowest Price</option>
-                        </select>
-                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
+                        <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
                     </div>
                 </div>
 
@@ -802,43 +796,6 @@ const AIToolsHub: React.FC<{
                 </section>
             )}
 
-            {/* ── "Looking for Rankings?" CTA ──────────────────────────── */}
-            <section className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-7 flex flex-col md:flex-row items-center gap-6 justify-between">
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 mb-2">Curated Rankings</p>
-                    <h3 className="text-lg font-black text-white mb-2">Looking for the Best Tools?</h3>
-                    <p className="text-sm text-news-muted max-w-md leading-relaxed">AI Tools is your exploration layer. For curated rankings, head-to-head comparisons, and expert recommendations, visit Best Software.</p>
-                </div>
-                <a href="/best-software"
-                    className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-black hover:bg-yellow-500/20 transition-colors whitespace-nowrap"
-                >
-                    Best Software Hub <ArrowRight size={14} />
-                </a>
-            </section>
-
-            {/* ── Related Guides ───────────────────────────────────────── */}
-            {!wfConfig && articles.filter(a => (a as any).article_type === 'guide').length > 0 && (
-                <section>
-                    <div className="flex items-center justify-between mb-5">
-                        <h2 className="text-xl font-black text-white flex items-center gap-2">
-                            <Workflow size={18} className="text-blue-400" /> Implementation Guides
-                        </h2>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                        {articles.filter(a => (a as any).article_type === 'guide').slice(0, 3).map(a => (
-                            <button key={a.id} onClick={() => onArticleClick(a)}
-                                className="group flex flex-col bg-surface-card border border-border-subtle rounded-2xl overflow-hidden hover:bg-surface-hover hover:-translate-y-0.5 hover:border-blue-400/30 transition-all text-left"
-                            >
-                                {a.imageUrl && <div className="w-full aspect-video overflow-hidden"><img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" /></div>}
-                                <div className="p-5">
-                                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-blue-400 mb-2">Guide</p>
-                                    <h4 className="font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </section>
-            )}
         </div>
     );
 };
@@ -993,7 +950,7 @@ const BestSoftwareHub: React.FC<{
 
     const activeFilterCount = (catFilter !== 'All' ? 1 : 0) + (pricingFilter !== 'All' ? 1 : 0) + (roleFilter !== 'All' ? 1 : 0);
 
-    if (bestOf.length === 0) return <EmptyState hub="best-software" />;
+    // Don't bail early — page has rich content (Start Here, Trending, How We Rank) even with no articles
 
     // ── Ranking card ────────────────────────────────────────────────────────
     const RankingCard: React.FC<{ a: Article; index: number; large?: boolean }> = ({ a, index, large = false }) => {

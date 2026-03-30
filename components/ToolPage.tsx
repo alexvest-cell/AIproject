@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Tool, Article, Stack } from '../types';
-import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon } from 'lucide-react';
+import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { RelatedContent } from './RelatedContent';
 
 interface ToolPageProps {
@@ -19,6 +19,19 @@ const PRICING_COLORS: Record<string, string> = {
     Enterprise: 'bg-orange-900/50 text-orange-400 border-orange-700',
     Trial: 'bg-yellow-900/50 text-yellow-400 border-yellow-700',
 };
+
+// Parse "$0 (Go: $8/mo; Plus: $20/mo; ...)" into [{label, price}]
+function parsePricingTiers(raw: string): { label: string; price: string }[] | null {
+    const match = raw.match(/^([^(]+)\(([^)]+)\)$/);
+    if (!match) return null;
+    const base = match[1].trim();
+    const tiers = match[2].split(';').map(s => {
+        const ci = s.indexOf(':');
+        if (ci < 0) return null;
+        return { label: s.slice(0, ci).trim(), price: s.slice(ci + 1).trim() };
+    }).filter(Boolean) as { label: string; price: string }[];
+    return [{ label: 'Free', price: base }, ...tiers];
+}
 
 const CATEGORY_PRIMARY_VALUES = [
     'AI Writing', 'AI Chatbots', 'Productivity', 'Automation', 'Design',
@@ -44,6 +57,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const [allTools, setAllTools] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set(['free']));
 
     useEffect(() => {
         setLoading(true);
@@ -101,7 +115,10 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         offers: {
                             '@type': 'Offer',
                             price: data.tool.starting_price || '0',
-                            priceCurrency: 'USD'
+                            priceCurrency: 'USD',
+                            ...(data.tool.free_tier && data.tool.free_tier.toLowerCase() !== 'none'
+                                ? { description: `Free tier: ${data.tool.free_tier}` }
+                                : {})
                         },
                         url: data.tool.website_url
                     };
@@ -175,6 +192,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const sections = [];
     if (tool.full_description) sections.push({ id: 'overview', label: 'Overview' });
     if (t.screenshots?.length > 0) sections.push({ id: 'screenshots', label: 'Screenshots' });
+    if (t.model_version_by_plan) sections.push({ id: 'plans', label: 'Plans' });
     if (tool.key_features?.length > 0) sections.push({ id: 'features', label: 'Features' });
     if (tool.pros?.length > 0 || tool.cons?.length > 0) sections.push({ id: 'proscons', label: 'Pros & Cons' });
     if (t.best_for?.length > 0 || t.not_ideal_for?.length > 0) sections.push({ id: 'best-for', label: 'Who It\'s For' });
@@ -207,7 +225,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
             `}</style>
             <JumpNav sections={sections} />
 
-            <div className="container mx-auto px-4 md:px-8 py-10 max-w-5xl">
+            <div className="container mx-auto px-4 md:px-8 py-10 max-w-7xl">
 
                 {/* Hero Header */}
                 <div className="flex flex-col md:flex-row gap-6 items-start mb-10 pb-10 border-b border-border-divider">
@@ -288,7 +306,30 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                     <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4">Pricing</h3>
                         <div className={`inline-block text-sm font-bold px-3 py-1 rounded-full border mb-3 ${pricingClass}`}>{tool.pricing_model}</div>
-                        {tool.starting_price && <p className="text-white font-semibold mb-3">{tool.starting_price}</p>}
+                        {tool.starting_price && (() => {
+                            const tiers = parsePricingTiers(tool.starting_price!);
+                            if (tiers) return (
+                                <div className="mb-3 space-y-1">
+                                    {tiers.map(({ label, price }) => (
+                                        <div key={label} className="flex justify-between items-baseline gap-2 text-xs">
+                                            <span className="text-news-muted">{label}</span>
+                                            <span className="text-white font-semibold tabular-nums">{price}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                            return <p className="text-white font-semibold mb-3 text-sm">{tool.starting_price}</p>;
+                        })()}
+                        {/* FREE_TIER shown here only when no Plans table (legacy records) */}
+                        {!t.model_version_by_plan && t.free_tier != null && (
+                            <div className="mt-2 mb-3 pt-3 border-t border-border-divider">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-1">Free tier includes:</p>
+                                {t.free_tier.toLowerCase() === 'none'
+                                    ? <p className="text-xs text-news-muted">Not available</p>
+                                    : <p className="text-xs text-white leading-relaxed">{t.free_tier}</p>
+                                }
+                            </div>
+                        )}
                         {tool.affiliate_url && (
                             <a href={tool.affiliate_url} target="_blank" rel="noopener noreferrer"
                                 className="block w-full text-center bg-news-accent hover:opacity-90 text-white font-bold text-sm px-4 py-2.5 rounded-lg transition-opacity shadow-md">
@@ -430,6 +471,116 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                 </div>
                             </section>
                         )}
+
+                        {/* Plans & Pricing */}
+                        {t.model_version_by_plan && (() => {
+                            const planTiersList = (t.model_version_by_plan as string)
+                                .split('\n').filter((l: string) => l.trim())
+                                .map((line: string) => {
+                                    const ci = line.indexOf(':');
+                                    return { plan: ci > 0 ? line.slice(0, ci).trim() : line.trim(), models: ci > 0 ? line.slice(ci + 1).trim() : '' };
+                                });
+                            const limitsMap: Record<string, string> = {};
+                            if (t.rate_limits) {
+                                (t.rate_limits as string).split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+                                    const ci = line.indexOf(':');
+                                    if (ci > 0) limitsMap[line.slice(0, ci).trim().toLowerCase()] = line.slice(ci + 1).trim();
+                                });
+                            }
+                            const priceMap: Record<string, string> = {};
+                            if (t.starting_price) {
+                                const tiers = parsePricingTiers(t.starting_price as string);
+                                if (tiers) tiers.forEach(({ label, price }) => { priceMap[label.toLowerCase()] = price; });
+                            }
+                            return (
+                                <section id="plans" className="scroll-mt-24">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Pricing</p>
+                                    <h2 className="text-xl font-bold text-white mb-4 border-b border-border-divider pb-2">Plans & Pricing</h2>
+
+                                    {/* Desktop table */}
+                                    <div className="hidden md:block overflow-hidden rounded-xl border border-border-subtle">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="bg-surface-card border-b border-border-subtle">
+                                                    {['Plan', 'Model', 'Usage Limits', 'Price'].map(h => (
+                                                        <th key={h} className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-news-accent">{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {planTiersList.map((tier: { plan: string; models: string }, i: number) => {
+                                                    const isFree = tier.plan.toLowerCase() === 'free';
+                                                    const rawLimits = limitsMap[tier.plan.toLowerCase()] || '';
+                                                    const limitDisplay = rawLimits.toLowerCase().includes('not publicly disclosed') ? '—' : (rawLimits || '—');
+                                                    return (
+                                                        <tr key={i} className={`border-b border-border-subtle last:border-0 hover:bg-surface-hover/30 transition-colors ${i % 2 === 0 ? 'bg-surface-base' : 'bg-surface-card/40'} ${isFree ? 'border-l-2 border-news-accent' : ''}`}>
+                                                            <td className="px-4 py-3 font-medium text-white whitespace-nowrap">
+                                                                {tier.plan}
+                                                                {isFree && <span className="ml-1.5 text-[8px] font-bold uppercase tracking-widest text-news-accent border border-news-accent/30 px-1.5 py-0.5 rounded">FREE</span>}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-news-text leading-snug">{tier.models || '—'}</td>
+                                                            <td className="px-4 py-3 text-news-muted leading-snug">{limitDisplay}</td>
+                                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                                {(() => {
+                                                                    const p = priceMap[tier.plan.toLowerCase()];
+                                                                    if (p) return <span className={`font-bold ${isFree ? 'text-news-accent' : 'text-white'}`}>{p}</span>;
+                                                                    if (t.website_url) return <a href={t.website_url} target="_blank" rel="noopener noreferrer" className="text-news-accent hover:underline">See pricing →</a>;
+                                                                    return <span className="text-news-muted">—</span>;
+                                                                })()}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Mobile accordion */}
+                                    <div className="md:hidden space-y-1">
+                                        {planTiersList.map((tier: { plan: string; models: string }, i: number) => {
+                                            const key = tier.plan.toLowerCase();
+                                            const isFree = key === 'free';
+                                            const isExpanded = expandedPlans.has(key);
+                                            const rawLimits = limitsMap[key] || '';
+                                            const limitDisplay = rawLimits.toLowerCase().includes('not publicly disclosed') ? '—' : (rawLimits || '—');
+                                            return (
+                                                <div key={i} className={`border rounded-xl overflow-hidden ${isFree ? 'border-news-accent/40' : 'border-border-subtle'}`}>
+                                                    <button
+                                                        onClick={() => setExpandedPlans(prev => {
+                                                            const next = new Set(prev);
+                                                            if (next.has(key)) next.delete(key); else next.add(key);
+                                                            return next;
+                                                        })}
+                                                        className="w-full flex items-center justify-between px-4 py-3 bg-surface-card hover:bg-surface-hover transition-colors text-left"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-medium text-white">{tier.plan}</span>
+                                                            {isFree && <span className="text-[8px] font-bold uppercase tracking-widest text-news-accent border border-news-accent/30 px-1.5 py-0.5 rounded">FREE</span>}
+                                                        </div>
+                                                        <div className="flex items-center gap-3 flex-shrink-0">
+                                                            <span className="text-xs font-bold text-news-accent">{priceMap[tier.plan.toLowerCase()] || (isFree ? '$0' : 'See pricing')}</span>
+                                                            <ChevronDown size={14} className={`text-news-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                                        </div>
+                                                    </button>
+                                                    {isExpanded && (
+                                                        <div className="px-4 py-3 bg-surface-base border-t border-border-subtle space-y-2.5">
+                                                            <div>
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent">Model</span>
+                                                                <p className="text-xs text-white mt-0.5 leading-snug">{tier.models || '—'}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent">Usage Limits</span>
+                                                                <p className="text-xs text-news-muted mt-0.5 leading-snug">{limitDisplay}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </section>
+                            );
+                        })()}
 
                         {/* Key Features */}
                         {tool.key_features?.length > 0 && (
@@ -614,7 +765,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         </div>
                                     </div>
                                 )}
-                                {t.model_version && (
+                                {/* Current Model — only shown when no Plans table (legacy fallback) */}
+                                {!t.model_version_by_plan && t.model_version && (
                                     <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
                                         <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-2">Current Model</h3>
                                         <p className="text-sm text-white font-medium">{t.model_version}</p>
@@ -734,8 +886,29 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             <div className={`inline-block text-sm font-bold px-3 py-1 rounded-full border mb-3 ${pricingClass}`}>
                                 {tool.pricing_model}
                             </div>
-                            {tool.starting_price && (
-                                <p className="text-white font-semibold">{tool.starting_price}</p>
+                            {tool.starting_price && (() => {
+                                const tiers = parsePricingTiers(tool.starting_price!);
+                                if (tiers) return (
+                                    <div className="mb-1 space-y-1">
+                                        {tiers.map(({ label, price }) => (
+                                            <div key={label} className="flex justify-between items-baseline gap-2 text-xs">
+                                                <span className="text-news-muted">{label}</span>
+                                                <span className="text-white font-semibold tabular-nums">{price}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                                return <p className="text-white font-semibold text-sm">{tool.starting_price}</p>;
+                            })()}
+                            {/* FREE_TIER shown here only when no Plans table (legacy records) */}
+                            {!t.model_version_by_plan && t.free_tier != null && (
+                                <div className="mt-3 pt-3 border-t border-border-divider">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-1">Free tier includes:</p>
+                                    {t.free_tier.toLowerCase() === 'none'
+                                        ? <p className="text-xs text-news-muted">Not available</p>
+                                        : <p className="text-xs text-white leading-relaxed">{t.free_tier}</p>
+                                    }
+                                </div>
                             )}
                             {tool.affiliate_url && (
                                 <a href={tool.affiliate_url} target="_blank" rel="noopener noreferrer"
@@ -929,8 +1102,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         )}
 
-                        {/* Model Version */}
-                        {t.model_version && (
+                        {/* Current Model — only shown when no Plans table (legacy fallback) */}
+                        {!t.model_version_by_plan && t.model_version && (
                             <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
                                 <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-2">Current Model</h3>
                                 <p className="text-sm text-white font-medium">{t.model_version}</p>

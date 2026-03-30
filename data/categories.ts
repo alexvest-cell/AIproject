@@ -35,34 +35,6 @@ export const CATEGORIES: CategoryDefinition[] = [
         description: "Head-to-head comparisons of the leading tools in every category. Find out which one wins for your use case.",
         imageUrl: "https://placehold.co/1200x800?text=Comparisons"
     },
-    {
-        id: "Use Cases",
-        label: "Use Cases",
-        slug: "use-cases",
-        description: "Find the best tools for your specific workflow, role, or industry. From startups to enterprise teams.",
-        imageUrl: "https://placehold.co/1200x800?text=Use+Cases"
-    },
-    {
-        id: "Stacks",
-        label: "Stacks",
-        slug: "stacks",
-        description: "Explore curated software stacks used by developers, marketers, creators, and startups to build efficient workflows.",
-        imageUrl: "https://placehold.co/1200x800?text=Stacks"
-    },
-    {
-        id: "Guides",
-        label: "Guides",
-        slug: "guides",
-        description: "Practical guides for getting the most out of modern software. Step-by-step, no fluff.",
-        imageUrl: "https://placehold.co/1200x800?text=Guides"
-    },
-    {
-        id: "News",
-        label: "News",
-        slug: "news",
-        description: "The latest developments across the AI and software landscape. Chronological, fact-first intelligence.",
-        imageUrl: "https://placehold.co/1200x800?text=News"
-    }
 ];
 
 export const CATEGORY_IDS = CATEGORIES.map(c => c.id);

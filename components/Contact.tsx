@@ -26,7 +26,7 @@ const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCate
               Categories
             </h3>
             <ul className="space-y-3">
-              {[...CATEGORIES.slice(0, 6), { id: 'guides', label: 'Guides' }, { id: 'news', label: 'News' }].map((cat) => (
+              {CATEGORIES.map((cat) => (
                 <li key={cat.id}>
                   <button
                     onClick={() => onCategorySelect && onCategorySelect(cat.id)}
@@ -89,11 +89,6 @@ const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCate
                 <a href="mailto:contact@thetoolcurrent.com" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
                   Contact
                 </a>
-              </li>
-              <li>
-                <button onClick={onSubscribeClick} className="text-blue-400 hover:text-blue-300 transition-colors text-sm hover:translate-x-1 duration-300 font-medium">
-                  Newsletter
-                </button>
               </li>
             </ul>
           </div>

@@ -148,6 +148,10 @@ export interface Tool {
   review_slug?: string;
   rating_breakdown?: Record<string, number>;
   model_version?: string;
+  // Plans & Models
+  free_tier?: string | null;
+  rate_limits?: string | null;
+  model_version_by_plan?: string | null;
   // Capabilities
   context_window?: string;
   max_integrations?: string;
@@ -157,6 +161,8 @@ export interface Tool {
   computer_use?: 'yes' | 'no' | 'partial';
   api_available?: 'yes' | 'no';
   use_case_scores?: { use_case: string; score: number | null; description: string }[];
+  workflow_tags?: string[];
+  workflow_breakdown?: string;
   createdAt?: string;
   updatedAt?: string;
 }

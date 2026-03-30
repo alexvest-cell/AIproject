@@ -184,7 +184,7 @@ function validate(data, _meta) {
     if (cons < 2 || cons > 4) errors.push(`CONS must have 2–4 items (got ${cons})`);
 
     const ints = data.integrations?.length ?? 0;
-    if (ints < 3 || ints > 6) errors.push(`INTEGRATIONS must have 3–6 items (got ${ints})`);
+    if (ints < 3 || ints > 8) errors.push(`INTEGRATIONS must have 3–8 items (got ${ints})`);
 
     const ucs = data.use_case_tags?.length ?? 0;
     if (ucs < 1 || ucs > 5) errors.push(`USE_CASES must have 1–5 valid items (got ${ucs})`);

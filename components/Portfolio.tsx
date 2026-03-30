@@ -329,7 +329,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
             )}
 
             {/* ── SECTION 4: Latest Guides & Reviews in a grid (Alternating Surface) ─────────────── */}
-            {(reviews.length > 0 || guides.length > 0 || useCases.length > 0) && (
+            {false && (reviews.length > 0 || guides.length > 0 || useCases.length > 0) && (
                 <section className="py-20 bg-surface-alt border-y border-border-divider">
                     <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/*  Reviews */}
@@ -384,7 +384,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
             )}
 
             {/* ── SECTION 5: Latest Intelligence — News (Base Surface) ────── */}
-            {news.length > 0 && (
+            {false && news.length > 0 && (
                 <section className="py-20 bg-surface-base pb-32">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
