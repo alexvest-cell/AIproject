@@ -266,7 +266,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         // Integrations: 3–6
         const ints = splitComma(form.integrations);
-        if (ints.length < 3 || ints.length > 10) errors.integrations = `Must have 3–10 items (currently ${ints.length})`;
+        if (ints.length < 3 || ints.length > 12) errors.integrations = `Must have 3–12 items (currently ${ints.length})`;
 
         // Use cases: 1–5, from enum only
         const ucs: string[] = Array.isArray(form.use_case_tags) ? form.use_case_tags : splitComma(form.use_case_tags);
@@ -692,7 +692,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (key_features.length < 4 || key_features.length > 6) errors.push(`KEY_FEATURES must have 4–6 items (got ${key_features.length})`);
         if (pros.length < 3 || pros.length > 5) errors.push(`PROS must have 3–5 items (got ${pros.length})`);
         if (cons.length < 2 || cons.length > 4) errors.push(`CONS must have 2–4 items (got ${cons.length})`);
-        if (integrations.length < 3 || integrations.length > 10) errors.push(`INTEGRATIONS must have 3–10 items (got ${integrations.length})`);
+        if (integrations.length < 3 || integrations.length > 12) errors.push(`INTEGRATIONS must have 3–12 items (got ${integrations.length})`);
         if (use_case_tags.length < 1 || use_case_tags.length > 5) errors.push(`USE_CASES must have 1–5 valid items (got ${use_case_tags.length})`);
         if (catRaw && !category_primary) errors.push(`CATEGORY_PRIMARY "${catRaw}" is not valid. Options: ${CATEGORY_PRIMARY_OPTS.join(', ')}`);
         if (invalidUC.length) errors.push(`USE_CASES has unrecognised values: ${invalidUC.join(', ')}`);
