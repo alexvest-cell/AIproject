@@ -240,9 +240,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const splitLines = (v: string | string[]) => Array.isArray(v) ? v : v.split('\n').map((s: string) => s.trim()).filter(Boolean);
         const splitComma = (v: string | string[]) => Array.isArray(v) ? v : v.split(',').map((s: string) => s.trim()).filter(Boolean);
 
-        // Short description: 15–25 words
+        // Short description: 15–30 words
         const sdWords = countWords(form.short_description || '');
-        if (sdWords < 15 || sdWords > 25) errors.short_description = `Must be 15–25 words (currently ${sdWords})`;
+        if (sdWords < 15 || sdWords > 30) errors.short_description = `Must be 15–30 words (currently ${sdWords})`;
 
         // Long description: 80–150 words
         const ldWords = countWords(form.full_description || '');
@@ -687,7 +687,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         // Validate
         const errors: string[] = [];
-        if (short_description) { const w = wordCount(short_description); if (w < 15 || w > 25) errors.push(`SHORT_DESCRIPTION must be 15–25 words (got ${w})`); }
+        if (short_description) { const w = wordCount(short_description); if (w < 15 || w > 30) errors.push(`SHORT_DESCRIPTION must be 15–30 words (got ${w})`); }
         if (full_description) { const w = wordCount(full_description); if (w < 80 || w > 150) errors.push(`LONG_DESCRIPTION must be 80–150 words (got ${w})`); }
         if (key_features.length < 4 || key_features.length > 6) errors.push(`KEY_FEATURES must have 4–6 items (got ${key_features.length})`);
         if (pros.length < 3 || pros.length > 5) errors.push(`PROS must have 3–5 items (got ${pros.length})`);
@@ -3095,7 +3095,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                                 {/* Short Description */}
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Short Description <span className="text-gray-600">(15–25 words)</span></label>
+                                    <label className="block text-xs text-gray-400 mb-1">Short Description <span className="text-gray-600">(15–30 words)</span></label>
                                     <input value={toolForm.short_description || ''} onChange={e => { setToolForm((p: any) => ({ ...p, short_description: e.target.value })); setToolErrors((e: any) => ({ ...e, short_description: undefined })); }}
                                         className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none ${toolErrors.short_description ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-news-accent'}`} placeholder="What it does and who it's for" />
                                     {toolErrors.short_description && <p className="text-red-400 text-xs mt-1">{toolErrors.short_description}</p>}
