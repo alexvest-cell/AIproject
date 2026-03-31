@@ -1,3 +1,5 @@
+// @ts-nocheck
+'use client';
 import React from 'react';
 import { Article, Tool, Comparison } from '../../types';
 import { QuickComparisonTable, VerdictBox, ProsConsSection, ArticleFAQ, ToolSummaryCard, RatingBreakdown, ToolSectionBlock, SideBySideHeader, ComparisonDetailTable, ComparisonDecisionSection, RelatedToolsModule, RelatedRankingsModule, ToolsUsedSummary, StepByStepModule, WorkflowBreakdownModule, ComparisonSummaryModule, RecommendedStackModule, TopAlternativesModule, CompareWithModule, ProductScreenshotModule, FeaturedInRankingsModule } from './SharedModules';

@@ -2,13 +2,11 @@
   "name": "planetary-brief-environmental-intelligence",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "node server/server.js",
-    "start:server": "node --env-file=.env.local server/server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "prewarm": "npx tsx scripts/prewarm.ts"
   },
   "dependencies": {
     "@google/genai": "^1.35.0",
@@ -21,6 +19,7 @@
     "lucide-react": "^0.562.0",
     "mongoose": "^9.1.5",
     "multer": "^2.0.2",
+    "next": "^15.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.12",
     "react": "^19.2.3",
@@ -30,8 +29,12 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
   }
 }

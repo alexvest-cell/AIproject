@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ChevronRight, Zap, Scale, List, GraduationCap, Rocket, Terminal, Megaphone, Palette, Building2, Workflow, Building, Layers } from 'lucide-react';
 import { Stack } from '../types';

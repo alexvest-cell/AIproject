@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect, useRef } from 'react';
 
 import Navigation from './components/Navigation';
@@ -17,6 +18,7 @@ import ToolPage from './components/ToolPage';
 import ComparisonPage from './components/ComparisonPage';
 import AlternativesPage from './components/AlternativesPage';
 import HubPage from './components/HubPage';
+import RankingPage from './components/RankingPage';
 import StackHubPage from './components/StackHubPage';
 import StackPage from './components/StackPage';
 import CategoryHubPage from './components/CategoryHubPage';
@@ -50,7 +52,7 @@ function App() {
   const [activeSection, setActiveSection] = useState<Section>(Section.HERO);
   const [view, setView] = useState<
     'home' | 'category' | 'article' | 'sources' | 'about' | 'subscribe' | 'admin' |
-    'hub' | 'tool' | 'comparison' | 'alternatives' | 'stacks' | 'stack' | 'tool-category'
+    'hub' | 'tool' | 'comparison' | 'alternatives' | 'stacks' | 'stack' | 'tool-category' | 'ranking'
   >(() => {
     const path = window.location.pathname;
     if (path === '/about') return 'about';
@@ -60,6 +62,7 @@ function App() {
     if (path.startsWith('/tools/')) return 'tool';
     if (path.startsWith('/compare/')) return 'comparison';
     if (path.startsWith('/categories/')) return 'tool-category';
+    if (path.startsWith('/best-software/for/')) return 'ranking';
     const hubPaths = ['/ai-tools', '/best-software', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
     if (hubPaths.includes(path)) return 'hub';
     return 'home';
@@ -75,6 +78,16 @@ function App() {
   const [activeComparisonUseCase, setActiveComparisonUseCase] = useState<string>('');
   const [activeAlternativesToolSlug, setActiveAlternativesToolSlug] = useState<string>('');
   const [activeStackSlug, setActiveStackSlug] = useState<string>('');
+  const [activeRankingSlug, setActiveRankingSlug] = useState<string>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/best-software/for/')) return path.replace('/best-software/for/', '');
+    return '';
+  });
+  const [activeRankingType, setActiveRankingType] = useState<'workflow' | 'category'>(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/best-software/for/')) return 'workflow';
+    return 'category';
+  });
   const [activeCategorySlug, setActiveCategorySlug] = useState<string>(() => {
     const path = window.location.pathname;
     return path.startsWith('/categories/') ? path.replace('/categories/', '') : '';
@@ -208,6 +221,18 @@ function App() {
           window.history.replaceState({ view: 'article', articleId: foundArticle.id }, '', preferredPath);
         }
       }
+    } else if (pathname.startsWith('/best-software/for/')) {
+      // Workflow ranking page
+      const workflowSlug = pathname.replace('/best-software/for/', '');
+      if (workflowSlug) {
+        setActiveRankingSlug(workflowSlug);
+        setActiveRankingType('workflow');
+        setView('ranking');
+        window.history.replaceState({ view: 'ranking', rankingType: 'workflow', slug: workflowSlug }, '', pathname);
+      } else {
+        setActiveHub('best-software');
+        setView('hub');
+      }
     } else if (pathname.startsWith('/best-software/') && articles.length > 0) {
       const identifier = pathname.replace('/best-software/', '');
       if (identifier) {
@@ -224,11 +249,11 @@ function App() {
             window.history.replaceState({ view: 'article', articleId: foundArticle.id }, '', preferredPath);
           }
         } else {
-          // Article not found, show hub
-          setActiveHub('best-software');
-          setWorkflowFilter(params.get('workflow') || '');
-          setUrlQueryString(window.location.search);
-          setView('hub');
+          // Not an article — treat as category ranking page
+          setActiveRankingSlug(identifier);
+          setActiveRankingType('category');
+          setView('ranking');
+          window.history.replaceState({ view: 'ranking', rankingType: 'category', slug: identifier }, '', pathname);
         }
       } else {
         // Just /best-software/
@@ -237,7 +262,7 @@ function App() {
         setUrlQueryString(window.location.search);
         setView('hub');
       }
-    } else if (pathname === '/ai-tools' || pathname === '/best-software' || pathname === '/comparisons' || 
+    } else if (pathname === '/ai-tools' || pathname === '/best-software' || pathname === '/comparisons' ||
                pathname === '/reviews' || pathname === '/use-cases' || pathname === '/guides' || pathname === '/news') {
       const hub = pathname.replace('/', '');
       const wf = params.get('workflow') || '';
@@ -296,6 +321,11 @@ function App() {
             setUrlQueryString(event.state.queryStr || '');
             setView('hub');
             break;
+          case 'ranking':
+            setActiveRankingSlug(event.state.slug);
+            setActiveRankingType(event.state.rankingType || 'category');
+            setView('ranking');
+            break;
           case 'alternatives':
             setActiveAlternativesToolSlug(event.state.slug);
             setView('alternatives');
@@ -336,7 +366,12 @@ function App() {
 
         if (path === '/about') {
           setView('about');
-        } else if (path === '/ai-tools' || path === '/best-software' || path === '/comparisons' || 
+        } else if (path.startsWith('/best-software/for/')) {
+          const wfSlug = path.replace('/best-software/for/', '');
+          setActiveRankingSlug(wfSlug);
+          setActiveRankingType('workflow');
+          setView('ranking');
+        } else if (path === '/ai-tools' || path === '/best-software' || path === '/comparisons' ||
                    path === '/reviews' || path === '/use-cases' || path === '/guides' || path === '/news') {
           const wf = event.state?.workflow || '';
           setActiveHub(path.replace('/', ''));
@@ -433,12 +468,23 @@ function App() {
     window.history.pushState({ view: 'hub', hub, workflow: workflow || '', queryStr: finalQs }, '', `/${hub}${finalQs}`);
   };
 
+  // Ranking page navigation
+  const handleRankingClick = (type: 'workflow' | 'category', slug: string) => {
+    setActiveRankingSlug(slug);
+    setActiveRankingType(type);
+    setView('ranking');
+    window.scrollTo(0, 0);
+    const path = type === 'workflow' ? `/best-software/for/${slug}` : `/best-software/${slug}`;
+    window.history.pushState({ view: 'ranking', rankingType: type, slug }, '', path);
+  };
+
   // Tool navigation
-  const handleToolClick = (slug: string) => {
+  const handleToolClick = (slug: string, forParam?: string) => {
     setActiveToolSlug(slug);
     setView('tool');
     window.scrollTo(0, 0);
-    window.history.pushState({ view: 'tool', slug }, '', `/tools/${slug}`);
+    const qs = forParam ? `?for=${forParam}` : '';
+    window.history.pushState({ view: 'tool', slug }, '', `/tools/${slug}${qs}`);
   };
 
   // Alternatives navigation
@@ -710,6 +756,18 @@ function App() {
               onArticleClick={handleArticleClick}
               onComparisonClick={handleComparisonClick}
               onStackClick={handleStackClick}
+            />
+          )}
+
+          {view === 'ranking' && activeRankingSlug && (
+            <RankingPage
+              type={activeRankingType}
+              slug={activeRankingSlug}
+              onBack={() => window.history.back()}
+              onToolClick={handleToolClick}
+              onComparisonClick={handleComparisonClick}
+              onRankingClick={handleRankingClick}
+              onHubNavigate={handleHubClick}
             />
           )}
 

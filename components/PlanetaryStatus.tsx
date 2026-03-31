@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import { Section } from '../types';
 import { Thermometer, CloudFog, Droplets, MountainSnow, TrendingUp, AlertTriangle, Waves, Trees, Bird, Flame, ArrowRight } from 'lucide-react';

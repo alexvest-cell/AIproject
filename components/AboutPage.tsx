@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect } from 'react';
 import {
     Database, Cpu, ShieldCheck, FileCheck, Globe, BookOpen,

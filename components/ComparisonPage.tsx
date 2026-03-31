@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Comparison, Tool } from '../types';
 import { ArrowRight, Trophy, Check, X, TrendingUp, Target, Star, Zap, Medal, ChevronDown } from 'lucide-react';
@@ -13,6 +14,8 @@ interface ComparisonPageProps {
     onBack: () => void;
     onToolClick: (slug: string) => void;
     onUseCaseChange?: (uc: string) => void;
+    // Server-prefetched data — skips client-side fetch when provided
+    initialData?: Comparison;
 }
 
 // ── Shared primitives ──────────────────────────────────────────────────────────
@@ -187,7 +190,8 @@ function parsePlanMap(tool: Tool): Record<string, { models: string; limits: stri
         rl.split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
             const ci = line.indexOf(':');
             if (ci > 0) {
-                const planRaw = line.slice(0, ci).trim();
+                // Strip embedded price suffix e.g. "Go ($8/mo)" → "Go"
+                const planRaw = line.slice(0, ci).trim().replace(/\s*\([^)]+\)\s*$/, '').trim();
                 const limit = line.slice(ci + 1).trim();
                 const key = Object.keys(map).find(k => k.toLowerCase() === planRaw.toLowerCase());
                 if (key) map[key].limits = limit.toLowerCase().includes('not publicly disclosed') ? '' : limit;
@@ -197,8 +201,31 @@ function parsePlanMap(tool: Tool): Record<string, { models: string; limits: stri
     return map;
 }
 
-// Build { planNameLower → priceString } from starting_price field
+// Build { planNameLower → priceString }
+// Priority: price_by_plan field → prices embedded in rate_limits plan names → legacy starting_price compact format
 function parsePriceMap(tool: Tool): Record<string, string> {
+    const pbp = (tool as any).price_by_plan as string | null | undefined;
+    if (pbp) {
+        const map: Record<string, string> = {};
+        pbp.split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+            const ci = line.indexOf(':');
+            if (ci > 0) map[line.slice(0, ci).trim().toLowerCase()] = line.slice(ci + 1).trim();
+        });
+        return map;
+    }
+    const rl = (tool as any).rate_limits as string | null | undefined;
+    if (rl) {
+        const map: Record<string, string> = {};
+        rl.split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+            const ci = line.indexOf(':');
+            if (ci < 0) return;
+            const rawKey = line.slice(0, ci).trim();
+            const priceMatch = rawKey.match(/\(([^)]+)\)\s*$/);
+            if (priceMatch) map[rawKey.replace(/\s*\([^)]+\)\s*$/, '').trim().toLowerCase()] = priceMatch[1];
+        });
+        if (Object.keys(map).length) return map;
+    }
+    // Legacy fallback: "$0 (Go: $8/mo; Plus: $20/mo)" compact format in starting_price
     const sp = (tool as any).starting_price as string | null | undefined;
     if (!sp) return {};
     const match = sp.match(/^([^(]+)\(([^)]+)\)$/);
@@ -1249,12 +1276,16 @@ const ComparisonMulti: React.FC<{
 // MAIN PAGE — Routes to 1v1 or Multi
 // ══════════════════════════════════════════════════════════════════════════════
 
-const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, onToolClick, onUseCaseChange }) => {
-    const [data, setData] = useState<Comparison | null>(null);
-    const [loading, setLoading] = useState(true);
+const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, onToolClick, onUseCaseChange, initialData }) => {
+    const [data, setData] = useState<Comparison | null>(initialData ?? null);
+    const [loading, setLoading] = useState(!initialData);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        if (initialData) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         setError(null);
         const ucParam = useCase ? `?use_case=${useCase.toLowerCase().replace(/\s+/g, '-')}` : '';
@@ -1281,7 +1312,9 @@ const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, 
         return [data.tool_a, data.tool_b, data.tool_c].filter(Boolean) as Tool[];
     }, [data]);
 
-    const [generated, setGenerated] = useState<GeneratedComparison | null>(null);
+    const [generated, setGenerated] = useState<GeneratedComparison | null>(
+        initialData ? (initialData.generated_output as GeneratedComparison) ?? null : null
+    );
 
     // Canonical URL management
     useEffect(() => {

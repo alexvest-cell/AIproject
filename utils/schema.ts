@@ -35,14 +35,14 @@ export function generateSoftwareApplicationSchema(tool: Tool): object {
 /**
  * Generates Article JSON-LD schema for an Article or Comparison page.
  */
-export function generateArticleSchema(article: Partial<Article & Comparison>): object {
+export function generateArticleSchema(article: Partial<Article> & { verdict?: string; publish_date?: string | Date }): object {
     return {
         '@context': 'https://schema.org',
         '@type': 'Article',
         headline: article.title,
-        description: (article as Article).excerpt || (article as Comparison).verdict || (article as any).meta_description,
-        datePublished: (article as Article).date || (article as Comparison).publish_date,
-        image: (article as Article).imageUrl,
+        description: article.excerpt || article.verdict || article.meta_description,
+        datePublished: article.date || (article.publish_date as string),
+        image: article.imageUrl,
         publisher: {
             '@type': 'Organization',
             name: 'ToolCurrent',

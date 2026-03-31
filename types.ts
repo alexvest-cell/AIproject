@@ -18,7 +18,7 @@ export interface Article {
   originalReadTime: string;
   read_time?: number; // minutes (numeric)
   url: string;
-  content: string[];
+  content: string | string[];
   createdAt?: string;
   updatedAt?: string;
   isFeaturedDiscover?: boolean;
@@ -34,7 +34,7 @@ export interface Article {
   imageOffsetY?: number;
 
   // Platform fields
-  article_type?: 'news' | 'review' | 'guide' | 'best-of' | 'comparison' | 'use-case';
+  article_type?: string;
   primary_tools?: string[];    // Tool slugs
   comparison_tools?: string[]; // Tool slugs
   use_cases?: string[];        // e.g. ['Content Writing', 'Marketing', 'SEO']
@@ -65,6 +65,18 @@ export interface Article {
     tool_a_value: string;
     tool_b_value: string;
   }[];
+  related_rankings?: string[];
+  // Publish control
+  status?: 'draft' | 'published' | 'scheduled';
+  scheduledPublishDate?: string | Date;
+  publishedAt?: string | Date;
+  readTime?: string;
+  // Use case-specific
+  workflow_stages?: { stage_title: string; description: string; tool_slugs: string[] }[];
+  steps?: { title: string; content: string; tool_slug?: string }[];
+  tools_used?: string[];
+  implications?: string;
+  location?: string;
 }
 
 export interface Category {
@@ -152,6 +164,7 @@ export interface Tool {
   free_tier?: string | null;
   rate_limits?: string | null;
   model_version_by_plan?: string | null;
+  price_by_plan?: string | null;
   // Capabilities
   context_window?: string;
   max_integrations?: string;

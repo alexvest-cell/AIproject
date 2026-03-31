@@ -1,6 +1,7 @@
+'use client';
 import React, { useEffect, useState } from 'react';
 import { Article, Tool, Comparison, Stack } from '../types';
-import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2 } from 'lucide-react';
+import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter } from 'lucide-react';
 
 type HubType = 'ai-tools' | 'best-software' | 'reviews' | 'comparisons' | 'use-cases' | 'guides' | 'news';
 
@@ -24,11 +25,11 @@ const HUB_META: Record<HubType, { label: string; description: string; titleTag: 
         titleTag: 'AI Tools Directory: Explore & Discover Software (2026)',
         showTools: true
     },
-    'best-software': { 
-        label: 'Best Software', 
-        description: 'Explore curated rankings of the best AI tools and software platforms across productivity, automation, development, marketing, and more.', 
+    'best-software': {
+        label: 'Best Software',
+        description: 'Curated rankings and expert recommendations across AI tools and software — scored and compared so you can decide faster.',
         titleTag: 'Best AI Software & Tools: 2026 Rankings & Reviews',
-        articleType: 'best-of' 
+        articleType: 'best-of'
     },
     'reviews': { 
         label: 'Reviews', 
@@ -218,7 +219,7 @@ const POPULAR_CATEGORIES = [
     { label: 'AI Marketing Tools',   icon: Megaphone,    filter: 'Marketing Tools' },
 ];
 
-const AIToolsHub: React.FC<{
+export const AIToolsHub: React.FC<{
     onToolClick: (s: string) => void;
     articles: Article[];
     onArticleClick: (a: Article) => void;
@@ -226,8 +227,9 @@ const AIToolsHub: React.FC<{
     workflowFilter?: string;
     queryString?: string;
     onStackClick?: (slug: string) => void;
-}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick }) => {
-    const [tools, setTools] = useState<Tool[]>([]);
+    initialTools?: Tool[];
+}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick, initialTools }) => {
+    const [tools, setTools] = useState<Tool[]>(initialTools ?? []);
     const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -237,7 +239,7 @@ const AIToolsHub: React.FC<{
     const wfConfig = workflowFilter ? WORKFLOW_CONFIG[workflowFilter] : null;
     const [catFilter, setCatFilter] = useState(wfConfig?.catFilter || 'All');
     const [useCaseFilter, setUseCaseFilter] = useState('All');
-    const [sortBy, setSortBy] = useState<'popular' | 'most-used' | 'newest' | 'price'>('most-used');
+    const [sortBy, setSortBy] = useState<'popular' | 'most-used' | 'newest' | 'price' | 'rating'>('most-used');
     const [visibleCount, setVisibleCount] = useState(TOOLS_PER_PAGE);
 
     // Sync query string to filters
@@ -282,11 +284,12 @@ const AIToolsHub: React.FC<{
     }, [queryString, workflowFilter]);
 
     useEffect(() => {
-        fetch('/api/tools')
-            .then(r => r.json())
-            .then(d => { setTools(d); setLoading(false); })
-            .catch(() => setLoading(false));
-
+        if (initialTools?.length) { setLoading(false); } else {
+            fetch('/api/tools')
+                .then(r => r.json())
+                .then(d => { setTools(Array.isArray(d) ? d : []); setLoading(false); })
+                .catch(() => setLoading(false));
+        }
         fetch('/api/stacks')
             .then(r => r.ok ? r.json() : [])
             .then(d => setStacks(d))
@@ -506,7 +509,7 @@ const AIToolsHub: React.FC<{
                                 return acc;
                             }, {} as Record<string, number>)
                         )
-                        .sort((a, b) => b[1] - a[1])
+                        .sort((a, b) => (b[1] as number) - (a[1] as number))
                         .map(([cat, count]) => {
                             const meta = CATEGORY_META[cat];
                             if (!meta) return null;
@@ -533,7 +536,7 @@ const AIToolsHub: React.FC<{
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400 mb-2">Curated Rankings</p>
                         <h3 className="text-lg font-black text-white mb-2">Looking for the Best Tools?</h3>
-                        <p className="text-sm text-news-muted max-w-md leading-relaxed">AI Tools is your exploration layer. For curated rankings, head-to-head comparisons, and expert recommendations, visit Best Software.</p>
+                        <p className="text-sm text-news-muted max-w-md leading-relaxed">Looking for ranked recommendations? Browse Best Software for curated rankings, head-to-head comparisons, and expert recommendations.</p>
                     </div>
                     <a href="/best-software"
                         className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-black hover:bg-yellow-500/20 transition-colors whitespace-nowrap"
@@ -801,45 +804,37 @@ const AIToolsHub: React.FC<{
 };
 
 // ─── Best Software Hub ──────────────────────────────────────────────────────────────
-const BS_START_HERE = [
-    {
-        label: 'By Use Case',
-        icon: Users,
-        color: 'text-blue-400',
-        bg: 'bg-blue-500/10 border-blue-500/20',
-        items: ['Best for Startups', 'Best for Developers', 'Best for Marketers', 'Best for Creators'],
-        filters: ['startup', 'developer', 'marketer', 'creator'],
-    },
-    {
-        label: 'By Category',
-        icon: Layers,
-        color: 'text-news-accent',
-        bg: 'bg-news-accent/10 border-news-accent/20',
-        items: ['AI Tools', 'Productivity', 'Automation', 'Developer Tools'],
-        filters: ['AI Tools', 'Productivity', 'Automation', 'Developer Tools'],
-    },
-    {
-        label: 'By Goal',
-        icon: Rocket,
-        color: 'text-purple-400',
-        bg: 'bg-purple-500/10 border-purple-500/20',
-        items: ['Ship faster', 'Cut costs', 'Scale output', 'Reduce team size'],
-        filters: ['ship', 'cost', 'scale', 'automat'],
-    },
-];
 
-const BS_USE_CASES = [
-    { label: 'Best for Startups',    icon: Rocket,    filter: 'startup',  color: 'text-orange-400' },
-    { label: 'Best for Developers',  icon: Code2,     filter: 'dev',      color: 'text-blue-400' },
-    { label: 'Best for Marketers',   icon: Megaphone, filter: 'market',   color: 'text-pink-400' },
-    { label: 'Best for Creators',    icon: PenLine,   filter: 'creat',    color: 'text-purple-400' },
-    { label: 'Best for Students',    icon: GraduationCap, filter: 'student', color: 'text-green-400' },
-    { label: 'Best for Small Business', icon: Briefcase, filter: 'business', color: 'text-yellow-400' },
-];
+const WORKFLOW_ICON_MAP: Record<string, React.ElementType> = {
+    'Students':         GraduationCap,
+    'Developers':       Code2,
+    'Marketers':        Megaphone,
+    'Content Creators': PenLine,
+    'Startups':         Rocket,
+    'Small Business':   Briefcase,
+    'Enterprise':       Layers,
+    'Researchers':      Search,
+    'Designers':        ImageIcon,
+    'Sales Teams':      TrendingUp,
+};
 
-const BS_CATEGORIES = ['All', 'AI Tools', 'Productivity', 'Automation', 'Developer Tools', 'Marketing', 'Business Software'];
-const BS_PRICING    = ['All', 'Free', 'Freemium', 'Paid'];
-const BS_ROLES      = ['All', 'Startups', 'Developers', 'Marketers', 'Creators'];
+const WORKFLOW_COLOR_MAP: Record<string, string> = {
+    'Students':         'text-green-400',
+    'Developers':       'text-blue-400',
+    'Marketers':        'text-pink-400',
+    'Content Creators': 'text-purple-400',
+    'Startups':         'text-orange-400',
+    'Small Business':   'text-yellow-400',
+    'Enterprise':       'text-cyan-400',
+    'Researchers':      'text-emerald-400',
+    'Designers':        'text-rose-400',
+    'Sales Teams':      'text-indigo-400',
+};
+
+const ALL_WORKFLOW_TAGS = [
+    'Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
+    'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
+];
 
 const BS_TRUST = [
     { icon: Search,   title: 'Independent Research',    desc: 'Every ranking is based on hands-on testing, public data, and community feedback — not vendor submissions.' },
@@ -862,7 +857,7 @@ const BS_SEO = [
     },
 ];
 
-const BestSoftwareHub: React.FC<{
+export const BestSoftwareHub: React.FC<{
     articles: Article[];
     onArticleClick: (a: Article) => void;
     onToolClick?: (slug: string) => void;
@@ -870,369 +865,261 @@ const BestSoftwareHub: React.FC<{
     onHubNavigate?: (hub: string) => void;
     workflowFilter?: string;
     queryString?: string;
-}> = ({ articles, onArticleClick, onToolClick, onComparisonClick, onHubNavigate, workflowFilter, queryString }) => {
-    const [allTools, setAllTools] = useState<Tool[]>([]);
-    const [catFilter, setCatFilter]       = useState('All');
-    const [pricingFilter, setPricingFilter] = useState('All');
-    const [roleFilter, setRoleFilter]     = useState('All');
-    const [sortBy, setSortBy]             = useState<'popular' | 'newest' | 'most-tools'>('popular');
-    const [filtersOpen, setFiltersOpen]   = useState(false);
-
-    // Sync incoming query/workflow filters
+    initialTools?: Tool[];
+}> = ({ onToolClick, onComparisonClick, onHubNavigate, initialTools }) => {
+    const [allTools, setAllTools] = useState<Tool[]>(initialTools ?? []);
     useEffect(() => {
-        const params = new URLSearchParams(queryString || '');
-        const cat = params.get('category');
-        const wf  = workflowFilter || params.get('workflow');
-        if (cat) {
-            const low = cat.toLowerCase();
-            if (low.includes('ai-tools') || low.includes('ai tools')) setCatFilter('AI Tools');
-            else if (low.includes('productiv')) setCatFilter('Productivity');
-            else if (low.includes('automat'))   setCatFilter('Automation');
-            else if (low.includes('dev'))        setCatFilter('Developer Tools');
-            else if (low.includes('market'))     setCatFilter('Marketing');
-            else if (low.includes('business'))   setCatFilter('Business Software');
-            else setCatFilter('All');
-        } else setCatFilter('All');
-        if (wf) setRoleFilter(wf); else setRoleFilter('All');
-    }, [queryString, workflowFilter]);
-
-    useEffect(() => {
-        fetch('/api/tools').then(r => r.json()).then(setAllTools).catch(() => {});
+        if (initialTools?.length) return;
+        fetch('/api/tools').then(r => r.json()).then(d => setAllTools(Array.isArray(d) ? d : [])).catch(() => {});
     }, []);
 
-    const toolMap = React.useMemo(() => {
-        const m: Record<string, Tool> = {};
-        allTools.forEach(t => { m[t.slug] = t; });
-        return m;
-    }, [allTools]);
-
-    const bestOf  = articles.filter(a => (a as any).article_type === 'best-of');
-    const reviews = articles.filter(a => (a as any).article_type === 'review').slice(0, 4);
-    const guides  = articles.filter(a => (a as any).article_type === 'guide').slice(0, 4);
-
-    const popularRankings = bestOf
-        .filter(a => a.isFeaturedDiscover || (a as any).isFeaturedCategory).slice(0, 4)
-        .concat(bestOf.slice(0, 4))
-        .filter((v, i, arr) => arr.findIndex(x => x.id === v.id) === i)
-        .slice(0, 4);
-
-    const trendingTools = React.useMemo(() =>
-        [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 8),
+    // ── Dynamic data ──────────────────────────────────────────────────────────
+    const featuredRankings = React.useMemo(() =>
+        [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6),
         [allTools]
     );
 
-    const articleText = (a: Article) =>
-        `${a.title} ${a.excerpt} ${(a as any).topic || ''} ${(Array.isArray(a.category) ? a.category : [a.category]).join(' ')}`.toLowerCase();
+    const workflowData = React.useMemo(() =>
+        ALL_WORKFLOW_TAGS.map(tag => {
+            const tools = allTools.filter(t => ((t as any).workflow_tags || []).includes(tag));
+            const scores = tools
+                .map(t => {
+                    const wb = (t as any).workflow_breakdown as string | null;
+                    if (!wb) return null;
+                    const line = wb.split('\n').find((l: string) => l.toLowerCase().startsWith(tag.toLowerCase() + ':'));
+                    if (!line) return null;
+                    const m = line.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+                    return m ? parseFloat(m[1]) : null;
+                })
+                .filter((s): s is number => s !== null);
+            const avgScore = scores.length >= 3
+                ? +(scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+                : null;
+            return { tag, count: tools.length, avgScore };
+        }).filter(w => w.count > 0),
+        [allTools]
+    );
 
-    const matchesFilters = (a: Article) => {
-        const text = articleText(a);
-        if (catFilter !== 'All') {
-            const q = catFilter.toLowerCase().replace(/ tools| software| platforms/g, '');
-            if (!text.includes(q)) return false;
-        }
-        if (roleFilter !== 'All') {
-            const r = roleFilter.toLowerCase();
-            if (!text.includes(r)) return false;
-        }
-        if (pricingFilter !== 'All') {
-            const toolSlugs: string[] = (a as any).primary_tools || [];
-            const toolsInArticle = toolSlugs.map(s => toolMap[s]).filter(Boolean);
-            if (toolsInArticle.length > 0 && !toolsInArticle.some(t => t.pricing_model === pricingFilter)) return false;
-        }
-        return true;
-    };
+    const catData = React.useMemo(() => {
+        const groups: Record<string, Tool[]> = {};
+        allTools.forEach(t => {
+            if (!t.category_primary) return;
+            if (!groups[t.category_primary]) groups[t.category_primary] = [];
+            groups[t.category_primary].push(t);
+        });
+        return Object.entries(groups)
+            .map(([cat, tools]) => {
+                const sorted = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0));
+                return { cat, topTool: sorted[0], count: tools.length };
+            })
+            .sort((a, b) => b.count - a.count);
+    }, [allTools]);
 
-    const sorted = [...bestOf.filter(matchesFilters)].sort((a, b) => {
-        if (sortBy === 'newest')     return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
-        if (sortBy === 'most-tools') return ((b as any).tools_reviewed || 0) - ((a as any).tools_reviewed || 0);
-        return 0;
-    });
+    const recentTools = React.useMemo(() =>
+        [...allTools]
+            .filter(t => t.last_updated)
+            .sort((a, b) => new Date(b.last_updated!).getTime() - new Date(a.last_updated!).getTime())
+            .slice(0, 4),
+        [allTools]
+    );
 
-    const activeFilterCount = (catFilter !== 'All' ? 1 : 0) + (pricingFilter !== 'All' ? 1 : 0) + (roleFilter !== 'All' ? 1 : 0);
-
-    // Don't bail early — page has rich content (Start Here, Trending, How We Rank) even with no articles
-
-    // ── Ranking card ────────────────────────────────────────────────────────
-    const RankingCard: React.FC<{ a: Article; index: number; large?: boolean }> = ({ a, index, large = false }) => {
-        const toolSlugs: string[] = (a as any).primary_tools || [];
-        const toolsReviewed: number = (a as any).tools_reviewed || toolSlugs.length || 0;
-        const category = (Array.isArray(a.category) ? a.category[0] : a.category) || (a as any).topic || 'Rankings';
-        const top3 = toolSlugs.slice(0, 3);
-        return (
-            <button
-                onClick={() => onArticleClick(a)}
-                className={`group w-full text-left bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all flex flex-col ${large ? 'p-6' : 'p-4'}`}
-            >
-                {a.imageUrl && (
-                    <div className="w-full h-36 rounded-xl overflow-hidden border border-border-subtle mb-4 flex-shrink-0">
-                        <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                    </div>
-                )}
-                {/* Category tag */}
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-news-accent/10 border border-news-accent/20 text-news-accent mb-2 self-start font-bold uppercase tracking-widest">
-                    {category}
-                </span>
-                <h3 className={`font-black text-white group-hover:text-news-accent transition-colors leading-snug mb-2 ${large ? 'text-base' : 'text-sm'} line-clamp-2`}>
-                    {a.title}
-                </h3>
-                {/* Short description */}
-                {a.excerpt && (
-                    <p className="text-[11px] text-news-muted leading-relaxed line-clamp-2 mb-3 flex-grow">{a.excerpt}</p>
-                )}
-                {/* Top 3 tool logos */}
-                {top3.length > 0 && (
-                    <div className="flex items-center gap-1.5 mb-3">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-news-muted">Top:</span>
-                        <div className="flex -space-x-1">
-                            {top3.map(slug => {
-                                const t = toolMap[slug];
-                                return t?.logo ? (
-                                    <div key={slug} title={t.name} className="w-5 h-5 rounded-full bg-white border border-border-subtle overflow-hidden ring-1 ring-surface-card flex-shrink-0">
-                                        <img src={t.logo} alt={t.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
-                                    </div>
-                                ) : (
-                                    <div key={slug} title={slug} className="w-5 h-5 rounded-full bg-surface-alt border border-border-subtle ring-1 ring-surface-card flex items-center justify-center text-[7px] font-black text-news-muted uppercase flex-shrink-0">
-                                        {slug.charAt(0)}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        {toolsReviewed > 0 && <span className="text-[9px] text-news-muted ml-1">{toolsReviewed} reviewed</span>}
-                    </div>
-                )}
-                <div className="mt-auto pt-3 border-t border-border-divider">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent flex items-center gap-1 group-hover:text-white transition-colors">
-                        View ranking <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                    </span>
-                </div>
-            </button>
-        );
-    };
 
     return (
         <div className="space-y-16">
 
-            {/* ── 1. Start Here ──────────────────────────────────────────── */}
-            <section>
-                <h2 className="text-xl font-black text-white mb-2">Start Here</h2>
-                <p className="text-sm text-news-muted mb-6">Jump to the rankings most relevant to you.</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {BS_START_HERE.map(group => {
-                        const GroupIcon = group.icon;
-                        return (
-                            <div key={group.label} className={`rounded-2xl border p-5 ${group.bg}`}>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <GroupIcon size={16} className={group.color} />
-                                    <span className={`text-xs font-black uppercase tracking-widest ${group.color}`}>{group.label}</span>
-                                </div>
-                                <ul className="space-y-2">
-                                    {group.items.map((item, idx) => (
-                                        <li key={item}>
-                                            <button
-                                                onClick={() => setCatFilter(group.filters[idx])}
-                                                className="w-full text-left flex items-center justify-between group/item text-sm text-news-text hover:text-white transition-colors py-1"
-                                            >
-                                                <span>{item}</span>
-                                                <ArrowRight size={12} className="text-news-muted group-hover/item:text-white transition-colors" />
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        );
-                    })}
-                </div>
-            </section>
-
-            {/* ── 2. Popular Rankings ────────────────────────────────────── */}
-            {popularRankings.length > 0 && (
-                <section>
-                    <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
-                        <TrendingUp size={20} className="text-news-accent" /> Popular Rankings
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                        {popularRankings.map((a, i) => <RankingCard key={a.id} a={a} index={i} large />)}
-                    </div>
-                </section>
-            )}
-
-            {/* ── 3. By Use Case ─────────────────────────────────────────── */}
-            <section>
-                <h2 className="text-xl font-black text-white mb-2">Rankings by Use Case</h2>
-                <p className="text-sm text-news-muted mb-6">Find the best tools for your specific role or context.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    {BS_USE_CASES.map(({ label, icon: Icon, filter, color }) => {
-                        const count = bestOf.filter(a => articleText(a).includes(filter)).length;
-                        return (
-                            <button
-                                key={label}
-                                onClick={() => setCatFilter(catFilter === label ? 'All' : filter)}
-                                className={`group flex flex-col items-center gap-2 px-3 py-4 rounded-2xl border transition-all text-center ${
-                                    catFilter === filter
-                                        ? 'bg-news-accent/10 border-news-accent/50 text-news-accent'
-                                        : 'bg-surface-card border-border-subtle hover:bg-surface-hover hover:border-border-divider text-news-muted hover:text-white'
-                                }`}
-                            >
-                                <Icon size={18} className={`flex-shrink-0 ${catFilter === filter ? 'text-news-accent' : color}`} />
-                                <span className="text-[11px] font-bold leading-tight">{label.replace('Best ', '')}</span>
-                                <span className="text-[9px] opacity-50">{count}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-                {/* Use-case ranking rows */}
-                {BS_USE_CASES.map(({ label, filter }) => {
-                    const uc = bestOf.filter(a => articleText(a).includes(filter)).slice(0, 3);
-                    if (!uc.length) return null;
-                    return (
-                        <div key={label} className="mt-8">
-                            <h3 className="text-sm font-black text-white uppercase tracking-wider mb-4">{label}</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                {uc.map((a, i) => <RankingCard key={a.id} a={a} index={i} />)}
-                            </div>
-                        </div>
-                    );
-                }).filter(Boolean).slice(0, 3) /* show top 3 use cases with content */}
-            </section>
-
-            {/* ── 4. Trending Tools ──────────────────────────────────────── */}
-            {trendingTools.length > 0 && (
+            {/* ── 1. Featured Rankings ─────────────────────────────────────── */}
+            {featuredRankings.length > 0 && (
                 <section>
                     <h2 className="text-xl font-black text-white mb-2 flex items-center gap-2">
-                        <Flame size={18} className="text-news-accent" /> Trending Tools
+                        <Star size={20} className="text-news-accent" /> Featured Rankings
                     </h2>
-                    <p className="text-sm text-news-muted mb-6">Top-rated tools on ToolCurrent right now.</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                        {trendingTools.map(t => (
-                            <button
-                                key={t.slug}
-                                onClick={() => onToolClick?.(t.slug)}
-                                className="group flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/50 hover:-translate-y-0.5 transition-all text-center"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center p-1.5 flex-shrink-0">
-                                    {t.logo
-                                        ? <img src={t.logo} alt={t.name} className="max-w-full max-h-full object-contain" loading="lazy" />
-                                        : <Layers size={16} className="text-news-muted" />
-                                    }
-                                </div>
-                                <span className="text-[11px] font-bold text-white group-hover:text-news-accent transition-colors leading-tight line-clamp-2">{t.name}</span>
-                                {t.rating_score > 0 && (
-                                    <span className="flex items-center gap-0.5 text-[9px] text-news-accent font-bold">
-                                        <Star size={9} fill="currentColor" />{t.rating_score}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
+                    <p className="text-sm text-news-muted mb-6">Top-rated tools ranked and scored across all categories.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {featuredRankings.map(tool => {
+                            const updatedLabel = tool.last_updated
+                                ? new Date(tool.last_updated).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                                : null;
+                            return (
+                                <button
+                                    key={tool.slug}
+                                    onClick={() => onToolClick?.(tool.slug)}
+                                    className="group w-full text-left bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all p-5 flex flex-col gap-3"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center p-1.5 flex-shrink-0">
+                                            {tool.logo
+                                                ? <img src={tool.logo} alt={tool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                                : <Layers size={16} className="text-news-muted" />
+                                            }
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-sm font-black text-white group-hover:text-news-accent transition-colors leading-tight truncate">{tool.name}</h3>
+                                            {tool.category_primary && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-news-accent/10 border border-news-accent/20 text-news-accent font-bold uppercase tracking-widest mt-1 inline-block">
+                                                    {tool.category_primary}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {tool.rating_score > 0 && (
+                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                <Star size={11} className="text-news-accent" fill="currentColor" />
+                                                <span className="text-sm font-black text-white">{tool.rating_score}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {tool.short_description && (
+                                        <p className="text-[11px] text-news-muted leading-relaxed line-clamp-2">{tool.short_description}</p>
+                                    )}
+                                    <div className="mt-auto pt-3 border-t border-border-divider flex items-center justify-between">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent flex items-center gap-1 group-hover:text-white transition-colors">
+                                            View tool <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                                        </span>
+                                        {updatedLabel && (
+                                            <span className="text-[8px] text-news-muted font-bold uppercase tracking-widest">{updatedLabel}</span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 </section>
             )}
 
-            {/* ── 5. Filter + All Rankings ──────────────────────────────── */}
-            <section>
-                {/* Filter bar — desktop */}
-                <div className="hidden md:flex flex-wrap items-center gap-3 mb-6 p-4 bg-surface-card rounded-2xl border border-border-subtle">
-                    <div className="flex items-center gap-1.5 text-xs text-news-muted font-bold uppercase tracking-widest flex-shrink-0">
-                        <Filter size={12} /> Filters
+            {/* ── 2. Browse by Workflow ─────────────────────────────────────── */}
+            {workflowData.length > 0 && (
+                <section>
+                    <h2 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+                        <Workflow size={20} className="text-news-accent" /> Browse by Workflow
+                    </h2>
+                    <p className="text-sm text-news-muted mb-6">Find the best tools for your specific role and workflow.</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {workflowData.map(({ tag, count, avgScore }) => {
+                            const Icon = WORKFLOW_ICON_MAP[tag] || Layers;
+                            const color = WORKFLOW_COLOR_MAP[tag] || 'text-news-muted';
+                            const wfSlug = tag.toLowerCase().replace(/\s+/g, '-');
+                            return (
+                                <a
+                                    key={tag}
+                                    href={`/best-software/for/${wfSlug}`}
+                                    className="group flex flex-col items-center gap-2 px-3 py-4 rounded-2xl border bg-surface-card border-border-subtle hover:bg-surface-hover hover:border-border-divider transition-all text-center no-underline"
+                                >
+                                    <Icon size={20} className={`flex-shrink-0 ${color}`} />
+                                    <span className="text-[11px] font-bold text-white leading-tight group-hover:text-news-accent transition-colors">{tag}</span>
+                                    <div className="flex flex-col items-center gap-0.5">
+                                        <span className="text-[9px] text-news-muted">{count} tool{count !== 1 ? 's' : ''}</span>
+                                        {avgScore !== null && (
+                                            <span className="flex items-center gap-0.5 text-[9px] text-news-accent font-bold">
+                                                <Star size={8} fill="currentColor" />{avgScore}/10
+                                            </span>
+                                        )}
+                                    </div>
+                                </a>
+                            );
+                        })}
                     </div>
-                    {/* Category */}
-                    <div className="flex flex-wrap gap-1.5 flex-1">
-                        {BS_CATEGORIES.map(f => (
-                            <button key={f} onClick={() => setCatFilter(f)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${catFilter === f ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white hover:bg-surface-hover'}`}
-                            >{f}</button>
-                        ))}
-                    </div>
-                    {/* Pricing */}
-                    <div className="flex gap-1.5 border-l border-border-subtle pl-3">
-                        {BS_PRICING.map(p => (
-                            <button key={p} onClick={() => setPricingFilter(p)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors ${pricingFilter === p ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted hover:text-white'}`}
-                            >{p}</button>
-                        ))}
-                    </div>
-                    {/* Sort */}
-                    <div className="relative flex-shrink-0 border-l border-border-subtle pl-3">
-                        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-                            className="appearance-none bg-surface-base border border-border-subtle text-news-muted text-xs font-bold rounded-xl px-3 py-2 pr-7 focus:outline-none focus:border-news-accent cursor-pointer"
-                        >
-                            <option value="popular">Most Popular</option>
-                            <option value="newest">Newest</option>
-                            <option value="most-tools">Most Tools Reviewed</option>
-                        </select>
-                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
-                    </div>
-                    {activeFilterCount > 0 && (
-                        <button onClick={() => { setCatFilter('All'); setPricingFilter('All'); setRoleFilter('All'); }}
-                            className="flex items-center gap-1 text-[11px] text-news-muted hover:text-white px-2 py-1 rounded border border-border-subtle transition-colors"
-                        >
-                            <X size={11} /> Clear ({activeFilterCount})
-                        </button>
-                    )}
-                </div>
+                </section>
+            )}
 
-                {/* Filter bar — mobile collapsible */}
-                <div className="md:hidden mb-6">
-                    <button
-                        onClick={() => setFiltersOpen(f => !f)}
-                        className="w-full flex items-center justify-between px-4 py-3 bg-surface-card border border-border-subtle rounded-xl text-xs font-bold text-white"
-                    >
-                        <span className="flex items-center gap-2"><Filter size={13} /> Filters {activeFilterCount > 0 && `(${activeFilterCount} active)`}</span>
-                        <ChevronDown size={14} className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {filtersOpen && (
-                        <div className="mt-2 p-4 bg-surface-card border border-border-subtle rounded-xl space-y-4">
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-2">Category</p>
-                                <div className="relative">
-                                    <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
-                                        className="w-full appearance-none bg-surface-alt border border-border-subtle rounded-xl px-3 py-2 text-xs text-news-text font-bold pr-8 focus:outline-none"
-                                    >
-                                        {BS_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                    <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-2">Pricing</p>
-                                <div className="flex gap-2">
-                                    {BS_PRICING.map(p => (
-                                        <button key={p} onClick={() => setPricingFilter(p)}
-                                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-colors ${pricingFilter === p ? 'bg-news-accent text-black border-news-accent' : 'bg-surface-base border-border-subtle text-news-muted'}`}
-                                        >{p}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-2">Sort</p>
-                                <div className="relative">
-                                    <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-                                        className="w-full appearance-none bg-surface-alt border border-border-subtle rounded-xl px-3 py-2 text-xs text-news-text font-bold pr-8 focus:outline-none"
-                                    >
-                                        <option value="popular">Most Popular</option>
-                                        <option value="newest">Newest</option>
-                                        <option value="most-tools">Most Tools Reviewed</option>
-                                    </select>
-                                    <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-news-muted pointer-events-none" />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <p className="text-xs text-news-muted uppercase tracking-widest mb-6">{sorted.length} Rankings</p>
-                {sorted.length === 0 ? (
-                    <div className="text-center py-16 border border-dashed border-border-subtle rounded-2xl text-gray-500">
-                        No rankings match your filters.
-                        <button onClick={() => { setCatFilter('All'); setPricingFilter('All'); setRoleFilter('All'); }} className="block mx-auto mt-3 text-news-accent text-xs font-bold hover:underline">Clear filters</button>
+            {/* ── 3. Browse by Category ─────────────────────────────────────── */}
+            {catData.length > 0 && (
+                <section>
+                    <h2 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+                        <LayoutGrid size={20} className="text-news-accent" /> Browse by Category
+                    </h2>
+                    <p className="text-sm text-news-muted mb-6">Explore rankings in every major software category.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {catData.map(({ cat, topTool, count }) => {
+                            const meta = CATEGORY_META[cat];
+                            const Icon = meta?.icon || Layers;
+                            return (
+                                <a
+                                    key={cat}
+                                    href={`/best-software/${cat.toLowerCase().replace(/\s+/g, '-')}`}
+                                    className="group w-full text-left bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all p-5 flex items-start gap-4 no-underline"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-news-accent/10 border border-news-accent/20 flex items-center justify-center flex-shrink-0">
+                                        <Icon size={18} className="text-news-accent" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <h3 className="text-sm font-black text-white group-hover:text-news-accent transition-colors leading-tight">{cat}</h3>
+                                            <span className="text-[9px] text-news-muted font-bold flex-shrink-0">{count} tools</span>
+                                        </div>
+                                        {topTool && (
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="text-[9px] text-news-muted uppercase tracking-widest font-bold">Top rated:</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {topTool.logo && (
+                                                        <div className="w-4 h-4 rounded bg-white border border-border-subtle flex items-center justify-center p-0.5 flex-shrink-0">
+                                                            <img src={topTool.logo} alt={topTool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                                        </div>
+                                                    )}
+                                                    <span className="text-[10px] font-bold text-news-text truncate">{topTool.name}</span>
+                                                    {topTool.rating_score > 0 && (
+                                                        <span className="text-[9px] text-news-accent font-bold flex items-center gap-0.5 flex-shrink-0">
+                                                            <Star size={8} fill="currentColor" />{topTool.rating_score}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </a>
+                            );
+                        })}
                     </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {sorted.map((a, i) => <RankingCard key={a.id} a={a} index={i} />)}
-                    </div>
-                )}
-            </section>
+                </section>
+            )}
 
-            {/* ── 6. Trust Section ───────────────────────────────────────── */}
+            {/* ── 4. Recently Updated Rankings ─────────────────────────────── */}
+            {recentTools.length > 0 && (
+                <section>
+                    <h2 className="text-xl font-black text-white mb-2 flex items-center gap-2">
+                        <Radio size={18} className="text-news-accent" /> Recently Updated
+                    </h2>
+                    <p className="text-sm text-news-muted mb-6">Rankings refreshed with the latest product updates and pricing.</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {recentTools.map(tool => {
+                            const updatedLabel = new Date(tool.last_updated!).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                            return (
+                                <button
+                                    key={tool.slug}
+                                    onClick={() => onToolClick?.(tool.slug)}
+                                    className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-surface-card border border-border-subtle hover:border-news-accent/50 hover:-translate-y-0.5 transition-all text-center"
+                                >
+                                    <div className="relative">
+                                        <div className="w-12 h-12 rounded-2xl bg-white border border-border-subtle flex items-center justify-center p-2 flex-shrink-0">
+                                            {tool.logo
+                                                ? <img src={tool.logo} alt={tool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                                : <Layers size={18} className="text-news-muted" />
+                                            }
+                                        </div>
+                                        <span className="absolute -top-1.5 -right-1.5 text-[7px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black uppercase tracking-widest whitespace-nowrap">
+                                            UPDATED
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[11px] font-bold text-white group-hover:text-news-accent transition-colors leading-tight line-clamp-1 block">{tool.name}</span>
+                                        {tool.category_primary && (
+                                            <span className="text-[9px] text-news-muted">{tool.category_primary}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col items-center gap-1">
+                                        {tool.rating_score > 0 && (
+                                            <span className="flex items-center gap-0.5 text-[9px] text-news-accent font-bold">
+                                                <Star size={9} fill="currentColor" />{tool.rating_score}
+                                            </span>
+                                        )}
+                                        <span className="text-[8px] text-news-muted font-bold">{updatedLabel}</span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </section>
+            )}
+
+            {/* ── 5. Trust Section ───────────────────────────────────────── */}
             <section className="rounded-2xl border border-border-subtle bg-surface-card p-8">
                 <h2 className="text-base font-black text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                     <Star size={16} className="text-news-accent" /> How We Rank
@@ -1252,79 +1139,24 @@ const BestSoftwareHub: React.FC<{
                 </div>
             </section>
 
-            {/* ── 7. Internal Linking: Compare + Stack CTAs ─────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-7 flex flex-col gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                        <BarChart2 size={18} className="text-blue-400" />
-                    </div>
-                    <div>
-                        <h3 className="text-base font-black text-white mb-2">Compare Tools Side by Side</h3>
-                        <p className="text-sm text-news-muted leading-relaxed mb-4">Not sure which tool is right for you? Our comparison pages break down features, pricing, and use cases head to head.</p>
-                    </div>
-                    <button
-                        onClick={() => onComparisonClick?.('comparisons')}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-black hover:bg-blue-500/20 transition-colors self-start"
-                    >
-                        Browse Comparisons <ArrowRight size={13} />
-                    </button>
+            {/* ── 6. Compare Tools CTA ──────────────────────────────────── */}
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-7 flex flex-col gap-4 max-w-2xl">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                    <BarChart2 size={18} className="text-blue-400" />
                 </div>
-                <div className="rounded-2xl border border-news-accent/20 bg-news-accent/5 p-7 flex flex-col gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-news-accent/10 border border-news-accent/20 flex items-center justify-center">
-                        <Layers size={18} className="text-news-accent" />
-                    </div>
-                    <div>
-                        <h3 className="text-base font-black text-white mb-2">Build Your Software Stack</h3>
-                        <p className="text-sm text-news-muted leading-relaxed mb-4">Found a few tools you like? See how they fit together as a complete workflow stack — pre-assembled by category and use case.</p>
-                    </div>
-                    <a
-                        href="/stacks"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-news-accent/10 border border-news-accent/30 text-news-accent text-xs font-black hover:bg-news-accent/20 transition-colors self-start"
-                    >
-                        Explore Stacks <ArrowRight size={13} />
-                    </a>
+                <div>
+                    <h3 className="text-base font-black text-white mb-2">Compare Tools Side by Side</h3>
+                    <p className="text-sm text-news-muted leading-relaxed mb-4">Not sure which tool is right for you? Our comparison pages break down features, pricing, and use cases head to head.</p>
                 </div>
+                <button
+                    onClick={() => onComparisonClick?.('comparisons')}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-black hover:bg-blue-500/20 transition-colors self-start"
+                >
+                    Browse Comparisons <ArrowRight size={13} />
+                </button>
             </div>
 
-            {/* ── 8. Related Guides ──────────────────────────────────────── */}
-            {guides.length > 0 && (
-                <section>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-5">Related Guides</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {guides.map(a => (
-                            <button key={a.id} onClick={() => onArticleClick(a)}
-                                className="group text-left bg-surface-card border border-border-subtle rounded-2xl overflow-hidden hover:-translate-y-0.5 hover:border-purple-400/40 transition-all"
-                            >
-                                {a.imageUrl && <img src={a.imageUrl} alt={a.title} className="w-full h-28 object-cover" loading="lazy" />}
-                                <div className="p-4">
-                                    <p className="text-[9px] font-bold uppercase tracking-widest text-purple-400 mb-2">Guide</p>
-                                    <h4 className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors leading-snug line-clamp-2">{a.title}</h4>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* ── 9. Related Reviews ─────────────────────────────────────── */}
-            {reviews.length > 0 && (
-                <section>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-5">Related Reviews</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {reviews.map(a => (
-                            <button key={a.id} onClick={() => onArticleClick(a)}
-                                className="group text-left bg-surface-card border border-border-subtle rounded-2xl p-4 hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all"
-                            >
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-2">Review</p>
-                                <h4 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{a.title}</h4>
-                                <span className="text-[10px] text-news-muted flex items-center gap-1 mt-2 group-hover:text-white transition-colors">Read review <ArrowRight size={9} /></span>
-                            </button>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* ── 10. AI Tools Back-Link Banner ──────────────────────────── */}
+            {/* ── 7. AI Tools Back-Link Banner ──────────────────────────── */}
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-7 flex flex-col sm:flex-row sm:items-center gap-5">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
                     <Search size={20} className="text-emerald-400" />
@@ -1982,8 +1814,8 @@ const ReviewsHub: React.FC<{
     const [sortBy, setSortBy] = useState<'newest' | 'highest-rated'>('newest');
 
     useEffect(() => {
-        fetch('/api/tools').then(r => r.json()).then(setTools).catch(() => {});
-        fetch('/api/comparisons').then(r => r.json()).then(setComparisons).catch(() => {});
+        fetch('/api/tools').then(r => r.json()).then(d => setTools(Array.isArray(d) ? d : [])).catch(() => {});
+        fetch('/api/comparisons').then(r => r.json()).then(d => setComparisons(Array.isArray(d) ? d : [])).catch(() => {});
     }, []);
 
     const reviews = articles.filter(a => {
@@ -2246,7 +2078,7 @@ const UseCasesHubInner: React.FC<{
     const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'tools'>('popular');
 
     useEffect(() => {
-        fetch('/api/tools').then(r => r.json()).then(setAllTools).catch(() => {});
+        fetch('/api/tools').then(r => r.json()).then(d => setAllTools(Array.isArray(d) ? d : [])).catch(() => {});
     }, []);
 
     const toolMap = React.useMemo(() => {
@@ -2521,7 +2353,7 @@ const GuidesHubInner: React.FC<{
     const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'beginner'>('popular');
 
     useEffect(() => {
-        fetch('/api/tools').then(r => r.json()).then(setAllTools).catch(() => {});
+        fetch('/api/tools').then(r => r.json()).then(d => setAllTools(Array.isArray(d) ? d : [])).catch(() => {});
     }, []);
 
     const toolMap = React.useMemo(() => {

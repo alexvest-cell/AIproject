@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { StackPageData, Article, Tool, Stack } from '../types';
 import {

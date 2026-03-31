@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { X, Mail, Check, Bell, Loader2 } from 'lucide-react';
 import { CATEGORIES } from '../data/categories';

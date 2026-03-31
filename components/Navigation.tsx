@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Section, Article } from '../types';
@@ -302,7 +303,7 @@ const Navigation: React.FC<NavigationProps> = ({
   // Dynamic AI tools menu data
   const [navTools, setNavTools] = useState<any[]>([]);
   useEffect(() => {
-    fetch('/api/tools').then(r => r.json()).then(setNavTools).catch(() => {});
+    fetch('/api/tools').then(r => r.json()).then(d => setNavTools(Array.isArray(d) ? d : [])).catch(() => {});
   }, []);
 
   const aiToolsColumns = React.useMemo((): MegaMenuColumn[] => {
@@ -355,6 +356,80 @@ const Navigation: React.FC<NavigationProps> = ({
       { heading: 'Filter by Use Case', items: useCaseItems },
       { heading: 'Featured Tools', items: featuredItems },
     ];
+  }, [navTools]);
+
+  const BS_WORKFLOW_ICON: Record<string, React.ElementType> = {
+    'Students': Users, 'Developers': Code2, 'Marketers': Megaphone,
+    'Content Creators': PenLine, 'Startups': Rocket, 'Small Business': Briefcase,
+    'Enterprise': Layers, 'Researchers': Search, 'Designers': ImageIcon, 'Sales Teams': Star,
+  };
+
+  const bsNavColumns = React.useMemo((): MegaMenuColumn[] => {
+    if (!navTools.length) return MEGA_MENUS['best-software'];
+
+    // Column 1: Browse by Workflow
+    const wfFreq: Record<string, number> = {};
+    navTools.forEach(t => ((t as any).workflow_tags || []).forEach((tag: string) => {
+      wfFreq[tag] = (wfFreq[tag] || 0) + 1;
+    }));
+    const wfItems = Object.entries(wfFreq)
+      .sort((a, b) => b[1] - a[1]).slice(0, 6)
+      .map(([tag, count]) => ({
+        label: tag,
+        href: `/best-software?workflow=${encodeURIComponent(tag.toLowerCase().replace(/\s+/g, '-'))}`,
+        hub: 'best-software',
+        description: `${count} tool${count !== 1 ? 's' : ''}`,
+        icon: BS_WORKFLOW_ICON[tag],
+      }));
+
+    // Column 2: Browse by Category
+    const bsCatFreq: Record<string, number> = {};
+    navTools.forEach(t => { if (t.category_primary) bsCatFreq[t.category_primary] = (bsCatFreq[t.category_primary] || 0) + 1; });
+    const bsCatItems = Object.entries(bsCatFreq)
+      .sort((a, b) => b[1] - a[1]).slice(0, 6)
+      .map(([cat, count]) => ({
+        label: cat,
+        href: `/ai-tools?category=${encodeURIComponent(cat)}`,
+        hub: 'best-software',
+        description: `${count} tools`,
+        icon: CATEGORY_ICON_MAP[cat],
+      }));
+
+    // Column 3: Top Rated Tools
+    const topRatedItems = [...navTools]
+      .sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 5)
+      .map(t => ({
+        label: t.name,
+        href: `/tools/${t.slug}`,
+        hub: 'best-software',
+        logo: t.logo || undefined,
+        description: t.rating_score > 0 ? `★ ${t.rating_score}` : (t.category_primary || undefined),
+      }));
+
+    // Column 4: Recently Updated
+    const recentItems = [...navTools]
+      .filter(t => (t as any).last_updated)
+      .sort((a, b) => new Date((b as any).last_updated).getTime() - new Date((a as any).last_updated).getTime())
+      .slice(0, 5)
+      .map(t => {
+        const label = new Date((t as any).last_updated).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return {
+          label: t.name,
+          href: `/tools/${t.slug}`,
+          hub: 'best-software',
+          logo: t.logo || undefined,
+          description: `Updated ${label}`,
+          badge: 'New' as const,
+        };
+      });
+
+    const cols: MegaMenuColumn[] = [
+      { heading: 'Browse by Workflow', items: wfItems.length ? wfItems : MEGA_MENUS['best-software'][2].items },
+      { heading: 'Browse by Category', items: bsCatItems.length ? bsCatItems : MEGA_MENUS['best-software'][1].items },
+      { heading: 'Top Rated Tools', items: topRatedItems.length ? topRatedItems : MEGA_MENUS['best-software'][0].items },
+    ];
+    if (recentItems.length) cols.push({ heading: 'Recently Updated', items: recentItems });
+    return cols;
   }, [navTools]);
 
   // ── Viewport listener ──────────────────────────────────────────────────────
@@ -618,10 +693,10 @@ const Navigation: React.FC<NavigationProps> = ({
       </div>
 
       {/* ── Desktop Mega Menu Panel (portal, desktop ≥1024px only) ─────────── */}
-      {isDesktop && activeDropdown && (MEGA_MENUS[activeDropdown] || activeDropdown === 'ai-tools') && (
+      {isDesktop && activeDropdown && (MEGA_MENUS[activeDropdown] || activeDropdown === 'ai-tools' || activeDropdown === 'best-software') && (
         <MegaMenuPanel
           slug={activeDropdown}
-          columns={activeDropdown === 'ai-tools' ? aiToolsColumns : MEGA_MENUS[activeDropdown]}
+          columns={activeDropdown === 'ai-tools' ? aiToolsColumns : activeDropdown === 'best-software' ? bsNavColumns : MEGA_MENUS[activeDropdown]}
           anchorRect={anchorRect}
           onItemClick={handleMegaItemClick}
           onMouseEnter={cancelClose}
@@ -746,7 +821,7 @@ const Navigation: React.FC<NavigationProps> = ({
                     {/* Best Software Sub-sections */}
                     {mobileExpanded === 'best-software' && (
                       <div className="pl-4 mt-2 space-y-2 animate-fade-in border-l-2 border-border-divider ml-7">
-                        {MEGA_MENUS['best-software'].map((col, ci) => {
+                        {bsNavColumns.map((col, ci) => {
                           const colKey = `best-software-${ci}`;
                           const isSubExpanded = mobileSubExpanded === colKey;
                           return (

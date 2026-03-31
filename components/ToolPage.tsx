@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useState } from 'react';
 import { Tool, Article, Stack } from '../types';
 import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon, ChevronDown } from 'lucide-react';
@@ -10,6 +11,11 @@ interface ToolPageProps {
     onComparisonClick: (slug: string) => void;
     onAlternativesClick: (slug: string) => void;
     onStackClick?: (slug: string) => void;
+    // Server-prefetched data — skips client-side fetch when provided
+    initialTool?: Tool;
+    initialAlternatives?: Tool[];
+    initialCompetitors?: Tool[];
+    initialRelatedTools?: Tool[];
 }
 
 const PRICING_COLORS: Record<string, string> = {
@@ -43,9 +49,9 @@ const USE_CASE_VALUES = [
     'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity', 'Marketing',
 ] as const;
 
-const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick }) => {
-    const [tool, setTool] = useState<Tool | null>(null);
-    const [alternatives, setAlternatives] = useState<Tool[]>([]);
+const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick, initialTool, initialAlternatives, initialCompetitors, initialRelatedTools }) => {
+    const [tool, setTool] = useState<Tool | null>(initialTool ?? null);
+    const [alternatives, setAlternatives] = useState<Tool[]>(initialAlternatives ?? []);
     const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
     const [reviews, setReviews] = useState<Article[]>([]);
     const [guides, setGuides] = useState<Article[]>([]);
@@ -55,11 +61,16 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const [stacks, setStacks] = useState<Stack[]>([]);
     const [useCases, setUseCases] = useState<any[]>([]);
     const [allTools, setAllTools] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!initialTool);
     const [error, setError] = useState<string | null>(null);
     const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set(['free']));
 
     useEffect(() => {
+        if (initialTool) {
+            // Data was pre-loaded server-side; skip the primary fetch
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         setError(null);
         // Scroll restoration managed by browser
@@ -168,8 +179,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
     const competitorIds: string[] = Array.isArray(t.competitors) ? t.competitors : [];
     const relatedToolIds: string[] = Array.isArray(t.related_tools) ? t.related_tools : [];
-    const competitorObjs = allTools.filter(at => competitorIds.includes(at.id));
-    const relatedToolObjs = allTools.filter(at => relatedToolIds.includes(at.id));
+    const competitorObjs = (initialCompetitors?.length) ? initialCompetitors : allTools.filter(at => competitorIds.includes(at.id));
+    const relatedToolObjs = (initialRelatedTools?.length) ? initialRelatedTools : allTools.filter(at => relatedToolIds.includes(at.id));
 
     // Inline link injection: wraps competitor names in <a> tags within prose text
     const linkifyCompetitors = (text: string): React.ReactNode => {
@@ -480,17 +491,38 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     const ci = line.indexOf(':');
                                     return { plan: ci > 0 ? line.slice(0, ci).trim() : line.trim(), models: ci > 0 ? line.slice(ci + 1).trim() : '' };
                                 });
+                            // Build limitsMap from rate_limits.
+                            // Plan names may include a price suffix: "Go ($8/mo): limits..."
+                            // Strip that suffix so keys match the plain plan names from model_version_by_plan.
                             const limitsMap: Record<string, string> = {};
+                            const rateLimitsPriceMap: Record<string, string> = {};
                             if (t.rate_limits) {
                                 (t.rate_limits as string).split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
                                     const ci = line.indexOf(':');
-                                    if (ci > 0) limitsMap[line.slice(0, ci).trim().toLowerCase()] = line.slice(ci + 1).trim();
+                                    if (ci < 0) return;
+                                    const rawKey = line.slice(0, ci).trim();
+                                    // Extract "(price)" from plan name if present e.g. "Go ($8/mo)"
+                                    const priceMatch = rawKey.match(/\(([^)]+)\)\s*$/);
+                                    const planKey = rawKey.replace(/\s*\([^)]+\)\s*$/, '').trim().toLowerCase();
+                                    if (priceMatch) rateLimitsPriceMap[planKey] = priceMatch[1];
+                                    limitsMap[planKey] = line.slice(ci + 1).trim();
                                 });
                             }
                             const priceMap: Record<string, string> = {};
-                            if (t.starting_price) {
-                                const tiers = parsePricingTiers(t.starting_price as string);
-                                if (tiers) tiers.forEach(({ label, price }) => { priceMap[label.toLowerCase()] = price; });
+                            if (t.price_by_plan) {
+                                // Explicit price_by_plan field takes priority
+                                (t.price_by_plan as string).split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+                                    const ci = line.indexOf(':');
+                                    if (ci > 0) priceMap[line.slice(0, ci).trim().toLowerCase()] = line.slice(ci + 1).trim();
+                                });
+                            } else {
+                                // Extract prices embedded in rate_limits plan names e.g. "Plus ($20/mo):"
+                                Object.assign(priceMap, rateLimitsPriceMap);
+                                // Final fallback: legacy "$0 (Go: $8/mo; Plus: $20/mo)" compact format
+                                if (!Object.keys(priceMap).length && t.starting_price) {
+                                    const tiers = parsePricingTiers(t.starting_price as string);
+                                    if (tiers) tiers.forEach(({ label, price }) => { priceMap[label.toLowerCase()] = price; });
+                                }
                             }
                             return (
                                 <section id="plans" className="scroll-mt-24">

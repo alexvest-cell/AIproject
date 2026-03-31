@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useState } from 'react';
 import { Section, Article, Comparison, Tool } from '../types';
 import { ArrowRight, Filter, ExternalLink, Star } from 'lucide-react';

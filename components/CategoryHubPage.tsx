@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useState } from 'react';
 import { Article, Tool, Comparison, Category, UseCase } from '../types';
 import { ArrowRight, Star, Zap, Filter, BookOpen, LayoutGrid, ChevronLeft, TrendingUp, Layers } from 'lucide-react';

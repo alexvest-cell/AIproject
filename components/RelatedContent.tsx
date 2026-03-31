@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import { Tool, Comparison, Article, Stack } from '../types';
 import { ArrowRight, Star, ExternalLink, Zap, LayoutGrid, Layers, FileText } from 'lucide-react';

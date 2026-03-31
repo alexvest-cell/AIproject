@@ -1,0 +1,80 @@
+import Article from './models/Article';
+import Tool from './models/Tool';
+import Comparison from './models/Comparison';
+import Stack from './models/Stack';
+
+function generateSlug(text: string): string {
+    return text.toString().toLowerCase().trim()
+        .replace(/[\s_]+/g, '-').replace(/[^\w-]+/g, '')
+        .replace(/--+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+}
+
+export default async function seedDatabase() {
+    try {
+        // Lazy-load seed data (large files, don't import at module level)
+        const { seedArticles, seedTools, seedComparisons, seedStacks } = await import('./seed_data_toolcurrent.js');
+
+        // 1. Seed Articles
+        const count = await Article.countDocuments();
+        if (count === 0) {
+            console.log('Seeding database with ToolCurrent articles...');
+            const formattedSeed = seedArticles.map((a: Record<string, unknown>) => ({
+                ...a,
+                content: Array.isArray(a.content) ? a.content : [a.content],
+                slug: a.slug || generateSlug(a.title as string),
+            }));
+            await Article.insertMany(formattedSeed);
+            console.log('Article seeding complete.');
+        }
+
+        // 2. Seed Tools ($setOnInsert — never overwrites CMS edits)
+        let seededCount = 0;
+        for (const tool of seedTools) {
+            const result = await Tool.findOneAndUpdate(
+                { slug: tool.slug },
+                { $setOnInsert: tool },
+                { upsert: true, new: false }
+            );
+            if (!result) seededCount++;
+        }
+        if (seededCount > 0) console.log(`Tool seed: inserted ${seededCount} new tools.`);
+
+        // 3. Seed Comparisons ($setOnInsert — never overwrites CMS edits)
+        for (const comparison of seedComparisons) {
+            await Comparison.findOneAndUpdate(
+                { slug: comparison.slug },
+                { $setOnInsert: comparison },
+                { upsert: true, new: true }
+            );
+        }
+
+        // Migrate: copy primary_use_cases[0] → use_case for docs missing it
+        const migrated = await Comparison.updateMany(
+            { use_case: { $in: [null, undefined, ''] }, $or: [{ primary_use_cases: { $exists: true, $not: { $size: 0 } } }, { primary_use_case: { $exists: true, $ne: '' } }] },
+            [{ $set: { use_case: { $ifNull: [{ $arrayElemAt: ['$primary_use_cases', 0] }, '$primary_use_case'] } } }],
+            { strict: false, updatePipeline: true } as any
+        );
+        if (migrated.modifiedCount > 0) console.log(`Migrated ${migrated.modifiedCount} comparisons → use_case field.`);
+
+        const overrideMigrated = await Comparison.updateMany(
+            { is_override: { $exists: false } },
+            { $set: { is_override: true } }
+        );
+        if (overrideMigrated.modifiedCount > 0) console.log(`Migration: marked ${overrideMigrated.modifiedCount} comparisons as is_override=true.`);
+
+        // 4. Seed Stacks ($setOnInsert — never overwrites CMS edits)
+        const stackCount = await Stack.countDocuments();
+        if (stackCount < seedStacks.length) {
+            for (const stack of seedStacks) {
+                await Stack.findOneAndUpdate(
+                    { slug: stack.slug },
+                    { $setOnInsert: stack },
+                    { upsert: true, new: true }
+                );
+            }
+            console.log('Stacks sync complete.');
+        }
+    } catch (err) {
+        console.error('Seeding error:', err);
+    }
+}

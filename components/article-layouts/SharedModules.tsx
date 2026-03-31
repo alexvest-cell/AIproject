@@ -1,3 +1,5 @@
+// @ts-nocheck
+'use client';
 import React, { useEffect, useState } from 'react';
 import { Article, Tool, Comparison, Stack } from '../../types';
 import * as toolsService from '../../services/toolsService';

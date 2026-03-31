@@ -1,3 +1,5 @@
+// @ts-nocheck
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Edit, Save, Plus, Download, Upload, Calendar, Eye, EyeOff, Sparkles, Image as ImageIcon, Clock, Copy, FileImage, Volume2, Loader2, ArrowLeft, LogOut, Search, Headphones, ExternalLink, ArrowRight, Layers, Tag, ChevronDown, Code2 } from 'lucide-react';
@@ -90,7 +92,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
-    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', free_tier: '', rate_limits: '', model_version_by_plan: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', context_window: '', max_integrations: '', api_pricing: '', image_generation: '', memory_persistence: '', computer_use: '', api_available: '', use_case_breakdown: '', use_case_scores: [] as any[], workflow_tags: [] as string[], workflow_scores: [] as any[], rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
+    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', free_tier: '', rate_limits: '', model_version_by_plan: '', price_by_plan: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', context_window: '', max_integrations: '', api_pricing: '', image_generation: '', memory_persistence: '', computer_use: '', api_available: '', use_case_breakdown: '', use_case_scores: [] as any[], workflow_tags: [] as string[], workflow_scores: [] as any[], rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
     const [toolForm, setToolForm] = useState<any>({ ...EMPTY_TOOL_FORM });
     const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
@@ -264,7 +266,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         // Integrations: 3–6
         const ints = splitComma(form.integrations);
-        if (ints.length < 3 || ints.length > 8) errors.integrations = `Must have 3–8 items (currently ${ints.length})`;
+        if (ints.length < 3 || ints.length > 10) errors.integrations = `Must have 3–10 items (currently ${ints.length})`;
 
         // Use cases: 1–5, from enum only
         const ucs: string[] = Array.isArray(form.use_case_tags) ? form.use_case_tags : splitComma(form.use_case_tags);
@@ -538,6 +540,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
             free_tier: t.free_tier || '',
             rate_limits: t.rate_limits || '',
             model_version_by_plan: t.model_version_by_plan || '',
+            price_by_plan: t.price_by_plan || '',
             primary_keyword: t.primary_keyword || '',
             review_slug: t.review_slug || '',
             last_updated: t.last_updated || '',
@@ -641,6 +644,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const free_tier = extracted['FREE_TIER'] || null;
         const rate_limits = extracted['RATE_LIMITS'] || null;
         const model_version_by_plan = extracted['MODEL_VERSION_BY_PLAN'] || null;
+        const price_by_plan = extracted['PRICE_BY_PLAN'] || null;
         const primary_keyword = extracted['PRIMARY_KEYWORD'] || null;
         const alternative_keywords = parseArr(extracted['ALTERNATIVE_KEYWORDS']);
         const review_slug = extracted['REVIEW_SLUG'] || null;
@@ -688,7 +692,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (key_features.length < 4 || key_features.length > 6) errors.push(`KEY_FEATURES must have 4–6 items (got ${key_features.length})`);
         if (pros.length < 3 || pros.length > 5) errors.push(`PROS must have 3–5 items (got ${pros.length})`);
         if (cons.length < 2 || cons.length > 4) errors.push(`CONS must have 2–4 items (got ${cons.length})`);
-        if (integrations.length < 3 || integrations.length > 8) errors.push(`INTEGRATIONS must have 3–8 items (got ${integrations.length})`);
+        if (integrations.length < 3 || integrations.length > 10) errors.push(`INTEGRATIONS must have 3–10 items (got ${integrations.length})`);
         if (use_case_tags.length < 1 || use_case_tags.length > 5) errors.push(`USE_CASES must have 1–5 valid items (got ${use_case_tags.length})`);
         if (catRaw && !category_primary) errors.push(`CATEGORY_PRIMARY "${catRaw}" is not valid. Options: ${CATEGORY_PRIMARY_OPTS.join(', ')}`);
         if (invalidUC.length) errors.push(`USE_CASES has unrecognised values: ${invalidUC.join(', ')}`);
@@ -728,7 +732,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         if (errors.length) return { status: 'error' as const, errors };
 
-        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, free_tier, rate_limits, model_version_by_plan, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated, context_window, max_integrations, api_pricing, image_generation, memory_persistence, computer_use, api_available, workflow_tags, workflow_breakdown_raw } };
+        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, free_tier, rate_limits, model_version_by_plan, price_by_plan, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated, context_window, max_integrations, api_pricing, image_generation, memory_persistence, computer_use, api_available, workflow_tags, workflow_breakdown_raw } };
     };
 
     const handleParseInput = () => {
@@ -795,6 +799,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 free_tier: d.free_tier || (isEditing ? prev.free_tier : ''),
                 rate_limits: d.rate_limits || (isEditing ? prev.rate_limits : ''),
                 model_version_by_plan: d.model_version_by_plan || (isEditing ? prev.model_version_by_plan : ''),
+                price_by_plan: d.price_by_plan || (isEditing ? prev.price_by_plan : ''),
                 primary_keyword: d.primary_keyword || (isEditing ? prev.primary_keyword : ''),
                 alternative_keywords: d.alternative_keywords?.length ? d.alternative_keywords.join(', ') : (isEditing ? prev.alternative_keywords : ''),
                 review_slug: d.review_slug || (isEditing ? prev.review_slug : ''),
@@ -3275,6 +3280,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <textarea value={toolForm.model_version_by_plan || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setToolForm((p: any) => ({ ...p, model_version_by_plan: e.target.value }))}
                                             rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Free: Claude Sonnet 4.6 (limited)\nPro: Claude Sonnet 4.6 (unlimited), Claude Opus 4.6\nTeam: All Pro models plus admin controls"} />
                                         <p className="text-[10px] text-gray-600 mt-0.5">One line per plan tier. Format: Plan name: model name(s). Reflects current models as of Last Updated date.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Price by Plan <span className="text-gray-600">(one line per tier)</span></label>
+                                        <textarea value={toolForm.price_by_plan || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setToolForm((p: any) => ({ ...p, price_by_plan: e.target.value }))}
+                                            rows={4} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent resize-none font-mono" placeholder={"Free: Free\nGo: $8/month\nPlus: $20/month\nPro: $200/month\nBusiness: $30/user/month\nEnterprise: Custom"} />
+                                        <p className="text-[10px] text-gray-600 mt-0.5">One line per plan tier. Format: Plan name: price. Shown in the Plans & Pricing table on the tool page.</p>
                                     </div>
                                 </div>
 

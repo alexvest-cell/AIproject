@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useState } from 'react';
 import { generateArticleSchema, generateFAQSchema, injectSchema } from '../utils/schema';
 import { Article, Tool, Comparison } from '../types';

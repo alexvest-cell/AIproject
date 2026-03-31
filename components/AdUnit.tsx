@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useRef } from 'react';
 import { ADS_CONFIG } from '../data/adsConfig';
 

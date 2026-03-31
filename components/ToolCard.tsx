@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import { Check, ExternalLink, ArrowRight, Zap } from 'lucide-react';
 import { Tool } from '../types';
