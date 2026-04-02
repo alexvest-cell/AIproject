@@ -248,12 +248,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const ldWords = countWords(form.full_description || '');
         if (ldWords < 80 || ldWords > 150) errors.full_description = `Must be 80–150 words (currently ${ldWords})`;
 
-        // Key features: 4–6 items, each 3–20 words
+        // Key features: 4–6 items, each 3–24 words
         const kf = splitLines(form.key_features);
         if (kf.length < 4 || kf.length > 6) errors.key_features = `Must have 4–6 items (currently ${kf.length})`;
         else {
-            const badKf = kf.filter((f: string) => { const w = countWords(f); return w < 3 || w > 20; });
-            if (badKf.length) errors.key_features = `Each feature must be 3–20 words. Check: "${badKf[0]}"`;
+            const badKf = kf.filter((f: string) => { const w = countWords(f); return w < 3 || w > 24; });
+            if (badKf.length) errors.key_features = `Each feature must be 3–24 words. Check: "${badKf[0]}"`;
         }
 
         // Pros: 3–5
@@ -3174,7 +3174,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
                                 {/* Key Features */}
                                 <div>
-                                    <label className="block text-xs text-gray-400 mb-1">Key Features <span className="text-gray-600">(4–6, one per line, 3–20 words each)</span></label>
+                                    <label className="block text-xs text-gray-400 mb-1">Key Features <span className="text-gray-600">(4–6, one per line, 3–24 words each)</span></label>
                                     <textarea value={Array.isArray(toolForm.key_features) ? toolForm.key_features.join('\n') : toolForm.key_features || ''}
                                         onChange={e => { setToolForm((p: any) => ({ ...p, key_features: e.target.value })); setToolErrors((e: any) => ({ ...e, key_features: undefined })); }}
                                         rows={5} className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none font-mono ${toolErrors.key_features ? 'border-red-500/60 focus:border-red-500' : 'border-white/10 focus:border-news-accent'}`} placeholder={"Feature one\nFeature two\nFeature three"} />
