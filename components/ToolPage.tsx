@@ -574,11 +574,16 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
                         {/* Plans & Pricing */}
                         {t.model_version_by_plan && (() => {
+                            const mvbpPriceMap: Record<string, string> = {};
                             const planTiersList = (t.model_version_by_plan as string)
                                 .split('\n').filter((l: string) => l.trim())
                                 .map((line: string) => {
                                     const ci = line.indexOf(':');
-                                    return { plan: ci > 0 ? line.slice(0, ci).trim() : line.trim(), models: ci > 0 ? line.slice(ci + 1).trim() : '' };
+                                    const rawKey = ci > 0 ? line.slice(0, ci).trim() : line.trim();
+                                    const priceMatch = rawKey.match(/\(([^)]+)\)\s*$/);
+                                    const planName = rawKey.replace(/\s*\([^)]+\)\s*$/, '').trim();
+                                    if (priceMatch) mvbpPriceMap[planName.toLowerCase()] = priceMatch[1];
+                                    return { plan: planName, models: ci > 0 ? line.slice(ci + 1).trim() : '' };
                                 });
                             // Build limitsMap from rate_limits.
                             // Plan names may include a price suffix: "Go ($8/mo): limits..."
@@ -605,7 +610,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     if (ci > 0) priceMap[line.slice(0, ci).trim().toLowerCase()] = line.slice(ci + 1).trim();
                                 });
                             } else {
-                                // Extract prices embedded in rate_limits plan names e.g. "Plus ($20/mo):"
+                                // Prices embedded in model_version_by_plan plan names e.g. "Plus ($20/mo):"
+                                Object.assign(priceMap, mvbpPriceMap);
+                                // Prices embedded in rate_limits plan names e.g. "Plus ($20/mo):"
                                 Object.assign(priceMap, rateLimitsPriceMap);
                                 // Final fallback: legacy "$0 (Go: $8/mo; Plus: $20/mo)" compact format
                                 if (!Object.keys(priceMap).length && t.starting_price) {
@@ -645,7 +652,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                                 {(() => {
                                                                     const p = priceMap[tier.plan.toLowerCase()];
                                                                     if (p) return <span className={`font-bold ${isFree ? 'text-news-accent' : 'text-white'}`}>{p}</span>;
-                                                                    if (t.website_url) return <a href={t.website_url} target="_blank" rel="noopener noreferrer" className="text-news-accent hover:underline">See pricing →</a>;
                                                                     return <span className="text-news-muted">—</span>;
                                                                 })()}
                                                             </td>
@@ -679,7 +685,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                             {isFree && <span className="text-[8px] font-bold uppercase tracking-widest text-news-accent border border-news-accent/30 px-1.5 py-0.5 rounded">FREE</span>}
                                                         </div>
                                                         <div className="flex items-center gap-3 flex-shrink-0">
-                                                            <span className="text-xs font-bold text-news-accent">{priceMap[tier.plan.toLowerCase()] || (isFree ? '$0' : 'See pricing')}</span>
+                                                            <span className="text-xs font-bold text-news-accent">{priceMap[tier.plan.toLowerCase()] || (isFree ? '$0' : '—')}</span>
                                                             <ChevronDown size={14} className={`text-news-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                                                         </div>
                                                     </button>
