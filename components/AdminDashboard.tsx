@@ -92,7 +92,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // Tools state
     const [tools, setTools] = useState<any[]>([]);
-    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', free_tier: '', rate_limits: '', model_version_by_plan: '', price_by_plan: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', context_window: '', max_integrations: '', api_pricing: '', image_generation: '', memory_persistence: '', computer_use: '', api_available: '', use_case_breakdown: '', use_case_scores: [] as any[], workflow_tags: [] as string[], workflow_scores: [] as any[], rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
+    const EMPTY_TOOL_FORM = { name: '', slug: '', short_description: '', full_description: '', pricing_model: 'Freemium', starting_price: '', category_primary: '', secondary_tags: '', use_case_tags: [] as string[], key_features: '', pros: '', cons: '', integrations: '', supported_platforms: [] as string[], website_url: '', affiliate_url: '', logo: '', data_confidence: 'ai_generated', related_tools: [] as string[], competitors: [] as string[], rating_score: 0, screenshots: [] as { url: string; caption: string }[], review_slug: '', meta_title: '', meta_description: '', primary_keyword: '', alternative_keywords: '', model_version: '', free_tier: '', rate_limits: '', model_version_by_plan: '', price_by_plan: '', alternative_selection: '', best_for: '', not_ideal_for: '', limitations: '', context_window: '', max_integrations: '', api_pricing: '', image_generation: '', memory_persistence: '', computer_use: '', api_available: '', multimodal: '', open_source: '', browser_extension: '', use_case_breakdown: '', use_case_scores: [] as any[], workflow_tags: [] as string[], workflow_scores: [] as any[], rating_breakdown: '', competitor_differentiator: '', related_tool_note: '', last_updated: '' };
     const [toolForm, setToolForm] = useState<any>({ ...EMPTY_TOOL_FORM });
     const [toolErrors, setToolErrors] = useState<Record<string, string>>({});
     const [editingToolId, setEditingToolId] = useState<string | null>(null);
@@ -270,7 +270,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         // Use cases: 1–5, from enum only
         const ucs: string[] = Array.isArray(form.use_case_tags) ? form.use_case_tags : splitComma(form.use_case_tags);
-        const VALID_USE_CASES = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'];
+        const VALID_USE_CASES = ['Content Creation','Marketing','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Image Generation','Video Generation','Audio Generation','SEO','Sales'];
         if (ucs.length < 1 || ucs.length > 5) errors.use_case_tags = `Must select 1–5 use cases (currently ${ucs.length})`;
         else {
             const invalid = ucs.filter((u: string) => !VALID_USE_CASES.includes(u));
@@ -367,6 +367,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 memory_persistence: toolForm.memory_persistence || undefined,
                 computer_use: toolForm.computer_use || undefined,
                 api_available: toolForm.api_available || undefined,
+                multimodal: toolForm.multimodal || undefined,
+                open_source: toolForm.open_source || undefined,
+                browser_extension: toolForm.browser_extension || undefined,
                 // New fields — convert textarea strings back to arrays/objects
                 best_for: splitLines(toolForm.best_for),
                 not_ideal_for: splitLines(toolForm.not_ideal_for),
@@ -498,6 +501,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
             memory_persistence: t.memory_persistence || '',
             computer_use: t.computer_use || '',
             api_available: t.api_available || '',
+            multimodal: t.multimodal || '',
+            open_source: t.open_source || '',
+            browser_extension: t.browser_extension || '',
             use_case_breakdown: mapToStr(t.use_case_breakdown),
             use_case_scores: (() => {
                 let parsed: any[] = [];
@@ -551,10 +557,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // ── Client-side parser (no server call needed) ──────────────────────────
     const clientParseToolInput = (rawText: string) => {
-        const CATEGORY_PRIMARY_OPTS = ['AI Writing','AI Chatbots','Productivity','Automation','Design','Development','Marketing','Data Analysis','Customer Support','Other'];
-        const USE_CASE_OPTS = ['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'];
-        const PLATFORM_OPTS = ['Web','iOS','Android','API','Desktop'];
-        const PRICING_MAP: Record<string, string> = { free:'Free', freemium:'Freemium', paid:'Paid', trial:'Trial', enterprise:'Enterprise' };
+        const CATEGORY_PRIMARY_OPTS = ['AI Chatbots','AI Writing','AI Image Generation','AI Video','AI Audio','Productivity','Automation','Design','Development','Marketing','Sales & CRM','Customer Support','Data Analysis','SEO Tools','Other'];
+        const USE_CASE_OPTS = ['Content Creation','Marketing','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Image Generation','Video Generation','Audio Generation','SEO','Sales'];
+        const PLATFORM_OPTS = ['Web','iOS','Android','API','Desktop','Browser Extension'];
+        const PRICING_MAP: Record<string, string> = { free:'Free', freemium:'Freemium', paid:'Paid', trial:'Trial', enterprise:'Enterprise', 'open source':'Open Source' };
         const DC_OPTS = ['verified','inferred','ai_generated'];
 
         // Extract <<<FIELD>>>...<<<END_FIELD>>> blocks
@@ -652,7 +658,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const related_tool_note_raw = parseKeyValueStr(extracted['RELATED_TOOL_NOTES']);
 
         const WORKFLOW_TAG_OPTS = ['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
-            'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams'];
+            'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
+            'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists'];
         const rawWT = parseArr(extracted['WORKFLOW_TAGS']);
         const workflow_tags = rawWT
             .map(w => WORKFLOW_TAG_OPTS.find(v => v.toLowerCase() === w.toLowerCase()))
@@ -670,10 +677,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         const memPersRaw = (extracted['MEMORY_PERSISTENCE'] || '').toLowerCase().trim();
         const compUseRaw = (extracted['COMPUTER_USE'] || '').toLowerCase().trim();
         const apiAvailRaw = (extracted['API_AVAILABLE'] || '').toLowerCase().trim();
+        const multimodalRaw = (extracted['MULTIMODAL'] || '').toLowerCase().trim();
+        const openSourceRaw = (extracted['OPEN_SOURCE'] || '').toLowerCase().trim();
+        const browserExtRaw = (extracted['BROWSER_EXTENSION'] || '').toLowerCase().trim();
         const image_generation = ENUM_YNP.includes(imgGenRaw) ? imgGenRaw : null;
         const memory_persistence = ENUM_YNP.includes(memPersRaw) ? memPersRaw : null;
         const computer_use = ENUM_YNP.includes(compUseRaw) ? compUseRaw : null;
         const api_available = ENUM_YN.includes(apiAvailRaw) ? apiAvailRaw : null;
+        const multimodal = ENUM_YNP.includes(multimodalRaw) ? multimodalRaw : null;
+        const open_source = ENUM_YNP.includes(openSourceRaw) ? openSourceRaw : null;
+        const browser_extension = ENUM_YN.includes(browserExtRaw) ? browserExtRaw : null;
 
         // Parse "Month Year" (e.g. "March 2026") into ISO date string; fall back to now
         const last_updated_raw = extracted['LAST_UPDATED'] || null;
@@ -700,6 +713,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
         if (memPersRaw && !memory_persistence) errors.push(`MEMORY_PERSISTENCE must be yes, no, or partial (got "${memPersRaw}")`);
         if (compUseRaw && !computer_use) errors.push(`COMPUTER_USE must be yes, no, or partial (got "${compUseRaw}")`);
         if (apiAvailRaw && !api_available) errors.push(`API_AVAILABLE must be yes or no (got "${apiAvailRaw}")`);
+        if (multimodalRaw && !multimodal) errors.push(`MULTIMODAL must be yes, no, or partial (got "${multimodalRaw}")`);
+        if (openSourceRaw && !open_source) errors.push(`OPEN_SOURCE must be yes, no, or partial (got "${openSourceRaw}")`);
+        if (browserExtRaw && !browser_extension) errors.push(`BROWSER_EXTENSION must be yes or no (got "${browserExtRaw}")`);
 
         // WORKFLOW_TAGS / WORKFLOW_BREAKDOWN cross-validation
         if (invalidWTs.length) errors.push(`WORKFLOW_TAGS has unrecognised values: ${invalidWTs.join(', ')}. Allowed: ${WORKFLOW_TAG_OPTS.join(', ')}`);
@@ -732,7 +748,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         if (errors.length) return { status: 'error' as const, errors };
 
-        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, free_tier, rate_limits, model_version_by_plan, price_by_plan, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated, context_window, max_integrations, api_pricing, image_generation, memory_persistence, computer_use, api_available, workflow_tags, workflow_breakdown_raw } };
+        return { status: 'success' as const, data: { name, slug, short_description, full_description, category_primary, pricing_model, starting_price, use_case_tags, key_features, pros, cons, integrations, supported_platforms, website_url, affiliate_url, logo, secondary_tags, data_confidence, meta_title, meta_description, related_tool_names, competitor_names, rating_score, best_for, not_ideal_for, use_case_breakdown_raw, alternative_selection, limitations, rating_breakdown, model_version, free_tier, rate_limits, model_version_by_plan, price_by_plan, primary_keyword, alternative_keywords, review_slug, competitor_differentiator_raw, related_tool_note_raw, last_updated, context_window, max_integrations, api_pricing, image_generation, memory_persistence, computer_use, api_available, multimodal, open_source, browser_extension, workflow_tags, workflow_breakdown_raw } };
     };
 
     const handleParseInput = () => {
@@ -813,6 +829,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                 memory_persistence: d.memory_persistence || (isEditing ? prev.memory_persistence : ''),
                 computer_use: d.computer_use || (isEditing ? prev.computer_use : ''),
                 api_available: d.api_available || (isEditing ? prev.api_available : ''),
+                multimodal: d.multimodal || (isEditing ? prev.multimodal : ''),
+                open_source: d.open_source || (isEditing ? prev.open_source : ''),
+                browser_extension: d.browser_extension || (isEditing ? prev.browser_extension : ''),
                 workflow_tags: d.workflow_tags?.length ? d.workflow_tags : (isEditing ? prev.workflow_tags : []),
                 workflow_scores: (() => {
                     const raw: string = d.workflow_breakdown_raw || '';
@@ -3116,14 +3135,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <select value={toolForm.category_primary || ''} onChange={e => setToolForm((p: any) => ({ ...p, category_primary: e.target.value }))}
                                             className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
                                             <option value="">— Select —</option>
-                                            {['AI Writing','AI Chatbots','Productivity','Automation','Design','Development','Marketing','Data Analysis','Customer Support','Other'].map(c => <option key={c} value={c}>{c}</option>)}
+                                            {['AI Chatbots','AI Writing','AI Image Generation','AI Video','AI Audio','Productivity','Automation','Design','Development','Marketing','Sales & CRM','Customer Support','Data Analysis','SEO Tools','Other'].map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">Pricing Model *</label>
                                         <select value={toolForm.pricing_model} onChange={e => setToolForm((p: any) => ({ ...p, pricing_model: e.target.value }))}
                                             className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
-                                            {['Free', 'Freemium', 'Paid', 'Trial', 'Enterprise'].map(m => <option key={m} value={m}>{m}</option>)}
+                                            {['Free', 'Freemium', 'Paid', 'Trial', 'Enterprise', 'Open Source'].map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
                                     <div>
@@ -3151,7 +3170,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <span className={`font-mono ${(toolForm.use_case_tags?.length || 0) > 5 ? 'text-red-400' : 'text-gray-500'}`}>{toolForm.use_case_tags?.length || 0}/5</span>
                                     </label>
                                     <div className={`flex flex-wrap gap-1.5 p-3 bg-black/40 border rounded-lg ${toolErrors.use_case_tags ? 'border-red-500/60' : 'border-white/10'}`}>
-                                        {['Content Creation','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Marketing'].map(uc => {
+                                        {['Content Creation','Marketing','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Image Generation','Video Generation','Audio Generation','SEO','Sales'].map(uc => {
                                             const ucArr: string[] = Array.isArray(toolForm.use_case_tags) ? toolForm.use_case_tags : [];
                                             const selected = ucArr.includes(uc);
                                             const atMax = ucArr.length >= 5 && !selected;
@@ -3212,7 +3231,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                 <div>
                                     <label className="block text-xs text-gray-400 mb-1">Platforms</label>
                                     <div className="flex flex-wrap gap-1.5 p-3 bg-black/40 border border-white/10 rounded-lg">
-                                        {['Web','iOS','Android','API','Desktop'].map(p => {
+                                        {['Web','iOS','Android','API','Desktop','Browser Extension'].map(p => {
                                             const sel = Array.isArray(toolForm.supported_platforms) ? toolForm.supported_platforms.includes(p) : false;
                                             return (
                                                 <button key={p} type="button" onClick={() => setToolForm((prev: any) => {
@@ -3242,7 +3261,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         ))}
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        {[['image_generation','Image Generation',['yes','no','partial']],['memory_persistence','Memory Persistence',['yes','no','partial']],['computer_use','Computer Use',['yes','no','partial']],['api_available','API Available',['yes','no']]].map(([key, label, opts]) => (
+                                        {[['image_generation','Image Generation',['yes','no','partial']],['memory_persistence','Memory Persistence',['yes','no','partial']],['computer_use','Computer Use',['yes','no','partial']],['api_available','API Available',['yes','no']],['multimodal','Multimodal',['yes','no','partial']],['open_source','Open Source',['yes','no','partial']],['browser_extension','Browser Extension',['yes','no']]].map(([key, label, opts]) => (
                                             <div key={key as string}>
                                                 <label className="block text-xs text-gray-400 mb-1">{label as string}</label>
                                                 <select value={toolForm[key as string] || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setToolForm((p: any) => ({ ...p, [key as string]: e.target.value }))}
@@ -3250,6 +3269,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                                     <option value="">— not set —</option>
                                                     {(opts as string[]).map(o => <option key={o} value={o}>{o}</option>)}
                                                 </select>
+                                                <p className="text-[10px] text-gray-600 mt-0.5">
+                                                    {key === 'multimodal' && 'Handles multiple input/output types — text, image, audio, or video in one model'}
+                                                    {key === 'open_source' && 'Partial = some components are open source or weights are available but with restrictions'}
+                                                    {key === 'browser_extension' && 'Available as a browser extension for Chrome, Firefox, or similar'}
+                                                </p>
                                             </div>
                                         ))}
                                     </div>
@@ -3619,7 +3643,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <label className="block text-xs text-gray-400 mb-1">Workflow Tags <span className="text-gray-600">(select 1–4)</span></label>
                                         <p className="text-[11px] text-gray-500 mb-3">Select 1–4 workflow types this tool is built for or well suited to.</p>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {(['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups', 'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams'] as const).map(tag => {
+                                            {(['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups', 'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams', 'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists'] as const).map(tag => {
                                                 const selected: string[] = Array.isArray(toolForm.workflow_tags) ? toolForm.workflow_tags : [];
                                                 const isSelected = selected.includes(tag);
                                                 const atMax = selected.length >= 4;
@@ -3815,10 +3839,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                 {tools.map(t => (
                                     <div key={t.id || t._id} className="flex items-center justify-between bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 hover:border-white/10 transition-colors">
                                         <div className="min-w-0 flex items-start gap-2">
-                                            <div
-                                                title={t.workflow_tags?.length ? `Workflow tags populated (${(t.workflow_tags as string[]).join(', ')})` : 'Workflow tags missing — regenerate this tool.'}
-                                                className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${t.workflow_tags?.length ? 'bg-news-accent' : 'bg-gray-600'}`}
-                                            />
+                                            <div className="flex flex-col gap-1 flex-shrink-0 mt-1.5">
+                                                <div
+                                                    title={t.workflow_tags?.length ? `Workflow tags populated (${(t.workflow_tags as string[]).join(', ')})` : 'Workflow tags missing — regenerate this tool.'}
+                                                    className={`w-2 h-2 rounded-full ${t.workflow_tags?.length ? 'bg-news-accent' : 'bg-gray-600'}`}
+                                                />
+                                                {t.category_primary === 'Customer Support' && (
+                                                    <div
+                                                        title="Category may need review — check if this tool should be Sales & CRM"
+                                                        className="w-2 h-2 rounded-full bg-orange-500"
+                                                    />
+                                                )}
+                                            </div>
                                             <div className="min-w-0">
                                                 <p className="font-bold text-sm text-white truncate">{t.name}</p>
                                                 <p className="text-xs text-gray-500">{t.pricing_model} · {t.slug}</p>

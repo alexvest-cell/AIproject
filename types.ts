@@ -131,8 +131,8 @@ export interface Tool {
   category_tags: string[];
   secondary_tags?: string[];
   use_case_tags: string[];
-  category_primary?: 'AI Writing' | 'AI Chatbots' | 'Productivity' | 'Automation' | 'Design' | 'Development' | 'Marketing' | 'Data Analysis' | 'Customer Support' | 'Other';
-  pricing_model: 'Free' | 'Freemium' | 'Paid' | 'Enterprise' | 'Trial';
+  category_primary?: 'AI Chatbots' | 'AI Writing' | 'AI Image Generation' | 'AI Video' | 'AI Audio' | 'Productivity' | 'Automation' | 'Design' | 'Development' | 'Marketing' | 'Sales & CRM' | 'Customer Support' | 'Data Analysis' | 'SEO Tools' | 'Other';
+  pricing_model: 'Free' | 'Freemium' | 'Paid' | 'Enterprise' | 'Trial' | 'Open Source';
   data_confidence?: 'verified' | 'inferred' | 'ai_generated';
   related_tools?: string[];
   competitors?: string[];
@@ -173,6 +173,9 @@ export interface Tool {
   memory_persistence?: 'yes' | 'no' | 'partial';
   computer_use?: 'yes' | 'no' | 'partial';
   api_available?: 'yes' | 'no';
+  multimodal?: 'yes' | 'no' | 'partial';
+  open_source?: 'yes' | 'no' | 'partial';
+  browser_extension?: 'yes' | 'no';
   use_case_scores?: { use_case: string; score: number | null; description: string }[];
   workflow_tags?: string[];
   workflow_breakdown?: string;

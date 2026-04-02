@@ -15,13 +15,14 @@ const toolSchema = new mongoose.Schema({
     use_case_tags: [String],
     category_primary: {
         type: String,
-        enum: ['AI Writing', 'AI Chatbots', 'Productivity', 'Automation', 'Design',
-               'Development', 'Marketing', 'Data Analysis', 'Customer Support', 'Other'],
+        enum: ['AI Chatbots', 'AI Writing', 'AI Image Generation', 'AI Video', 'AI Audio',
+               'Productivity', 'Automation', 'Design', 'Development', 'Marketing',
+               'Sales & CRM', 'Customer Support', 'Data Analysis', 'SEO Tools', 'Other'],
     },
 
     pricing_model: {
         type: String,
-        enum: ['Free', 'Freemium', 'Paid', 'Enterprise', 'Trial'],
+        enum: ['Free', 'Freemium', 'Paid', 'Enterprise', 'Trial', 'Open Source'],
         default: 'Freemium',
     },
     starting_price: String,
@@ -59,6 +60,9 @@ const toolSchema = new mongoose.Schema({
     memory_persistence: { type: String, enum: ['yes', 'no', 'partial'] },
     computer_use: { type: String, enum: ['yes', 'no', 'partial'] },
     api_available: { type: String, enum: ['yes', 'no'] },
+    multimodal: { type: String, enum: ['yes', 'no', 'partial'] },
+    open_source: { type: String, enum: ['yes', 'no', 'partial'] },
+    browser_extension: { type: String, enum: ['yes', 'no'] },
 
     use_case_scores: [{
         use_case: String,
@@ -71,7 +75,8 @@ const toolSchema = new mongoose.Schema({
         validate: {
             validator: function(arr: string[]) {
                 const VALID = ['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
-                               'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams'];
+                               'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
+                               'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists'];
                 return arr.every(v => VALID.includes(v));
             },
             message: 'workflow_tags contains invalid value(s).',
