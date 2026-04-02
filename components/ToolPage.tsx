@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Tool, Article, Stack } from '../types';
-import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon, ChevronDown, Users, Tag } from 'lucide-react';
 import { RelatedContent } from './RelatedContent';
 
 interface ToolPageProps {
@@ -16,6 +16,7 @@ interface ToolPageProps {
     initialAlternatives?: Tool[];
     initialCompetitors?: Tool[];
     initialRelatedTools?: Tool[];
+    forContext?: string;
 }
 
 const PRICING_COLORS: Record<string, string> = {
@@ -44,12 +45,47 @@ const CATEGORY_PRIMARY_VALUES = [
     'Development', 'Marketing', 'Data Analysis', 'Customer Support', 'Other',
 ] as const;
 
+const ALL_WORKFLOW_SLUGS = [
+    'students', 'developers', 'marketers', 'content-creators', 'startups',
+    'small-business', 'enterprise', 'researchers', 'designers', 'sales-teams',
+];
+
+function forSlugToLabel(slug: string): string {
+    const overrides: Record<string, string> = {
+        'content-creators': 'Content Creators',
+        'small-business': 'Small Business',
+        'sales-teams': 'Sales Teams',
+        'ai-chatbots': 'AI Chatbots',
+        'ai-writing': 'AI Writing',
+        'data-analysis': 'Data Analysis',
+    };
+    return overrides[slug] || slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function wfBreakdownScore(wb: string | null | undefined, label: string): number | null {
+    if (!wb) return null;
+    const line = wb.split('\n').find((l: string) => l.toLowerCase().startsWith(label.toLowerCase() + ':'));
+    if (!line) return null;
+    const m = line.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+    return m ? parseFloat(m[1]) : null;
+}
+
+function wfBreakdownEvidence(wb: string | null | undefined, label: string): string | null {
+    if (!wb) return null;
+    const line = wb.split('\n').find((l: string) => l.toLowerCase().startsWith(label.toLowerCase() + ':'));
+    if (!line) return null;
+    const dashIdx = line.indexOf('—');
+    const enDashIdx = line.indexOf('–');
+    const idx = dashIdx !== -1 ? dashIdx : enDashIdx !== -1 ? enDashIdx : -1;
+    return idx !== -1 ? line.slice(idx + 1).trim() : null;
+}
+
 const USE_CASE_VALUES = [
     'Content Creation', 'Research', 'Coding', 'Automation', 'Lead Generation',
     'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity', 'Marketing',
 ] as const;
 
-const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick, initialTool, initialAlternatives, initialCompetitors, initialRelatedTools }) => {
+const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick, initialTool, initialAlternatives, initialCompetitors, initialRelatedTools, forContext }) => {
     const [tool, setTool] = useState<Tool | null>(initialTool ?? null);
     const [alternatives, setAlternatives] = useState<Tool[]>(initialAlternatives ?? []);
     const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
@@ -64,6 +100,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const [loading, setLoading] = useState(!initialTool);
     const [error, setError] = useState<string | null>(null);
     const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set(['free']));
+    const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     useEffect(() => {
         if (initialTool) {
@@ -173,6 +210,17 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     );
 
     const t = tool as any;
+
+    // ── forContext banner data ─────────────────────────────────────────────────
+    const forContextLabel = forContext ? forSlugToLabel(forContext) : null;
+    const isWorkflowContext = forContext ? ALL_WORKFLOW_SLUGS.includes(forContext) : false;
+    const bannerScore = (forContextLabel && isWorkflowContext)
+        ? wfBreakdownScore(t.workflow_breakdown, forContextLabel)
+        : (tool.rating_score > 0 ? tool.rating_score : null);
+    const bannerEvidence = (forContextLabel && isWorkflowContext)
+        ? wfBreakdownEvidence(t.workflow_breakdown, forContextLabel)
+        : (tool.short_description || null);
+
     const ratingBreakdown: Record<string, number> = (t.rating_breakdown && typeof t.rating_breakdown === 'object' && !Array.isArray(t.rating_breakdown)) ? t.rating_breakdown : {};
     const useCaseBreakdown: Record<string, string> = (t.use_case_breakdown && typeof t.use_case_breakdown === 'object' && !Array.isArray(t.use_case_breakdown)) ? t.use_case_breakdown : {};
     const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = Array.isArray(t.use_case_scores) ? t.use_case_scores : [];
@@ -309,6 +357,47 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         )}
                     </div>
                 </div>
+
+                {/* ── For-context banner ───────────────────────────────────── */}
+                {forContext && forContextLabel && (
+                    <div className="border-l-4 border-teal-500 bg-teal-500/[.03] rounded-r-xl p-4 mb-8">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-6">
+                            {/* Left: icon + context label */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                {isWorkflowContext
+                                    ? <Users size={13} className="text-teal-400 flex-shrink-0" />
+                                    : <Tag size={13} className="text-teal-400 flex-shrink-0" />
+                                }
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
+                                    {isWorkflowContext ? `Viewing for ${forContextLabel}` : `Viewing in ${forContextLabel}`}
+                                </span>
+                            </div>
+                            {/* Center: score */}
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <Star size={13} fill="currentColor" className="text-teal-400" />
+                                <span className="text-sm font-semibold text-white">
+                                    {bannerScore != null
+                                        ? (isWorkflowContext ? `${bannerScore}/10 for ${forContextLabel}` : `${(bannerScore as number).toFixed(1)}/10 Overall`)
+                                        : forContextLabel
+                                    }
+                                </span>
+                            </div>
+                            {/* Right: evidence + back link */}
+                            <div className="flex-1 min-w-0">
+                                {bannerEvidence && (
+                                    <p className="text-sm text-news-muted leading-relaxed line-clamp-2 mb-2">{bannerEvidence}</p>
+                                )}
+                                <a
+                                    href={isWorkflowContext ? `/best-software/for/${forContext}` : `/best-software/${forContext}`}
+                                    className="inline-flex items-center gap-1 text-xs text-teal-400 hover:underline font-medium"
+                                >
+                                    <ChevronLeft size={12} />
+                                    Back to Best {forContextLabel} Tools
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* ─── Mobile only: decision-critical blocks (positions 2–6) ─── */}
                 <div className="md:hidden space-y-4 mb-8">
@@ -692,6 +781,54 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         </div>
                                     )}
                                 </div>
+                                {/* Audience Scores */}
+                                {t.workflow_tags?.length > 0 && (
+                                    <div className="mt-6">
+                                        <p className="text-xs font-bold uppercase tracking-widest text-teal-400 mb-3">Audience Scores</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(t.workflow_tags as string[]).map((wf: string) => {
+                                                const wfScore = wfBreakdownScore(t.workflow_breakdown, wf);
+                                                const wfEvidence = wfBreakdownEvidence(t.workflow_breakdown, wf);
+                                                const wfSlug = wf.toLowerCase().replace(/\s+/g, '-');
+                                                const tooltipOpen = activeTooltip === wf;
+                                                return (
+                                                    <div key={wf} className="relative">
+                                                        <a
+                                                            href={`/best-software/for/${wfSlug}`}
+                                                            className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-surface-alt border transition-colors ${tooltipOpen ? 'border-teal-500/50 text-white' : 'border-border-subtle text-news-text hover:border-teal-500/40 hover:text-white'}`}
+                                                            onMouseEnter={() => wfEvidence && setActiveTooltip(wf)}
+                                                            onMouseLeave={() => setActiveTooltip(null)}
+                                                            onClick={(e) => {
+                                                                if (wfEvidence && !tooltipOpen) {
+                                                                    e.preventDefault();
+                                                                    setActiveTooltip(wf);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <span>{wf}</span>
+                                                            {wfScore != null && (
+                                                                <span className="text-teal-400 font-bold">{wfScore}/10</span>
+                                                            )}
+                                                        </a>
+                                                        {tooltipOpen && wfEvidence && (
+                                                            <div className="absolute bottom-full left-0 mb-2 w-64 max-w-xs p-3 bg-surface-card border border-border-subtle rounded-xl shadow-lg z-20 text-xs text-news-text leading-relaxed">
+                                                                <strong className="text-teal-400 block mb-1">{wf}</strong>
+                                                                {wfEvidence}
+                                                                <button
+                                                                    className="absolute top-1.5 right-2 text-news-muted hover:text-white text-sm leading-none"
+                                                                    onClick={(e) => { e.preventDefault(); setActiveTooltip(null); }}
+                                                                    aria-label="Close"
+                                                                >
+                                                                    ×
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         )}
 
@@ -1088,6 +1225,24 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                             </a>
                                         );
                                     })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Best For */}
+                        {t.workflow_tags?.length > 0 && (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-teal-400 mb-3">Best For</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {(t.workflow_tags as string[]).map((wf: string) => (
+                                        <a
+                                            key={wf}
+                                            href={`/best-software/for/${wf.toLowerCase().replace(/\s+/g, '-')}`}
+                                            className="text-[11px] px-2.5 py-1 rounded-full bg-surface-alt border border-border-subtle text-teal-400 hover:border-teal-500/40 hover:bg-teal-500/5 transition-colors font-medium"
+                                        >
+                                            {wf}
+                                        </a>
+                                    ))}
                                 </div>
                             </div>
                         )}
