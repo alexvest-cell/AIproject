@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Section, Article } from '../types';
-import { Menu, X, Search, Bell, ChevronRight, ChevronDown, PenLine, Code2, ImageIcon, Zap, Layers, Users, Megaphone, Briefcase, LayoutGrid, Star, Rocket, Sparkles, Flame, MousePointer2 } from 'lucide-react';
+import { Menu, X, Search, Bell, ChevronRight, ChevronDown, PenLine, Code2, ImageIcon, Zap, Layers, Users, Megaphone, Briefcase, LayoutGrid, Star, Rocket, Sparkles, Flame, MousePointer2, Video, Mic, TrendingUp, Check } from 'lucide-react';
 
 interface NavigationProps {
   activeSection: Section;
@@ -45,13 +45,18 @@ interface MegaMenuColumn {
 const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
   'AI Writing': PenLine,
   'AI Chatbots': Sparkles,
+  'AI Image Generation': ImageIcon,
+  'AI Video': Video,
+  'AI Audio': Mic,
   'Productivity': Layers,
   'Automation': Zap,
   'Design': ImageIcon,
   'Development': Code2,
   'Marketing': Megaphone,
-  'Data Analysis': LayoutGrid,
+  'Sales & CRM': TrendingUp,
   'Customer Support': Users,
+  'Data Analysis': LayoutGrid,
+  'SEO Tools': Search,
   'Other': LayoutGrid,
 };
 
@@ -85,11 +90,14 @@ const MEGA_MENUS: Record<string, MegaMenuColumn[]> = {
     {
       heading: 'Tool Discovery',
       items: [
-        { label: 'All AI Tools',     href: '/ai-tools',             hub: 'ai-tools' },
-        { label: 'Top Rated Tools',  href: '/ai-tools?sort=rating', hub: 'ai-tools', sort: 'rating', badge: 'Popular' },
-        { label: 'Newest Tools',     href: '/ai-tools?sort=newest', hub: 'ai-tools', sort: 'newest', badge: 'New' },
-        { label: 'Free Tools',       href: '/ai-tools?price=free',  hub: 'ai-tools', category: 'Productivity' },
-        { label: 'Freemium Tools',   href: '/ai-tools?price=freemium', hub: 'ai-tools' },
+        { label: 'All AI Tools',       href: '/ai-tools',                         hub: 'ai-tools' },
+        { label: 'Top Rated Tools',    href: '/ai-tools?sort=rating',             hub: 'ai-tools', sort: 'rating', badge: 'Popular' },
+        { label: 'Newest Tools',       href: '/ai-tools?sort=newest',             hub: 'ai-tools', sort: 'newest', badge: 'New' },
+        { label: 'Free Tools',         href: '/ai-tools?price=free',              hub: 'ai-tools' },
+        { label: 'Open Source Tools',  href: '/ai-tools?price=open-source',       hub: 'ai-tools' },
+        { label: 'Has Image Gen',      href: '/ai-tools?capability=image-gen',    hub: 'ai-tools', icon: ImageIcon },
+        { label: 'Has Multimodal',     href: '/ai-tools?capability=multimodal',   hub: 'ai-tools', icon: Layers },
+        { label: 'Browser Extension',  href: '/ai-tools?capability=browser-ext',  hub: 'ai-tools', icon: Check },
       ],
     },
     {

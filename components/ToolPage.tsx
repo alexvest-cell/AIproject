@@ -25,6 +25,7 @@ const PRICING_COLORS: Record<string, string> = {
     Paid: 'bg-purple-900/50 text-purple-400 border-purple-700',
     Enterprise: 'bg-orange-900/50 text-orange-400 border-orange-700',
     Trial: 'bg-yellow-900/50 text-yellow-400 border-yellow-700',
+    'Open Source': 'bg-violet-900/50 text-violet-400 border-violet-700',
 };
 
 // Parse "$0 (Go: $8/mo; Plus: $20/mo; ...)" into [{label, price}]
@@ -461,6 +462,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             { label: 'Memory Persistence', value: t.memory_persistence },
                             { label: 'Computer Use', value: t.computer_use },
                             { label: 'API Available', value: t.api_available },
+                            { label: 'Multimodal', value: (t as any).multimodal, tooltip: 'Handles multiple input/output types — text, image, audio, or video' },
+                            { label: 'Open Source', value: (t as any).open_source, tooltip: 'Partial = some components open source or weights available with restrictions' },
+                            { label: 'Browser Extension', value: (t as any).browser_extension, tooltip: 'Available as a browser extension' },
                         ].filter(r => r.value);
                         if (!capRows.length) return null;
                         const renderCap = (value: string | null | undefined) => {
@@ -476,7 +480,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                 </h3>
                                 <div className={capRows.length >= 4 ? 'grid grid-cols-2 gap-x-3 gap-y-3' : 'space-y-2.5'}>
                                     {capRows.map(r => (
-                                        <div key={r.label} className="space-y-0.5">
+                                        <div key={r.label} className="space-y-0.5" title={(r as any).tooltip || undefined}>
                                             <span className="text-[11px] text-news-muted block">{r.label}</span>
                                             {renderCap(r.value)}
                                         </div>

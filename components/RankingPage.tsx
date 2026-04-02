@@ -9,13 +9,15 @@ import { Tool } from '../types';
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const CATEGORY_PRIMARY_VALUES = [
-    'AI Writing', 'AI Chatbots', 'Productivity', 'Automation', 'Design',
-    'Development', 'Marketing', 'Data Analysis', 'Customer Support', 'Other',
+    'AI Chatbots', 'AI Writing', 'AI Image Generation', 'AI Video', 'AI Audio',
+    'Productivity', 'Automation', 'Design', 'Development', 'Marketing',
+    'Sales & CRM', 'Customer Support', 'Data Analysis', 'SEO Tools', 'Other',
 ];
 
 const ALL_WORKFLOW_TAGS = [
     'Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
     'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
+    'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists',
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

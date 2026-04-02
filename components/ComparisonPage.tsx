@@ -23,11 +23,12 @@ interface ComparisonPageProps {
 
 // Teal pricing badges matching site design system
 const PRICING_COLORS: Record<string, string> = {
-    Free:       'bg-news-accent/15 text-news-accent border-news-accent/30',
-    Freemium:   'bg-news-accent/10 text-news-accent border-news-accent/20',
-    Paid:       'bg-surface-alt text-news-muted border-border-subtle',
-    Enterprise: 'bg-orange-900/30 text-orange-400 border-orange-700/40',
-    Trial:      'bg-yellow-900/30 text-yellow-400 border-yellow-700/40',
+    Free:          'bg-news-accent/15 text-news-accent border-news-accent/30',
+    Freemium:      'bg-news-accent/10 text-news-accent border-news-accent/20',
+    Paid:          'bg-surface-alt text-news-muted border-border-subtle',
+    Enterprise:    'bg-orange-900/30 text-orange-400 border-orange-700/40',
+    Trial:         'bg-yellow-900/30 text-yellow-400 border-yellow-700/40',
+    'Open Source': 'bg-violet-900/30 text-violet-400 border-violet-700/40',
 };
 
 // Teal fill, dark track — no number at end (number shown separately with star icon)
@@ -73,6 +74,9 @@ function buildTableRows(
         { key: 'image_generation',   label: 'Image Generation' },
         { key: 'memory_persistence', label: 'Memory Persistence' },
         { key: 'computer_use',       label: 'Computer Use' },
+        { key: 'multimodal',         label: 'Multimodal' },
+        { key: 'open_source',        label: 'Open Source' },
+        { key: 'browser_extension',  label: 'Browser Extension' },
     ] as const;
     return (
         <>

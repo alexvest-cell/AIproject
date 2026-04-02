@@ -7,6 +7,23 @@ type Props = { params: Promise<{ slug: string }> };
 
 export const revalidate = 86400;
 
+export async function generateStaticParams() {
+    await connectDB();
+    const tools = await Tool.find({ status: 'Active', workflow_tags: { $exists: true, $ne: [] } }, 'workflow_tags').lean() as any[];
+    const seen = new Set<string>();
+    const params: { slug: string }[] = [];
+    for (const t of tools) {
+        for (const tag of (t.workflow_tags || [])) {
+            const slug = (tag as string).toLowerCase().replace(/\s+/g, '-');
+            if (!seen.has(slug)) {
+                seen.add(slug);
+                params.push({ slug });
+            }
+        }
+    }
+    return params;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const label = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

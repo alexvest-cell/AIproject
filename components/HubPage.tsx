@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Article, Tool, Comparison, Stack } from '../types';
-import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter } from 'lucide-react';
+import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter, Video, Mic, Building2, Database, Clipboard, UserRound } from 'lucide-react';
 
 type HubType = 'ai-tools' | 'best-software' | 'reviews' | 'comparisons' | 'use-cases' | 'guides' | 'news';
 
@@ -149,16 +149,21 @@ const HScrollRow: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const TOOLS_PER_PAGE = 24;
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ElementType }> = {
-    'AI Chatbots':      { label: 'AI CHATBOTS',      icon: Brain },
-    'AI Writing':       { label: 'AI WRITING',        icon: PenLine },
-    'Productivity':     { label: 'PRODUCTIVITY',      icon: Layers },
-    'Automation':       { label: 'AUTOMATION',        icon: Zap },
-    'Design':           { label: 'DESIGN',            icon: ImageIcon },
-    'Development':      { label: 'DEVELOPMENT',       icon: Code2 },
-    'Marketing':        { label: 'MARKETING',         icon: Megaphone },
-    'Data Analysis':    { label: 'DATA ANALYSIS',     icon: BarChart2 },
-    'Customer Support': { label: 'CUSTOMER SUPPORT',  icon: Headphones },
-    'Other':            { label: 'OTHER',             icon: LayoutGrid },
+    'AI Chatbots':        { label: 'AI CHATBOTS',        icon: Brain },
+    'AI Writing':         { label: 'AI WRITING',          icon: PenLine },
+    'AI Image Generation':{ label: 'AI IMAGE GENERATION', icon: ImageIcon },
+    'AI Video':           { label: 'AI VIDEO',            icon: Video },
+    'AI Audio':           { label: 'AI AUDIO',            icon: Mic },
+    'Productivity':       { label: 'PRODUCTIVITY',        icon: Layers },
+    'Automation':         { label: 'AUTOMATION',          icon: Zap },
+    'Design':             { label: 'DESIGN',              icon: ImageIcon },
+    'Development':        { label: 'DEVELOPMENT',         icon: Code2 },
+    'Marketing':          { label: 'MARKETING',           icon: Megaphone },
+    'Sales & CRM':        { label: 'SALES & CRM',         icon: TrendingUp },
+    'Customer Support':   { label: 'CUSTOMER SUPPORT',    icon: Headphones },
+    'Data Analysis':      { label: 'DATA ANALYSIS',       icon: BarChart2 },
+    'SEO Tools':          { label: 'SEO TOOLS',           icon: Search },
+    'Other':              { label: 'OTHER',               icon: LayoutGrid },
 };
 
 const WORKFLOW_KEYWORDS: Record<string, string[]> = {
@@ -170,8 +175,8 @@ const WORKFLOW_KEYWORDS: Record<string, string[]> = {
     'small-business': ['small business', 'smb', 'small team'],
 };
 
-const PRICING_OPTIONS = ['All', 'Free', 'Freemium', 'Paid', 'Enterprise', 'Trial'];
-const PLATFORM_OPTIONS = ['All', 'Web', 'Mobile', 'Desktop', 'API'];
+const PRICING_OPTIONS = ['All', 'Free', 'Freemium', 'Paid', 'Enterprise', 'Trial', 'Open Source'];
+const PLATFORM_OPTIONS = ['All', 'Web', 'Mobile', 'Desktop', 'API', 'Browser Extension'];
 const dynCatFilters = ['All', 'AI Writing', 'Productivity', 'Automation', 'Developer Tools', 'Marketing Tools', 'CRM', 'AI Image'];
 const dynUseCaseFilters = ['All', 'Content Creation', 'Coding', 'Workflow Automation', 'Note Taking', 'Customer Support'];
 
@@ -806,34 +811,45 @@ export const AIToolsHub: React.FC<{
 // ─── Best Software Hub ──────────────────────────────────────────────────────────────
 
 const WORKFLOW_ICON_MAP: Record<string, React.ElementType> = {
-    'Students':         GraduationCap,
-    'Developers':       Code2,
-    'Marketers':        Megaphone,
-    'Content Creators': PenLine,
-    'Startups':         Rocket,
-    'Small Business':   Briefcase,
-    'Enterprise':       Layers,
-    'Researchers':      Search,
-    'Designers':        ImageIcon,
-    'Sales Teams':      TrendingUp,
+    'Students':          GraduationCap,
+    'Developers':        Code2,
+    'Marketers':         Megaphone,
+    'Content Creators':  PenLine,
+    'Startups':          Rocket,
+    'Small Business':    Briefcase,
+    'Enterprise':        Layers,
+    'Researchers':       Search,
+    'Designers':         ImageIcon,
+    'Sales Teams':       TrendingUp,
+    'Agencies':          Building2,
+    'Educators':         BookOpen,
+    'Freelancers':       UserRound,
+    'Product Managers':  Clipboard,
+    'Data Scientists':   Database,
 };
 
 const WORKFLOW_COLOR_MAP: Record<string, string> = {
-    'Students':         'text-green-400',
-    'Developers':       'text-blue-400',
-    'Marketers':        'text-pink-400',
-    'Content Creators': 'text-purple-400',
-    'Startups':         'text-orange-400',
-    'Small Business':   'text-yellow-400',
-    'Enterprise':       'text-cyan-400',
-    'Researchers':      'text-emerald-400',
-    'Designers':        'text-rose-400',
-    'Sales Teams':      'text-indigo-400',
+    'Students':          'text-green-400',
+    'Developers':        'text-blue-400',
+    'Marketers':         'text-pink-400',
+    'Content Creators':  'text-purple-400',
+    'Startups':          'text-orange-400',
+    'Small Business':    'text-yellow-400',
+    'Enterprise':        'text-cyan-400',
+    'Researchers':       'text-emerald-400',
+    'Designers':         'text-rose-400',
+    'Sales Teams':       'text-indigo-400',
+    'Agencies':          'text-violet-400',
+    'Educators':         'text-teal-400',
+    'Freelancers':       'text-sky-400',
+    'Product Managers':  'text-amber-400',
+    'Data Scientists':   'text-lime-400',
 };
 
 const ALL_WORKFLOW_TAGS = [
     'Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
     'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
+    'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists',
 ];
 
 const BS_TRUST = [
@@ -1034,7 +1050,7 @@ export const BestSoftwareHub: React.FC<{
                             return (
                                 <a
                                     key={cat}
-                                    href={`/best-software/${cat.toLowerCase().replace(/\s+/g, '-')}`}
+                                    href={`/best-software/${cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-')}`}
                                     className="group w-full text-left bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all p-5 flex items-start gap-4 no-underline"
                                 >
                                     <div className="w-10 h-10 rounded-xl bg-news-accent/10 border border-news-accent/20 flex items-center justify-center flex-shrink-0">
