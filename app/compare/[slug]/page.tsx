@@ -57,21 +57,53 @@ export default async function ComparePage({ params, searchParams }: Props) {
     const { use_case } = await searchParams;
     await connectDB();
     const comparison = await ComparisonModel.findOne({ slug }).lean() as any;
-    if (!comparison) notFound();
 
-    const [toolA, toolB, toolC] = await Promise.all([
-        comparison.tool_a_slug ? Tool.findOne({ slug: comparison.tool_a_slug }).lean() : null,
-        comparison.tool_b_slug ? Tool.findOne({ slug: comparison.tool_b_slug }).lean() : null,
-        comparison.tool_c_slug ? Tool.findOne({ slug: comparison.tool_c_slug }).lean() : null,
+    if (comparison) {
+        const [toolA, toolB, toolC] = await Promise.all([
+            comparison.tool_a_slug ? Tool.findOne({ slug: comparison.tool_a_slug }).lean() : null,
+            comparison.tool_b_slug ? Tool.findOne({ slug: comparison.tool_b_slug }).lean() : null,
+            comparison.tool_c_slug ? Tool.findOne({ slug: comparison.tool_c_slug }).lean() : null,
+        ]);
+        const enriched = { ...comparison, tool_a: toolA, tool_b: toolB, tool_c: toolC ?? undefined };
+        return (
+            <ComparisonPageClient
+                slug={slug}
+                useCase={use_case}
+                initialData={JSON.parse(JSON.stringify(enriched))}
+            />
+        );
+    }
+
+    // No comparison doc yet — build a synthetic one from the two tool slugs
+    const parts = slug.split('-vs-');
+    if (parts.length < 2) notFound();
+    const slugA = parts[0];
+    const slugB = parts.slice(1).join('-vs-');
+    const [toolA, toolB] = await Promise.all([
+        Tool.findOne({ slug: slugA, status: 'Active' }).lean(),
+        Tool.findOne({ slug: slugB, status: 'Active' }).lean(),
     ]);
+    if (!toolA || !toolB) notFound();
 
-    const enriched = { ...comparison, tool_a: toolA, tool_b: toolB, tool_c: toolC ?? undefined };
-
+    const tA = toolA as any;
+    const tB = toolB as any;
+    const synthetic = {
+        id: slug,
+        slug,
+        title: `${tA.name} vs ${tB.name}`,
+        tool_a_slug: slugA,
+        tool_b_slug: slugB,
+        tool_a: tA,
+        tool_b: tB,
+        status: 'published' as const,
+        comparison_type: '1v1' as const,
+        generated_output: null,
+    };
     return (
         <ComparisonPageClient
             slug={slug}
             useCase={use_case}
-            initialData={JSON.parse(JSON.stringify(enriched))}
+            initialData={JSON.parse(JSON.stringify(synthetic))}
         />
     );
 }

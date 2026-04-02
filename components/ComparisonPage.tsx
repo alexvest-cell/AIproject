@@ -5,6 +5,7 @@ import { ArrowRight, Trophy, Check, X, TrendingUp, Target, Star, Zap, Medal, Che
 import { ArticleFAQ } from './article-layouts/SharedModules';
 import { RelatedContent } from './RelatedContent';
 import type { GeneratedComparison } from '../utils/compareEngine';
+import { generateComparison } from '../utils/compareEngine';
 
 const ALL_USE_CASES = ['Content Creation', 'Research', 'Coding', 'Automation', 'Lead Generation', 'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity', 'Marketing'];
 
@@ -1315,6 +1316,17 @@ const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, 
     const [generated, setGenerated] = useState<GeneratedComparison | null>(
         initialData ? (initialData.generated_output as GeneratedComparison) ?? null : null
     );
+
+    // When no generated_output exists but we have both tools, derive comparison from tool data
+    useEffect(() => {
+        if (generated) return;
+        const toolsArr = [data?.tool_a, data?.tool_b, data?.tool_c].filter(Boolean) as Tool[];
+        if (toolsArr.length < 2) return;
+        try {
+            const derived = generateComparison(toolsArr as any[], { primary_use_case: useCase || undefined });
+            setGenerated(derived);
+        } catch { /* not enough data — leave fallback message */ }
+    }, [data, useCase, generated]);
 
     // Canonical URL management
     useEffect(() => {
