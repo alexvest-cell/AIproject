@@ -329,15 +329,19 @@ const Navigation: React.FC<NavigationProps> = ({
         icon: CATEGORY_ICON_MAP[cat],
       }));
 
-    // Column 2: Filter by Pricing
-    const priceFreq: Record<string, number> = {};
-    navTools.forEach(t => { if (t.pricing_model) priceFreq[t.pricing_model] = (priceFreq[t.pricing_model] || 0) + 1; });
-    const priceItems = Object.entries(priceFreq)
-      .sort((a, b) => b[1] - a[1])
-      .map(([model, count]) => ({
-        label: model, href: `/ai-tools?pricing=${encodeURIComponent(model)}`,
-        hub: 'ai-tools', description: `${count} tools`,
-      }));
+    // Column 2: Filter by Capability
+    const capCount = (field: string, value: string | string[]) =>
+      navTools.filter(t => Array.isArray(value) ? value.includes(t[field]) : t[field] === value).length;
+    const capItems = [
+      { label: 'Has Free Tier',            href: '/ai-tools?pricing=freemium',              description: `${navTools.filter(t => t.pricing_model === 'Free' || t.pricing_model === 'Freemium').length} tools` },
+      { label: 'Image Generation',         href: '/ai-tools?capability=image-generation',   description: `${capCount('image_generation', 'yes')} tools` },
+      { label: 'Memory / Remembers You',   href: '/ai-tools?capability=memory',             description: `${capCount('memory_persistence', 'yes')} tools` },
+      { label: 'Computer Use',             href: '/ai-tools?capability=computer-use',        description: `${capCount('computer_use', 'yes')} tools` },
+      { label: 'Multimodal',               href: '/ai-tools?capability=multimodal',          description: `${capCount('multimodal', 'yes')} tools` },
+      { label: 'Open Source',              href: '/ai-tools?capability=open-source',         description: `${navTools.filter(t => t.open_source === 'yes' || t.open_source === 'partial').length} tools` },
+      { label: 'Browser Extension',        href: '/ai-tools?capability=browser-extension',   description: `${capCount('browser_extension', 'yes')} tools` },
+      { label: 'API Available',            href: '/ai-tools?capability=api',                 description: `${capCount('api_available', 'yes')} tools` },
+    ].map(item => ({ ...item, hub: 'ai-tools' as const }));
 
     // Column 3: Filter by Use Case
     const useCaseFreq: Record<string, number> = {};
@@ -360,7 +364,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
     return [
       { heading: 'Browse by Category', items: catItems },
-      { heading: 'Filter by Pricing', items: priceItems },
+      { heading: 'Filter by Capability', items: capItems },
       { heading: 'Filter by Use Case', items: useCaseItems },
       { heading: 'Featured Tools', items: featuredItems },
     ];

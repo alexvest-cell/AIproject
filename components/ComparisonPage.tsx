@@ -328,18 +328,9 @@ const PlanComparisonTable: React.FC<{ tools: Tool[] }> = ({ tools }) => {
         <div className={dimmed ? 'opacity-75' : ''}>
             <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-0.5">{plan.name}</p>
             {plan.isEnterprise ? (
-                <>
-                    <p className="text-news-muted italic text-xs">Custom</p>
-                    {tool.website_url && (
-                        <a href={tool.website_url} target="_blank" rel="noopener noreferrer"
-                            className="text-[10px] text-news-accent hover:underline">Contact sales →</a>
-                    )}
-                </>
+                <p className="text-news-muted italic text-xs">Custom</p>
             ) : plan.price ? (
                 <p className="text-white font-medium text-xs">{plan.price}</p>
-            ) : tool.website_url ? (
-                <a href={tool.website_url} target="_blank" rel="noopener noreferrer"
-                    className="text-[10px] text-news-accent hover:underline">See pricing →</a>
             ) : null}
             {plan.models && <p className="text-news-text text-xs leading-snug mt-1">{plan.models}</p>}
             {plan.limits && <p className="text-news-muted text-[11px] leading-snug mt-0.5">{plan.limits}</p>}
@@ -426,9 +417,7 @@ const PlanComparisonTable: React.FC<{ tools: Tool[] }> = ({ tools }) => {
                                                             ? <span className="text-news-muted italic">Custom</span>
                                                             : priceStr
                                                                 ? <span className="text-white font-medium">{priceStr}</span>
-                                                                : tool.website_url
-                                                                    ? <a href={tool.website_url} target="_blank" rel="noopener noreferrer" className="text-news-accent hover:underline">See pricing →</a>
-                                                                    : <span className="text-news-muted">—</span>
+                                                                : <span className="text-news-muted">—</span>
                                                         }
                                                     </td>
                                                     <td className="px-4 py-3 text-news-text leading-snug align-top">{models || '—'}</td>
