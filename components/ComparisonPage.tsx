@@ -257,6 +257,7 @@ function extractMonthlyPrice(priceStr: string): number | null {
 function priceToBand(price: number | null, name: string): PriceBand {
     const lower = name.toLowerCase();
     if (lower === 'enterprise' || lower.includes('enterprise')) return 'enterprise';
+    if (lower === 'free' || lower.startsWith('free ')) return 'free';
     if (price === null) return 'enterprise';
     if (price === 0) return 'free';
     if (price <= 25) return 'entry';
