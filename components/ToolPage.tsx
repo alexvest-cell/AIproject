@@ -656,6 +656,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                                 {(() => {
                                                                     const p = priceMap[tier.plan.toLowerCase()];
                                                                     if (p) return <span className={`font-bold ${isFree ? 'text-news-accent' : 'text-white'}`}>{p}</span>;
+                                                                    if (isFree) return <span className="font-bold text-news-accent">Free</span>;
                                                                     return <span className="text-news-muted">—</span>;
                                                                 })()}
                                                             </td>
