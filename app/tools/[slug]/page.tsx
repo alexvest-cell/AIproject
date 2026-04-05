@@ -104,12 +104,12 @@ export default async function ToolPage({ params, searchParams }: Props) {
 
     const [competitors, relatedTools] = await Promise.all([
         competitorIds.length
-            ? Tool.find({ $or: [{ id: { $in: competitorIds } }, { _id: { $in: competitorIds } }], status: 'Active' }).lean()
+            ? Tool.find({ id: { $in: competitorIds }, status: 'Active' }).lean()
             : unresolvedCompetitorNames.length
                 ? Tool.find({ name: { $in: unresolvedCompetitorNames }, status: 'Active' }).lean()
                 : [],
         relatedIds.length
-            ? Tool.find({ $or: [{ id: { $in: relatedIds } }, { _id: { $in: relatedIds } }], status: 'Active' }).lean()
+            ? Tool.find({ id: { $in: relatedIds }, status: 'Active' }).lean()
             : unresolvedRelatedNames.length
                 ? Tool.find({ name: { $in: unresolvedRelatedNames }, status: 'Active' }).lean()
                 : [],
