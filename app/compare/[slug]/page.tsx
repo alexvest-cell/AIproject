@@ -4,6 +4,7 @@ import ComparisonModel from '@/lib/models/Comparison';
 import Tool from '@/lib/models/Tool';
 import { notFound } from 'next/navigation';
 import ComparisonPageClient from '@/components/ComparisonPageClient';
+import { jsonLdScript } from '@/lib/jsonld';
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ use_case?: string }> };
 
@@ -17,8 +18,8 @@ export async function generateStaticParams() {
     const seen = new Set<string>();
     for (const tool of tools as any[]) {
         for (const competitor of tool.competitors || []) {
-            const competitorSlug = (competitor as string).toLowerCase().replace(/\s+/g, '-');
-            const slug = `${tool.slug}-vs-${competitorSlug}`;
+            // competitors are real slugs after the ID migration
+            const slug = `${tool.slug}-vs-${competitor}`;
             if (!seen.has(slug)) {
                 seen.add(slug);
                 params.push({ slug });
@@ -58,52 +59,137 @@ export default async function ComparePage({ params, searchParams }: Props) {
     await connectDB();
     const comparison = await ComparisonModel.findOne({ slug }).lean() as any;
 
+    // ── Resolve tools and initialData (real comparison or synthetic) ──────────
+    let tA: any, tB: any, tC: any = null;
+    let initialData: any;
+
     if (comparison) {
         const [toolA, toolB, toolC] = await Promise.all([
             comparison.tool_a_slug ? Tool.findOne({ slug: comparison.tool_a_slug }).lean() : null,
             comparison.tool_b_slug ? Tool.findOne({ slug: comparison.tool_b_slug }).lean() : null,
             comparison.tool_c_slug ? Tool.findOne({ slug: comparison.tool_c_slug }).lean() : null,
         ]);
-        const enriched = { ...comparison, tool_a: toolA, tool_b: toolB, tool_c: toolC ?? undefined };
-        return (
+        tA = toolA; tB = toolB; tC = toolC ?? null;
+        initialData = { ...comparison, tool_a: toolA, tool_b: toolB, tool_c: toolC ?? undefined };
+    } else {
+        // No comparison doc — synthetic builder from tool slugs
+        const parts = slug.split('-vs-');
+        if (parts.length < 2) notFound();
+        const slugA = parts[0];
+        const slugB = parts.slice(1).join('-vs-');
+        const [toolA, toolB] = await Promise.all([
+            Tool.findOne({ slug: slugA, status: 'Active' }).lean(),
+            Tool.findOne({ slug: slugB, status: 'Active' }).lean(),
+        ]);
+        if (!toolA || !toolB) notFound();
+        tA = toolA as any;
+        tB = toolB as any;
+        initialData = {
+            id: slug,
+            slug,
+            title: `${tA.name} vs ${tB.name}`,
+            tool_a_slug: slugA,
+            tool_b_slug: slugB,
+            tool_a: tA,
+            tool_b: tB,
+            status: 'published' as const,
+            comparison_type: '1v1' as const,
+            generated_output: null,
+        };
+    }
+
+    if (!tA || !tB) notFound();
+
+    // ── JSON-LD Schemas ──────────────────────────────────────────────────────
+    const useCaseDisplay = use_case
+        ? use_case.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        : undefined;
+    const comparedTools = [tA, tB, tC].filter(Boolean);
+    const compUrl = `https://toolcurrent.com/compare/${slug}`;
+
+    const itemListSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: `${tA.name} vs ${tB.name}${useCaseDisplay ? ` for ${useCaseDisplay}` : ''} — Comparison`,
+        description: `Side-by-side comparison of ${tA.name} and ${tB.name}${useCaseDisplay ? ` for ${useCaseDisplay}` : ''}. Scores, features, pricing, and verdict.`,
+        url: compUrl,
+        numberOfItems: comparedTools.length,
+        itemListElement: comparedTools.map((tool: any, index: number) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: tool.name,
+            url: `https://toolcurrent.com/tools/${tool.slug}`,
+            description: tool.short_description || tool.name,
+        })),
+    };
+
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Comparisons', item: 'https://toolcurrent.com/comparisons' },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: useCaseDisplay
+                    ? `${tA.name} vs ${tB.name} for ${useCaseDisplay}`
+                    : `${tA.name} vs ${tB.name}`,
+                item: compUrl,
+            },
+        ],
+    };
+
+    const verdictText = comparison?.verdict
+        || (typeof comparison?.body === 'string' ? comparison.body.slice(0, 300) : undefined)
+        || `Compare ${tA.name} and ${tB.name} — see the full comparison for ratings, features, and pricing.`;
+
+    const pricingText = `${tA.name}: ${tA.starting_price || tA.pricing_model || 'See website'}. ${tB.name}: ${tB.starting_price || tB.pricing_model || 'See website'}.`;
+
+    const winnerAdvantage = comparison?.choose_tool_a?.[0]
+        || comparison?.why_it_wins_override
+        || `See full comparison for detailed strengths of ${tA.name} vs ${tB.name}.`;
+
+    const faqSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+            {
+                '@type': 'Question',
+                name: `Which is better: ${tA.name} or ${tB.name}${useCaseDisplay ? ` for ${useCaseDisplay}` : ''}?`,
+                acceptedAnswer: { '@type': 'Answer', text: verdictText },
+            },
+            {
+                '@type': 'Question',
+                name: `How much does ${tA.name} cost compared to ${tB.name}?`,
+                acceptedAnswer: { '@type': 'Answer', text: pricingText },
+            },
+            {
+                '@type': 'Question',
+                name: `What is ${tA.name} better at than ${tB.name}?`,
+                acceptedAnswer: { '@type': 'Answer', text: winnerAdvantage },
+            },
+        ],
+    };
+
+    return (
+        <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(itemListSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(faqSchema) }}
+            />
             <ComparisonPageClient
                 slug={slug}
                 useCase={use_case}
-                initialData={JSON.parse(JSON.stringify(enriched))}
+                initialData={JSON.parse(JSON.stringify(initialData))}
             />
-        );
-    }
-
-    // No comparison doc yet — build a synthetic one from the two tool slugs
-    const parts = slug.split('-vs-');
-    if (parts.length < 2) notFound();
-    const slugA = parts[0];
-    const slugB = parts.slice(1).join('-vs-');
-    const [toolA, toolB] = await Promise.all([
-        Tool.findOne({ slug: slugA, status: 'Active' }).lean(),
-        Tool.findOne({ slug: slugB, status: 'Active' }).lean(),
-    ]);
-    if (!toolA || !toolB) notFound();
-
-    const tA = toolA as any;
-    const tB = toolB as any;
-    const synthetic = {
-        id: slug,
-        slug,
-        title: `${tA.name} vs ${tB.name}`,
-        tool_a_slug: slugA,
-        tool_b_slug: slugB,
-        tool_a: tA,
-        tool_b: tB,
-        status: 'published' as const,
-        comparison_type: '1v1' as const,
-        generated_output: null,
-    };
-    return (
-        <ComparisonPageClient
-            slug={slug}
-            useCase={use_case}
-            initialData={JSON.parse(JSON.stringify(synthetic))}
-        />
+        </>
     );
 }

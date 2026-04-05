@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Article, Tool, Comparison, Stack } from '../types';
 import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter, Video, Mic, Building2, Database, Clipboard, UserRound } from 'lucide-react';
 
@@ -224,6 +224,28 @@ const POPULAR_CATEGORIES = [
     { label: 'AI Marketing Tools',   icon: Megaphone,    filter: 'Marketing Tools' },
 ];
 
+// Maps workflow card key → canonical workflow_tags values stored in DB
+const WORKFLOW_TAG_LABELS: Record<string, string[]> = {
+    'students':       ['Students'],
+    'developers':     ['Developers'],
+    'marketing':      ['Marketers'],
+    'startups':       ['Startups'],
+    'creators':       ['Content Creators'],
+    'small-business': ['Small Business'],
+};
+
+type CapChip = { label: string; field: keyof Tool; values: string[] };
+const CAP_CHIPS: CapChip[] = [
+    { label: 'Free Tier',         field: 'pricing_model',    values: ['Free', 'Freemium'] },
+    { label: 'Image Generation',  field: 'image_generation', values: ['yes'] },
+    { label: 'Memory',            field: 'memory_persistence', values: ['yes'] },
+    { label: 'Computer Use',      field: 'computer_use',     values: ['yes'] },
+    { label: 'Multimodal',        field: 'multimodal',       values: ['yes'] },
+    { label: 'Open Source',       field: 'open_source',      values: ['yes', 'partial'] },
+    { label: 'Browser Extension', field: 'browser_extension',values: ['yes'] },
+    { label: 'API Available',     field: 'api_available',    values: ['yes'] },
+];
+
 export const AIToolsHub: React.FC<{
     onToolClick: (s: string) => void;
     articles: Article[];
@@ -238,6 +260,8 @@ export const AIToolsHub: React.FC<{
     const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [pricingFilter, setPricingFilter] = useState('All');
     const [platformFilter, setPlatformFilter] = useState('All');
@@ -246,6 +270,9 @@ export const AIToolsHub: React.FC<{
     const [useCaseFilter, setUseCaseFilter] = useState('All');
     const [sortBy, setSortBy] = useState<'popular' | 'most-used' | 'newest' | 'price' | 'rating'>('most-used');
     const [visibleCount, setVisibleCount] = useState(TOOLS_PER_PAGE);
+    const [activeWorkflow, setActiveWorkflow] = useState<string | null>(null);
+    const [capFilters, setCapFilters] = useState<string[]>([]);
+    const toolGridRef = useRef<HTMLDivElement>(null);
 
     // Sync query string to filters
     useEffect(() => {
@@ -301,8 +328,15 @@ export const AIToolsHub: React.FC<{
             .catch(() => {});
     }, []);
 
+    // Debounce search input → debouncedSearch used for filtering
+    useEffect(() => {
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
+        return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
+    }, [search]);
+
     // Reset pagination when filters change
-    useEffect(() => { setVisibleCount(TOOLS_PER_PAGE); }, [search, pricingFilter, catFilter, useCaseFilter, sortBy]);
+    useEffect(() => { setVisibleCount(TOOLS_PER_PAGE); }, [debouncedSearch, pricingFilter, catFilter, useCaseFilter, sortBy, platformFilter, activeWorkflow, capFilters]);
 
     const getBadge = (tool: Tool): string | null => {
         if (tool.ai_enabled && tool.rating_score >= 4.7) return 'Trending';
@@ -325,18 +359,35 @@ export const AIToolsHub: React.FC<{
         return [...toolMatches, ...queryMatches].slice(0, 6);
     }, [search, tools]);
 
+    // Combined OR workflow matching: workflow_tags, use_case_tags, best_for text
+    const workflowMatchesTool = useCallback((t: Tool, key: string): boolean => {
+        const tagLabels = WORKFLOW_TAG_LABELS[key] || [];
+        if (tagLabels.some(tag => t.workflow_tags?.some((wt: string) => wt.toLowerCase() === tag.toLowerCase()))) return true;
+        const keywords = WORKFLOW_KEYWORDS[key] || [key];
+        if (t.use_case_tags?.some((u: string) => keywords.some(kw => u.toLowerCase().includes(kw.toLowerCase())))) return true;
+        if (t.best_for?.some((b: string) => keywords.some(kw => b.toLowerCase().includes(kw.toLowerCase())))) return true;
+        return false;
+    }, []);
+
     const filtered = tools.filter(t => {
-        const q = search.toLowerCase();
-        const matchSearch = !search ||
+        const q = debouncedSearch.toLowerCase();
+        const matchSearch = !debouncedSearch ||
             t.name.toLowerCase().includes(q) ||
             t.short_description?.toLowerCase().includes(q) ||
-            t.category_tags?.some(c => c.toLowerCase().includes(q)) ||
-            t.use_case_tags?.some(u => u.toLowerCase().includes(q));
+            t.category_tags?.some((c: string) => c.toLowerCase().includes(q)) ||
+            t.use_case_tags?.some((u: string) => u.toLowerCase().includes(q));
         const matchPrice    = pricingFilter === 'All' || t.pricing_model === pricingFilter;
-        const matchCat      = catFilter === 'All' || t.category_primary === catFilter || t.category_tags?.some(c => c.toLowerCase().includes(catFilter.toLowerCase()));
-        const matchUse      = useCaseFilter === 'All' || t.use_case_tags?.some(u => u.toLowerCase().includes(useCaseFilter.toLowerCase()));
-        const matchPlatform = platformFilter === 'All' || t.supported_platforms?.some(p => p.toLowerCase().includes(platformFilter.toLowerCase()));
-        return matchSearch && matchPrice && matchCat && matchUse && matchPlatform;
+        const matchCat      = catFilter === 'All' || t.category_primary === catFilter || t.category_tags?.some((c: string) => c.toLowerCase().includes(catFilter.toLowerCase()));
+        const matchUse      = useCaseFilter === 'All' || t.use_case_tags?.some((u: string) => u.toLowerCase().includes(useCaseFilter.toLowerCase()));
+        const matchPlatform = platformFilter === 'All' || t.supported_platforms?.some((p: string) => p.toLowerCase().includes(platformFilter.toLowerCase()));
+        const matchWorkflow = !activeWorkflow || workflowMatchesTool(t, activeWorkflow);
+        const matchCaps     = capFilters.length === 0 || capFilters.every(label => {
+            const chip = CAP_CHIPS.find(c => c.label === label);
+            if (!chip) return true;
+            const val = (t as any)[chip.field];
+            return Array.isArray(val) ? val.some((v: string) => chip.values.includes(v)) : chip.values.includes(val);
+        });
+        return matchSearch && matchPrice && matchCat && matchUse && matchPlatform && matchWorkflow && matchCaps;
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -351,10 +402,9 @@ export const AIToolsHub: React.FC<{
     });
 
     const visible = sorted.slice(0, visibleCount);
-    const hasActiveFilters = pricingFilter !== 'All' || catFilter !== 'All' || useCaseFilter !== 'All' || platformFilter !== 'All' || !!search;
-    const activeFilterCount = (pricingFilter !== 'All' ? 1 : 0) + (catFilter !== 'All' ? 1 : 0) + (useCaseFilter !== 'All' ? 1 : 0) + (platformFilter !== 'All' ? 1 : 0);
+    const hasActiveFilters = pricingFilter !== 'All' || catFilter !== 'All' || useCaseFilter !== 'All' || platformFilter !== 'All' || !!search || !!activeWorkflow || capFilters.length > 0;
 
-    const clearAllFilters = () => { setSearch(''); setPricingFilter('All'); setCatFilter('All'); setUseCaseFilter('All'); setPlatformFilter('All'); };
+    const clearAllFilters = () => { setSearch(''); setDebouncedSearch(''); setPricingFilter('All'); setCatFilter('All'); setUseCaseFilter('All'); setPlatformFilter('All'); setActiveWorkflow(null); setCapFilters([]); };
 
     const dynCatFilters = React.useMemo(() => {
         const freq: Record<string, number> = {};
@@ -480,18 +530,17 @@ export const AIToolsHub: React.FC<{
                     <p className="text-sm text-news-muted mb-5">Filter the full tool database by your role.</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         {EXPLORE_BY_WORKFLOW.map(({ label, icon: Icon, key, color, bg }) => {
-                            const cfg = WORKFLOW_CONFIG[key];
-                            const keywords = WORKFLOW_KEYWORDS[key] || [key];
-                            const count = tools.filter(t => t.best_for?.some(b => {
-                                const lower = b.toLowerCase();
-                                return keywords.some(kw => lower.includes(kw.toLowerCase()));
-                            })).length;
+                            const count = tools.filter(t => workflowMatchesTool(t, key)).length;
                             if (count === 0) return null;
+                            const isActive = activeWorkflow === key;
                             return (
-                                <button key={key} onClick={() => setCatFilter(cfg?.catFilter || 'All')}
-                                    className={`group flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all text-center hover:-translate-y-0.5 ${bg}`}
+                                <button key={key} onClick={() => {
+                                    setActiveWorkflow(isActive ? null : key);
+                                    if (!isActive) setTimeout(() => toolGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                }}
+                                    className={`group flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all text-center hover:-translate-y-0.5 ${isActive ? 'border-news-accent bg-news-accent/10' : bg}`}
                                 >
-                                    <Icon size={20} className={color} />
+                                    <Icon size={20} className={isActive ? 'text-news-accent' : color} />
                                     <span className="text-xs font-bold text-white">{label}</span>
                                     <span className="text-[9px] text-news-muted">{count} tools</span>
                                 </button>
@@ -557,29 +606,30 @@ export const AIToolsHub: React.FC<{
                     <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
                         <Flame size={20} className="text-news-accent" /> Trending Tools
                     </h2>
-                    <HScrollRow>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {TRENDING_TOOL_SLUGS.map(slug => {
                             const tool = tools.find(t => t.slug === slug);
                             if (!tool) return null;
                             return (
                                 <button key={tool.slug} onClick={() => onToolClick(tool.slug)}
-                                    className="group flex-shrink-0 flex items-center gap-3 px-4 py-3.5 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/40 hover:bg-surface-hover transition-all min-w-[200px]"
+                                    className="group flex items-center gap-3 px-4 py-3.5 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/40 hover:bg-surface-hover transition-all"
                                 >
                                     {tool.logo
                                         ? <div className="w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1" loading="lazy" /></div>
                                         : <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-sm font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                                     }
-                                    <div className="text-left min-w-0">
+                                    <div className="text-left min-w-0 flex-1">
                                         <p className="font-bold text-white group-hover:text-news-accent transition-colors text-sm truncate">{tool.name}</p>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className="text-[10px] text-news-muted truncate">{tool.category_tags?.[0]}</span>
                                             {tool.rating_score > 0 && <span className="text-[10px] font-bold text-news-accent flex items-center gap-0.5 flex-shrink-0"><Star size={9} className="fill-news-accent" />{tool.rating_score.toFixed(1)}</span>}
                                         </div>
                                     </div>
+                                    <ArrowRight size={13} className="text-news-muted group-hover:text-news-accent transition-colors flex-shrink-0" />
                                 </button>
                             );
                         })}
-                    </HScrollRow>
+                    </div>
                 </section>
             )}
 
@@ -589,8 +639,8 @@ export const AIToolsHub: React.FC<{
                     <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
                         <Zap size={20} className="text-news-accent" /> Recently Added
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {[...tools].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 3).map(tool => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[...tools].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 4).map(tool => (
                             <button key={tool.id} onClick={() => onToolClick(tool.slug)}
                                 className="group flex items-center gap-3 p-4 bg-surface-card border border-border-subtle rounded-xl hover:border-news-accent/30 hover:bg-surface-hover transition-all text-left"
                             >
@@ -610,15 +660,38 @@ export const AIToolsHub: React.FC<{
                 </section>
             )}
 
-            {/* ── Filter bar ───────────────────────────────────────────── */}
+            {/* ── Capability quick-filter chips ────────────────────────── */}
             <section>
+                <div className="flex flex-wrap gap-2">
+                    {CAP_CHIPS.map(chip => {
+                        const isOn = capFilters.includes(chip.label);
+                        const count = tools.filter(t => {
+                            const val = (t as any)[chip.field];
+                            return Array.isArray(val) ? val.some((v: string) => chip.values.includes(v)) : chip.values.includes(val);
+                        }).length;
+                        if (count === 0) return null;
+                        return (
+                            <button key={chip.label}
+                                onClick={() => setCapFilters(prev => isOn ? prev.filter(l => l !== chip.label) : [...prev, chip.label])}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${isOn ? 'bg-news-accent/15 border-news-accent/50 text-news-accent' : 'bg-surface-card border-border-subtle text-news-muted hover:border-border-divider hover:text-white'}`}
+                            >
+                                {chip.label}
+                                <span className={`text-[9px] ${isOn ? 'text-news-accent/70' : 'text-news-muted/70'}`}>{count}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </section>
+
+            {/* ── Filter bar ───────────────────────────────────────────── */}
+            <section ref={toolGridRef}>
                 {/* Filter dropdowns — shared desktop + mobile */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                     {([
-                        { label: 'Category', opts: dynCatFilters,    value: catFilter,     set: setCatFilter },
-                        { label: 'Pricing',  opts: PRICING_OPTIONS,  value: pricingFilter, set: setPricingFilter },
-                        { label: 'Platform', opts: PLATFORM_OPTIONS, value: platformFilter, set: setPlatformFilter },
-                        { label: 'Use Case', opts: dynUseCaseFilters, value: useCaseFilter,  set: setUseCaseFilter },
+                        { label: 'All Categories', opts: dynCatFilters,    value: catFilter,     set: setCatFilter },
+                        { label: 'All Pricing',    opts: PRICING_OPTIONS,  value: pricingFilter, set: setPricingFilter },
+                        { label: 'All Platforms',  opts: PLATFORM_OPTIONS, value: platformFilter, set: setPlatformFilter },
+                        { label: 'All Use Cases',  opts: dynUseCaseFilters, value: useCaseFilter,  set: setUseCaseFilter },
                     ] as const).map(({ label, opts, value, set }) => {
                         const isActive = value !== 'All';
                         return (
@@ -650,11 +723,13 @@ export const AIToolsHub: React.FC<{
                         {hasActiveFilters && (
                             <div className="flex flex-wrap gap-1.5">
                                 {[
-                                    search && { label: `"${search}"`, clear: () => setSearch('') },
+                                    search && { label: `"${search}"`, clear: () => { setSearch(''); setDebouncedSearch(''); } },
                                     catFilter !== 'All' && { label: catFilter, clear: () => setCatFilter('All') },
                                     pricingFilter !== 'All' && { label: pricingFilter, clear: () => setPricingFilter('All') },
                                     platformFilter !== 'All' && { label: platformFilter, clear: () => setPlatformFilter('All') },
                                     useCaseFilter !== 'All' && { label: useCaseFilter, clear: () => setUseCaseFilter('All') },
+                                    activeWorkflow && { label: EXPLORE_BY_WORKFLOW.find(w => w.key === activeWorkflow)?.label || activeWorkflow, clear: () => setActiveWorkflow(null) },
+                                    ...capFilters.map(cap => ({ label: cap, clear: () => setCapFilters(prev => prev.filter(c => c !== cap)) })),
                                 ].filter(Boolean).map((chip: any) => (
                                     <span key={chip.label} className="flex items-center gap-1 text-[10px] bg-news-accent/15 text-news-accent border border-news-accent/30 rounded-full px-2 py-0.5">
                                         {chip.label} <button onClick={chip.clear} className="hover:text-white transition-colors"><X size={9} /></button>

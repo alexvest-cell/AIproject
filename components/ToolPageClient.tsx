@@ -11,7 +11,7 @@ interface Props {
     forContext?: string;
 }
 
-export default function ToolPageClient({ tool, competitors, relatedTools }: Props) {
+export default function ToolPageClient({ tool, competitors, relatedTools, forContext }: Props) {
     const router = useRouter();
     return (
         <>
@@ -22,6 +22,7 @@ export default function ToolPageClient({ tool, competitors, relatedTools }: Prop
                 initialAlternatives={competitors}
                 initialCompetitors={competitors}
                 initialRelatedTools={relatedTools}
+                forContext={forContext}
                 onBack={() => router.back()}
                 onArticleClick={(a) => router.push(`/article/${(a as any).slug || a.id}`)}
                 onComparisonClick={(s) => router.push(`/compare/${s}`)}

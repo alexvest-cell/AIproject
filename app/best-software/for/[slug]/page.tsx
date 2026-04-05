@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { connectDB } from '@/lib/mongodb';
 import Tool from '@/lib/models/Tool';
 import RankingPageClient from '@/components/RankingPageClient';
+import { jsonLdScript } from '@/lib/jsonld';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -43,11 +44,51 @@ export default async function WorkflowRankingPage({ params }: Props) {
         tools = await Tool.find({ status: 'Active' }).sort({ rating_score: -1 }).limit(20).lean();
     }
 
+    // ── JSON-LD Schemas ──────────────────────────────────────────────────────
+    const rankingTitle = `Best AI Tools for ${workflowLabel} (2026)`;
+    const rankingUrl = `/best-software/for/${slug}`;
+    const rankingDescription = `Top-ranked AI tools for ${workflowLabel}. Scored and ranked by workflow performance.`;
+
+    const itemListSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: rankingTitle,
+        description: rankingDescription,
+        url: `https://toolcurrent.com${rankingUrl}`,
+        numberOfItems: tools.length,
+        itemListElement: (tools as any[]).map((tool, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: tool.name,
+            url: `https://toolcurrent.com/tools/${tool.slug}?for=${slug}`,
+            description: tool.short_description || tool.name,
+        })),
+    };
+
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Best Software', item: 'https://toolcurrent.com/best-software' },
+            { '@type': 'ListItem', position: 2, name: rankingTitle, item: `https://toolcurrent.com${rankingUrl}` },
+        ],
+    };
+
     return (
-        <RankingPageClient
-            type="workflow"
-            slug={slug}
-            tools={JSON.parse(JSON.stringify(tools))}
-        />
+        <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(itemListSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }}
+            />
+            <RankingPageClient
+                type="workflow"
+                slug={slug}
+                tools={JSON.parse(JSON.stringify(tools))}
+            />
+        </>
     );
 }

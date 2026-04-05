@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import Tool from '@/lib/models/Tool';
 import ArticleModel from '@/lib/models/Article';
 import AppClient from './AppClient';
+import { jsonLdScript } from '@/lib/jsonld';
 
 export const metadata: Metadata = {
     title: 'ToolCurrent | Software Discovery & Intelligence',
@@ -25,8 +26,28 @@ export default async function HomePage() {
         ]);
     } catch { /* DB unavailable — render client-only */ }
 
+    const websiteSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: 'ToolCurrent',
+        url: 'https://toolcurrent.com',
+        description: 'Compare AI tools and software side-by-side with structured ratings, use-case scores, and head-to-head comparisons.',
+        potentialAction: {
+            '@type': 'SearchAction',
+            target: {
+                '@type': 'EntryPoint',
+                urlTemplate: 'https://toolcurrent.com/ai-tools?search={search_term_string}',
+            },
+            'query-input': 'required name=search_term_string',
+        },
+    };
+
     return (
         <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteSchema) }}
+            />
             {/* Visually hidden structured content for SEO crawlers */}
             {(featuredTools.length > 0 || recentArticles.length > 0) && (
                 <div aria-hidden="true" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
