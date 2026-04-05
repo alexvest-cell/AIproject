@@ -255,12 +255,14 @@ export const AIToolsHub: React.FC<{
     queryString?: string;
     onStackClick?: (slug: string) => void;
     initialTools?: Tool[];
-}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick, initialTools }) => {
+    initialSearch?: string;
+    onSearchChange?: (term: string) => void;
+}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick, initialTools, initialSearch, onSearchChange }) => {
     const [tools, setTools] = useState<Tool[]>(initialTools ?? []);
     const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [search, setSearch] = useState(initialSearch ?? '');
+    const [debouncedSearch, setDebouncedSearch] = useState(initialSearch ?? '');
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [pricingFilter, setPricingFilter] = useState('All');
@@ -328,12 +330,15 @@ export const AIToolsHub: React.FC<{
             .catch(() => {});
     }, []);
 
-    // Debounce search input → debouncedSearch used for filtering
+    // Debounce search input → debouncedSearch used for filtering + URL sync
     useEffect(() => {
         if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-        searchDebounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
+        searchDebounceRef.current = setTimeout(() => {
+            setDebouncedSearch(search);
+            onSearchChange?.(search);
+        }, 300);
         return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
-    }, [search]);
+    }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Reset pagination when filters change
     useEffect(() => { setVisibleCount(TOOLS_PER_PAGE); }, [debouncedSearch, pricingFilter, catFilter, useCaseFilter, sortBy, platformFilter, activeWorkflow, capFilters]);
@@ -404,7 +409,7 @@ export const AIToolsHub: React.FC<{
     const visible = sorted.slice(0, visibleCount);
     const hasActiveFilters = pricingFilter !== 'All' || catFilter !== 'All' || useCaseFilter !== 'All' || platformFilter !== 'All' || !!search || !!activeWorkflow || capFilters.length > 0;
 
-    const clearAllFilters = () => { setSearch(''); setDebouncedSearch(''); setPricingFilter('All'); setCatFilter('All'); setUseCaseFilter('All'); setPlatformFilter('All'); setActiveWorkflow(null); setCapFilters([]); };
+    const clearAllFilters = () => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); setPricingFilter('All'); setCatFilter('All'); setUseCaseFilter('All'); setPlatformFilter('All'); setActiveWorkflow(null); setCapFilters([]); };
 
     const dynCatFilters = React.useMemo(() => {
         const freq: Record<string, number> = {};
@@ -456,7 +461,7 @@ export const AIToolsHub: React.FC<{
                     className="w-full bg-surface-card border border-border-subtle rounded-2xl pl-11 pr-10 py-3.5 text-sm text-white placeholder:text-news-muted focus:outline-none focus:border-news-accent transition-colors"
                 />
                 {search && (
-                    <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-news-muted hover:text-white">
+                    <button onClick={() => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-news-muted hover:text-white">
                         <X size={14} />
                     </button>
                 )}
@@ -723,7 +728,7 @@ export const AIToolsHub: React.FC<{
                         {hasActiveFilters && (
                             <div className="flex flex-wrap gap-1.5">
                                 {[
-                                    search && { label: `"${search}"`, clear: () => { setSearch(''); setDebouncedSearch(''); } },
+                                    search && { label: `"${search}"`, clear: () => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); } },
                                     catFilter !== 'All' && { label: catFilter, clear: () => setCatFilter('All') },
                                     pricingFilter !== 'All' && { label: pricingFilter, clear: () => setPricingFilter('All') },
                                     platformFilter !== 'All' && { label: platformFilter, clear: () => setPlatformFilter('All') },
