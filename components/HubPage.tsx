@@ -246,6 +246,101 @@ const CAP_CHIPS: CapChip[] = [
     { label: 'API Available',     field: 'api_available',    values: ['yes'] },
 ];
 
+// ─── URL slug → filter value helpers ─────────────────────────────────────────
+
+function slugToCategory(slug: string): string {
+    const map: Record<string, string> = {
+        'ai-chatbots':         'AI Chatbots',
+        'ai-writing':          'AI Writing',
+        'ai-image-generation': 'AI Image Generation',
+        'ai-image':            'AI Image Generation',   // legacy
+        'ai-video':            'AI Video',
+        'ai-audio':            'AI Audio',
+        'productivity':        'Productivity',
+        'automation':          'Automation',
+        'design':              'Design',
+        'development':         'Development',
+        'developer-tools':     'Developer Tools',       // legacy
+        'ai-coding':           'Developer Tools',       // legacy
+        'marketing':           'Marketing',
+        'marketing-tools':     'Marketing Tools',       // legacy
+        'sales-crm':           'Sales & CRM',
+        'crm':                 'CRM',                  // legacy
+        'customer-support':    'Customer Support',
+        'data-analysis':       'Data Analysis',
+        'seo-tools':           'SEO Tools',
+        'other':               'Other',
+    };
+    return map[slug] || 'All';
+}
+
+function slugToUseCase(slug: string): string {
+    const map: Record<string, string> = {
+        'content-creation':      'Content Creation',
+        'marketing':             'Marketing',
+        'research':              'Research',
+        'coding':                'Coding',
+        'automation':            'Automation',
+        'lead-generation':       'Lead Generation',
+        'customer-support':      'Customer Support',
+        'data-analysis':         'Data Analysis',
+        'design':                'Design',
+        'education':             'Education',
+        'personal-productivity': 'Personal Productivity',
+        'image-generation':      'Image Generation',
+        'video-generation':      'Video Generation',
+        'audio-generation':      'Audio Generation',
+        'seo':                   'SEO',
+        'sales':                 'Sales',
+        'note-taking':           'Note Taking',
+        'workflow-automation':   'Workflow Automation',
+    };
+    // Fallback: replace hyphens with spaces (case-insensitive contains match still works)
+    return map[slug] || slug.replace(/-/g, ' ');
+}
+
+function parseInitialFilters(queryString: string, workflowFilter?: string) {
+    if (workflowFilter && WORKFLOW_CONFIG[workflowFilter]) {
+        return {
+            catFilter:     WORKFLOW_CONFIG[workflowFilter].catFilter || 'All',
+            useCaseFilter: 'All',
+            pricingFilter: 'All',
+            platformFilter:'All',
+            capFilters:    [] as string[],
+            activeWorkflow:null as string | null,
+            search:        '',
+        };
+    }
+    const params = new URLSearchParams(queryString.replace(/^\?/, ''));
+
+    const catSlug = params.get('category');
+    const catFilter = catSlug ? slugToCategory(catSlug) : 'All';
+
+    const useCaseSlug = params.get('use_case');
+    const useCaseFilter = useCaseSlug ? slugToUseCase(useCaseSlug) : 'All';
+
+    const pricingSlug = params.get('pricing') || params.get('price');
+    const pricingFilter = pricingSlug
+        ? (PRICING_OPTIONS.find(p => p.toLowerCase() === pricingSlug.toLowerCase()) || 'All')
+        : 'All';
+
+    const platformSlug = params.get('platform');
+    const platformFilter = platformSlug
+        ? (PLATFORM_OPTIONS.find(p => p.toLowerCase() === platformSlug.toLowerCase()) || 'All')
+        : 'All';
+
+    const capabilitySlug = params.get('capability');
+    const chip = capabilitySlug ? CAP_CHIPS.find(c => c.label.toLowerCase().replace(/\s+/g, '-') === capabilitySlug) : null;
+    const capFilters = chip ? [chip.label] : [];
+
+    // Workflow stores the raw slug key (used as key into WORKFLOW_TAG_LABELS / WORKFLOW_KEYWORDS)
+    const activeWorkflow = params.get('workflow') || null;
+
+    const search = params.get('search') || '';
+
+    return { catFilter, useCaseFilter, pricingFilter, platformFilter, capFilters, activeWorkflow, search };
+}
+
 export const AIToolsHub: React.FC<{
     onToolClick: (s: string) => void;
     articles: Article[];
@@ -261,80 +356,41 @@ export const AIToolsHub: React.FC<{
     const [tools, setTools] = useState<Tool[]>(initialTools ?? []);
     const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState(initialSearch ?? '');
-    const [debouncedSearch, setDebouncedSearch] = useState(initialSearch ?? '');
+
+    const wfConfig = workflowFilter ? WORKFLOW_CONFIG[workflowFilter] : null;
+
+    // Parse all filter state directly from queryString on first render — no flash
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const initialFilters = React.useMemo(() => parseInitialFilters(queryString || '', workflowFilter), []);
+
+    const [search, setSearch] = useState(initialSearch ?? initialFilters.search);
+    const [debouncedSearch, setDebouncedSearch] = useState(initialSearch ?? initialFilters.search);
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [pricingFilter, setPricingFilter] = useState('All');
-    const [platformFilter, setPlatformFilter] = useState('All');
-    const wfConfig = workflowFilter ? WORKFLOW_CONFIG[workflowFilter] : null;
-    const [catFilter, setCatFilter] = useState(wfConfig?.catFilter || 'All');
-    const [useCaseFilter, setUseCaseFilter] = useState('All');
+    const [pricingFilter, setPricingFilter] = useState(initialFilters.pricingFilter);
+    const [platformFilter, setPlatformFilter] = useState(initialFilters.platformFilter);
+    const [catFilter, setCatFilter] = useState(initialFilters.catFilter);
+    const [useCaseFilter, setUseCaseFilter] = useState(initialFilters.useCaseFilter);
     const [sortBy, setSortBy] = useState<'popular' | 'most-used' | 'newest' | 'price' | 'rating'>('most-used');
     const [visibleCount, setVisibleCount] = useState(TOOLS_PER_PAGE);
-    const [activeWorkflow, setActiveWorkflow] = useState<string | null>(null);
-    const [capFilters, setCapFilters] = useState<string[]>([]);
+    const [activeWorkflow, setActiveWorkflow] = useState<string | null>(initialFilters.activeWorkflow);
+    const [capFilters, setCapFilters] = useState<string[]>(initialFilters.capFilters);
     const toolGridRef = useRef<HTMLDivElement>(null);
+    const isFirstMount = useRef(true);
 
-    // Sync query string to filters
+    // Sync query string to filters — skips first mount (state already initialized correctly)
     useEffect(() => {
-        if (workflowFilter && WORKFLOW_CONFIG[workflowFilter]) {
-            setCatFilter(WORKFLOW_CONFIG[workflowFilter].catFilter || 'All');
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
             return;
         }
-
-        const params = new URLSearchParams(queryString || '');
-        const cat = params.get('category');
-        const sort = params.get('sort');
-        const price = params.get('pricing') || params.get('price');
-
-        if (cat) {
-            const low = cat.toLowerCase();
-            if (low.includes('coding') || low.includes('developer')) setCatFilter('Developer Tools');
-            else if (low.includes('writing')) setCatFilter('AI Writing');
-            else if (low.includes('image')) setCatFilter('AI Image');
-            else if (low.includes('automation')) setCatFilter('Automation');
-            else if (low.includes('productivity')) setCatFilter('Productivity');
-            else if (low.includes('crm')) setCatFilter('CRM');
-            else if (low.includes('marketing')) setCatFilter('Marketing Tools');
-            else setCatFilter('All');
-        } else {
-            setCatFilter('All');
-        }
-
-        if (sort === 'new' || sort === 'newest') setSortBy('newest');
-        else if (sort === 'rating') setSortBy('rating');
-        else setSortBy('rating');
-
-        if (price) {
-            const lowMatch = PRICING_OPTIONS.find(p => p.toLowerCase() === (price || '').toLowerCase());
-            setPricingFilter(lowMatch || 'All');
-        } else {
-            setPricingFilter('All');
-        }
-
-        const useCase = params.get('use_case');
-        // Convert slug format (e.g. "content-creation") to spaced format for contains-match
-        setUseCaseFilter(useCase ? useCase.replace(/-/g, ' ') : 'All');
-
-        const workflow = params.get('workflow');
-        setActiveWorkflow(workflow || null);
-
-        const capability = params.get('capability');
-        if (capability) {
-            const chip = CAP_CHIPS.find(c => c.label.toLowerCase().replace(/\s+/g, '-') === capability);
-            setCapFilters(chip ? [chip.label] : []);
-        } else {
-            setCapFilters([]);
-        }
-
-        const platform = params.get('platform');
-        if (platform) {
-            const match = PLATFORM_OPTIONS.find(p => p.toLowerCase() === platform.toLowerCase());
-            setPlatformFilter(match || 'All');
-        } else {
-            setPlatformFilter('All');
-        }
+        const filters = parseInitialFilters(queryString || '', workflowFilter);
+        setCatFilter(filters.catFilter);
+        setUseCaseFilter(filters.useCaseFilter);
+        setPricingFilter(filters.pricingFilter);
+        setPlatformFilter(filters.platformFilter);
+        setCapFilters(filters.capFilters);
+        setActiveWorkflow(filters.activeWorkflow);
     }, [queryString, workflowFilter]);
 
     useEffect(() => {

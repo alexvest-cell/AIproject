@@ -11,8 +11,25 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-export default async function AIToolsPage() {
+export default async function AIToolsPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+    const params = await searchParams;
     await connectDB();
     const tools = await Tool.find({ status: 'Active' }).sort({ rating_score: -1 }).lean();
-    return <AIToolsHubPageClient tools={JSON.parse(JSON.stringify(tools))} />;
+
+    const qs = new URLSearchParams(
+        Object.entries(params)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v[0] : (v as string)])
+    ).toString();
+
+    return (
+        <AIToolsHubPageClient
+            tools={JSON.parse(JSON.stringify(tools))}
+            initialQueryString={qs ? `?${qs}` : ''}
+        />
+    );
 }

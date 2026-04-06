@@ -5,9 +5,9 @@ import SiteNav from './SiteNav';
 import { AIToolsHub } from './HubPage';
 import type { Tool } from '../types';
 
-interface Props { tools: Tool[] }
+interface Props { tools: Tool[]; initialQueryString?: string }
 
-function AIToolsHubInner({ tools }: Props) {
+function AIToolsHubInner({ tools, initialQueryString }: Props) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialSearch = searchParams.get('search') || '';
@@ -23,7 +23,9 @@ function AIToolsHubInner({ tools }: Props) {
         router.replace(qs ? `/ai-tools?${qs}` : '/ai-tools', { scroll: false });
     };
 
+    // Client-side searchParams take precedence; fall back to server-provided value
     const qs = searchParams.toString();
+    const queryString = qs ? `?${qs}` : (initialQueryString || '');
 
     return (
         <AIToolsHub
@@ -34,19 +36,19 @@ function AIToolsHubInner({ tools }: Props) {
             initialTools={tools}
             initialSearch={initialSearch}
             onSearchChange={handleSearchChange}
-            queryString={qs ? `?${qs}` : ''}
+            queryString={queryString}
         />
     );
 }
 
-export default function AIToolsHubPageClient({ tools }: Props) {
+export default function AIToolsHubPageClient({ tools, initialQueryString }: Props) {
     return (
         <div className="min-h-screen bg-surface-base text-news-text font-sans">
             <SiteNav />
             <div className="pt-[112px]">
                 <div className="container mx-auto px-4 md:px-8 py-10">
                     <Suspense fallback={null}>
-                        <AIToolsHubInner tools={tools} />
+                        <AIToolsHubInner tools={tools} initialQueryString={initialQueryString} />
                     </Suspense>
                 </div>
             </div>
