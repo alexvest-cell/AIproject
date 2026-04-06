@@ -314,7 +314,27 @@ export const AIToolsHub: React.FC<{
         }
 
         const useCase = params.get('use_case');
-        setUseCaseFilter(useCase ? decodeURIComponent(useCase) : 'All');
+        // Convert slug format (e.g. "content-creation") to spaced format for contains-match
+        setUseCaseFilter(useCase ? useCase.replace(/-/g, ' ') : 'All');
+
+        const workflow = params.get('workflow');
+        setActiveWorkflow(workflow || null);
+
+        const capability = params.get('capability');
+        if (capability) {
+            const chip = CAP_CHIPS.find(c => c.label.toLowerCase().replace(/\s+/g, '-') === capability);
+            setCapFilters(chip ? [chip.label] : []);
+        } else {
+            setCapFilters([]);
+        }
+
+        const platform = params.get('platform');
+        if (platform) {
+            const match = PLATFORM_OPTIONS.find(p => p.toLowerCase() === platform.toLowerCase());
+            setPlatformFilter(match || 'All');
+        } else {
+            setPlatformFilter('All');
+        }
     }, [queryString, workflowFilter]);
 
     useEffect(() => {
@@ -970,10 +990,96 @@ export const BestSoftwareHub: React.FC<{
     }, []);
 
     // ── Dynamic data ──────────────────────────────────────────────────────────
-    const featuredRankings = React.useMemo(() =>
-        [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6),
-        [allTools]
-    );
+    type RankingCard = { title: string; url: string; description: string; count: number; topTools: Tool[]; avgScore?: number };
+
+    const featuredRankings = React.useMemo((): RankingCard[] => {
+        const catSlug = (cat: string) => cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-');
+        const wfSlug = (tag: string) => tag.toLowerCase().replace(/\s+/g, '-');
+
+        const catDescs: Record<string, string> = {
+            'AI Chatbots':        'The best AI conversation tools for productivity, research, and everyday tasks.',
+            'AI Writing':         'Top AI writing assistants ranked by content quality, features, and value.',
+            'AI Image Generation':'Leading image generation models ranked by output quality and ease of use.',
+            'AI Video':           'AI video creation and editing tools ranked by realism and workflow speed.',
+            'AI Audio':           'AI audio tools for voice cloning, transcription, and music generation.',
+            'Productivity':       'The best productivity tools to organize work and get more done.',
+            'Automation':         'Top workflow automation platforms to eliminate repetitive tasks.',
+            'Development':        'Developer tools powered by AI to ship code faster.',
+            'Marketing':          'AI marketing tools ranked by campaign performance and ease of use.',
+            'Sales & CRM':        'CRM and sales tools to manage pipelines and close deals faster.',
+            'Design':             'AI design tools ranked by creative output and collaboration features.',
+            'Customer Support':   'AI-powered support tools to resolve tickets faster at scale.',
+            'Data Analysis':      'Data analysis tools that turn raw numbers into actionable insights.',
+            'SEO Tools':          'SEO tools ranked by ranking lift, technical audit depth, and ease of use.',
+        };
+
+        const cards: RankingCard[] = [];
+
+        // Build sorted category data inline (same as catData memo)
+        const catGroups: Record<string, Tool[]> = {};
+        allTools.forEach(t => {
+            if (!t.category_primary) return;
+            if (!catGroups[t.category_primary]) catGroups[t.category_primary] = [];
+            catGroups[t.category_primary].push(t);
+        });
+        const sortedCats = Object.entries(catGroups)
+            .map(([cat, tools]) => ({ cat, count: tools.length, tools }))
+            .sort((a, b) => b.count - a.count);
+
+        // Build sorted workflow data inline (same as workflowData memo)
+        const sortedWfs = ALL_WORKFLOW_TAGS.map(tag => {
+            const tools = allTools.filter(t => ((t as any).workflow_tags || []).includes(tag));
+            const scores = tools.map(t => {
+                const wb = (t as any).workflow_breakdown as string | null;
+                if (!wb) return null;
+                const line = wb.split('\n').find((l: string) => l.toLowerCase().startsWith(tag.toLowerCase() + ':'));
+                if (!line) return null;
+                const m = line.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+                return m ? parseFloat(m[1]) : null;
+            }).filter((s): s is number => s !== null);
+            const avgScore = scores.length >= 3 ? +(scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : null;
+            return { tag, count: tools.length, avgScore, tools };
+        }).filter(w => w.count > 0 && w.avgScore !== null).sort((a, b) => (b.avgScore || 0) - (a.avgScore || 0));
+
+        // 1. Most populated category
+        if (sortedCats.length > 0) {
+            const { cat, count, tools } = sortedCats[0];
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-software/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
+        }
+        // 2. Highest avg-score workflow (min 3 tools with scores)
+        if (sortedWfs.length > 0) {
+            const { tag, count, tools, avgScore } = sortedWfs[0];
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-software/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
+        }
+        // 3. Second most populated category
+        if (sortedCats.length > 1) {
+            const { cat, count, tools } = sortedCats[1];
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-software/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
+        }
+        // 4. Second highest scoring workflow
+        if (sortedWfs.length > 1) {
+            const { tag, count, tools, avgScore } = sortedWfs[1];
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-software/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
+        }
+        // 5. Best Free AI Tools
+        const freeTools = allTools.filter(t => t.pricing_model === 'Free' || t.pricing_model === 'Freemium');
+        const freeCatFreq: Record<string, number> = {};
+        freeTools.forEach(t => { if (t.category_primary) freeCatFreq[t.category_primary] = (freeCatFreq[t.category_primary] || 0) + 1; });
+        const topFreeCat = Object.entries(freeCatFreq).sort((a, b) => b[1] - a[1])[0];
+        const freeCatSlug = topFreeCat ? catSlug(topFreeCat[0]) : 'ai-chatbots';
+        const topFreeTools = [...freeTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+        cards.push({ title: 'Best Free AI Tools 2026', url: `/best-software/${freeCatSlug}`, description: 'Free and freemium AI tools that deliver real value without a paid plan.', count: freeTools.length, topTools: topFreeTools });
+        // 6. Top Rated Tools
+        const topRatedTools = [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+        const topCatSlug = sortedCats.length > 0 ? catSlug(sortedCats[0].cat) : 'ai-chatbots';
+        cards.push({ title: 'Top Rated Tools 2026', url: `/best-software/${topCatSlug}`, description: 'The highest-rated AI tools across all categories, scored by features, pricing, and performance.', count: allTools.length, topTools: topRatedTools });
+
+        return cards.slice(0, 6);
+    }, [allTools]);
 
     const workflowData = React.useMemo(() =>
         ALL_WORKFLOW_TAGS.map(tag => {
@@ -1029,54 +1135,52 @@ export const BestSoftwareHub: React.FC<{
                     <h2 className="text-xl font-black text-white mb-2 flex items-center gap-2">
                         <Star size={20} className="text-news-accent" /> Featured Rankings
                     </h2>
-                    <p className="text-sm text-news-muted mb-6">Top-rated tools ranked and scored across all categories.</p>
+                    <p className="text-sm text-news-muted mb-6">Curated ranking pages across every major category and workflow.</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {featuredRankings.map(tool => {
-                            const updatedLabel = tool.last_updated
-                                ? new Date(tool.last_updated).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                                : null;
-                            return (
-                                <button
-                                    key={tool.slug}
-                                    onClick={() => onToolClick?.(tool.slug)}
-                                    className="group w-full text-left bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all p-5 flex flex-col gap-3"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center p-1.5 flex-shrink-0">
-                                            {tool.logo
-                                                ? <img src={tool.logo} alt={tool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
-                                                : <Layers size={16} className="text-news-muted" />
-                                            }
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-black text-white group-hover:text-news-accent transition-colors leading-tight truncate">{tool.name}</h3>
-                                            {tool.category_primary && (
-                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-news-accent/10 border border-news-accent/20 text-news-accent font-bold uppercase tracking-widest mt-1 inline-block">
-                                                    {tool.category_primary}
-                                                </span>
-                                            )}
-                                        </div>
-                                        {tool.rating_score > 0 && (
-                                            <div className="flex items-center gap-1 flex-shrink-0">
-                                                <Star size={11} className="text-news-accent" fill="currentColor" />
-                                                <span className="text-sm font-black text-white">{tool.rating_score}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {tool.short_description && (
-                                        <p className="text-[11px] text-news-muted leading-relaxed line-clamp-2">{tool.short_description}</p>
-                                    )}
-                                    <div className="mt-auto pt-3 border-t border-border-divider flex items-center justify-between">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent flex items-center gap-1 group-hover:text-white transition-colors">
-                                            View tool <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                        {featuredRankings.map((ranking, i) => (
+                            <a
+                                key={i}
+                                href={ranking.url}
+                                className="group w-full text-left bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all p-5 flex flex-col gap-3 no-underline"
+                            >
+                                {/* Header row */}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-news-accent">BEST OF</span>
+                                    {ranking.avgScore != null && (
+                                        <span className="text-[9px] font-black text-news-accent flex items-center gap-0.5">
+                                            <Star size={8} fill="currentColor" /> {ranking.avgScore}/10
                                         </span>
-                                        {updatedLabel && (
-                                            <span className="text-[8px] text-news-muted font-bold uppercase tracking-widest">{updatedLabel}</span>
-                                        )}
+                                    )}
+                                </div>
+                                {/* Title */}
+                                <h3 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-tight">{ranking.title}</h3>
+                                {/* Description */}
+                                <p className="text-[11px] text-news-muted leading-relaxed line-clamp-2 flex-1">{ranking.description}</p>
+                                {/* Tool count */}
+                                <span className="text-[10px] text-news-muted">{ranking.count} tools ranked</span>
+                                {/* Footer: overlapping logos + VIEW RANKINGS */}
+                                <div className="pt-3 border-t border-border-divider flex items-center justify-between">
+                                    <div className="flex items-center">
+                                        {ranking.topTools.map((tool, ti) => (
+                                            <div
+                                                key={tool.slug}
+                                                title={tool.name}
+                                                className="w-8 h-8 rounded-full bg-white border-2 border-surface-card flex items-center justify-center p-1 flex-shrink-0 overflow-hidden"
+                                                style={{ marginLeft: ti > 0 ? '-8px' : 0 }}
+                                            >
+                                                {tool.logo
+                                                    ? <img src={tool.logo} alt={tool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                                    : <Layers size={12} className="text-news-muted" />
+                                                }
+                                            </div>
+                                        ))}
                                     </div>
-                                </button>
-                            );
-                        })}
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent flex items-center gap-1 group-hover:text-white transition-colors">
+                                        View Rankings <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                                    </span>
+                                </div>
+                            </a>
+                        ))}
                     </div>
                 </section>
             )}

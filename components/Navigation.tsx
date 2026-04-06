@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import { usePathname } from 'next/navigation';
 import { Section, Article } from '../types';
 import { Menu, X, Search, Bell, ChevronRight, ChevronDown, PenLine, Code2, ImageIcon, Zap, Layers, Users, Megaphone, Briefcase, LayoutGrid, Star, Rocket, Sparkles, Flame, MousePointer2, Video, Mic, TrendingUp, Check } from 'lucide-react';
 
@@ -166,9 +167,29 @@ interface MegaMenuPanelProps {
   onItemClick: (item: MegaMenuColumn['items'][number]) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  activeParams?: URLSearchParams;
+  activePath?: string;
 }
 
-const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect, onItemClick, onMouseEnter, onMouseLeave }) => {
+const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect, onItemClick, onMouseEnter, onMouseLeave, activeParams, activePath }) => {
+  const isItemActive = (item: MegaMenuColumn['items'][number]): boolean => {
+    if (!activePath) return false;
+
+    if (slug === 'best-software') {
+      // Path-based: active when current page IS the ranking page the item links to
+      return activePath === item.href;
+    }
+
+    // ai-tools: query param matching
+    if (!activeParams || activePath !== '/ai-tools' || slug !== 'ai-tools') return false;
+    const qIdx = item.href.indexOf('?');
+    if (qIdx === -1) return false;
+    const itemParams = new URLSearchParams(item.href.substring(qIdx));
+    for (const [key, val] of itemParams.entries()) {
+      if (activeParams.get(key) === val) return true;
+    }
+    return false;
+  };
   if (!anchorRect) return null;
 
   const panelWidth = Math.min(1120, window.innerWidth - 32);
@@ -203,12 +224,14 @@ const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect
               {col.heading}
             </p>
             <ul className="space-y-0.5" role="none">
-              {col.items.map((item, ii) => (
+              {col.items.map((item, ii) => {
+                const active = isItemActive(item);
+                return (
                 <li key={ii} role="none">
                   <button
                     role="menuitem"
                     onClick={() => onItemClick(item)}
-                    className="w-full text-left px-2 py-2.5 rounded-xl transition-all group/item flex items-start gap-3 hover:bg-surface-hover/80 hover:translate-x-1"
+                    className={`w-full text-left px-2 py-2.5 rounded-xl transition-all group/item flex items-start gap-3 hover:bg-surface-hover/80 hover:translate-x-1 ${active ? 'bg-news-accent/8' : ''}`}
                   >
                     {/* Icon or Logo */}
                     {item.logo ? (
@@ -225,9 +248,10 @@ const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect
 
                     <div className="flex-1 pr-4">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="text-xs font-bold text-news-text group-hover/item:text-white transition-colors whitespace-normal break-words leading-tight">
+                        <span className={`text-xs font-bold transition-colors whitespace-normal break-words leading-tight ${active ? 'text-news-accent' : 'text-news-text group-hover/item:text-white'}`}>
                           {item.label}
                         </span>
+                        {active && <span className="w-1.5 h-1.5 rounded-full bg-news-accent flex-shrink-0 mt-0.5" />}
                         {item.badge && (
                           <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-widest flex-shrink-0 ${
                             item.badge === 'Popular' ? 'bg-news-accent/15 text-news-accent border border-news-accent/20' : 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
@@ -245,7 +269,8 @@ const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect
                     <ChevronRight size={10} className="opacity-0 group-hover/item:opacity-60 transition-all translate-x-[-4px] group-hover/item:translate-x-0" />
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         ))}
@@ -288,6 +313,12 @@ const Navigation: React.FC<NavigationProps> = ({
   currentView,
   lastSyncTime
 }) => {
+  const pathname = usePathname();
+  const [activeParams, setActiveParams] = useState<URLSearchParams>(() => new URLSearchParams());
+  useEffect(() => {
+    setActiveParams(new URLSearchParams(window.location.search));
+  }, [pathname]);
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -323,7 +354,7 @@ const Navigation: React.FC<NavigationProps> = ({
     const catItems = Object.entries(catFreq)
       .sort((a, b) => b[1] - a[1]).slice(0, 8)
       .map(([cat, count]) => ({
-        label: cat, href: `/ai-tools?category=${encodeURIComponent(cat)}`,
+        label: cat, href: `/ai-tools?category=${cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-')}`,
         hub: 'ai-tools', category: cat,
         description: `${count} tools`,
         icon: CATEGORY_ICON_MAP[cat],
@@ -333,14 +364,14 @@ const Navigation: React.FC<NavigationProps> = ({
     const capCount = (field: string, value: string | string[]) =>
       navTools.filter(t => Array.isArray(value) ? value.includes(t[field]) : t[field] === value).length;
     const capItems = [
-      { label: 'Has Free Tier',            href: '/ai-tools?pricing=freemium',              description: `${navTools.filter(t => t.pricing_model === 'Free' || t.pricing_model === 'Freemium').length} tools` },
+      { label: 'Has Free Tier',            href: '/ai-tools?capability=free-tier',          description: `${navTools.filter(t => t.pricing_model === 'Free' || t.pricing_model === 'Freemium').length} tools` },
       { label: 'Image Generation',         href: '/ai-tools?capability=image-generation',   description: `${capCount('image_generation', 'yes')} tools` },
       { label: 'Memory / Remembers You',   href: '/ai-tools?capability=memory',             description: `${capCount('memory_persistence', 'yes')} tools` },
       { label: 'Computer Use',             href: '/ai-tools?capability=computer-use',        description: `${capCount('computer_use', 'yes')} tools` },
       { label: 'Multimodal',               href: '/ai-tools?capability=multimodal',          description: `${capCount('multimodal', 'yes')} tools` },
       { label: 'Open Source',              href: '/ai-tools?capability=open-source',         description: `${navTools.filter(t => t.open_source === 'yes' || t.open_source === 'partial').length} tools` },
       { label: 'Browser Extension',        href: '/ai-tools?capability=browser-extension',   description: `${capCount('browser_extension', 'yes')} tools` },
-      { label: 'API Available',            href: '/ai-tools?capability=api',                 description: `${capCount('api_available', 'yes')} tools` },
+      { label: 'API Available',            href: '/ai-tools?capability=api-available',       description: `${capCount('api_available', 'yes')} tools` },
     ].map(item => ({ ...item, hub: 'ai-tools' as const }));
 
     // Column 3: Filter by Use Case
@@ -349,7 +380,7 @@ const Navigation: React.FC<NavigationProps> = ({
     const useCaseItems = Object.entries(useCaseFreq)
       .sort((a, b) => b[1] - a[1]).slice(0, 7)
       .map(([uc, count]) => ({
-        label: uc, href: `/ai-tools?use_case=${encodeURIComponent(uc)}`,
+        label: uc, href: `/ai-tools?use_case=${uc.toLowerCase().replace(/\s+/g, '-')}`,
         hub: 'ai-tools', description: `${count} tools`,
       }));
 
@@ -370,78 +401,94 @@ const Navigation: React.FC<NavigationProps> = ({
     ];
   }, [navTools]);
 
-  const BS_WORKFLOW_ICON: Record<string, React.ElementType> = {
-    'Students': Users, 'Developers': Code2, 'Marketers': Megaphone,
-    'Content Creators': PenLine, 'Startups': Rocket, 'Small Business': Briefcase,
-    'Enterprise': Layers, 'Researchers': Search, 'Designers': ImageIcon, 'Sales Teams': Star,
-  };
-
   const bsNavColumns = React.useMemo((): MegaMenuColumn[] => {
     if (!navTools.length) return MEGA_MENUS['best-software'];
 
-    // Column 1: Browse by Workflow
+    const catSlug = (cat: string) => cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-');
+    const wfSlug  = (tag: string) => tag.toLowerCase().replace(/\s+/g, '-');
+    const now = Date.now();
+    const DAY = 24 * 3600 * 1000;
+
+    // Frequency maps
+    const catFreq: Record<string, number> = {};
+    navTools.forEach(t => { if (t.category_primary) catFreq[t.category_primary] = (catFreq[t.category_primary] || 0) + 1; });
+    const sortedCats = Object.entries(catFreq).sort((a, b) => b[1] - a[1]);
+
     const wfFreq: Record<string, number> = {};
-    navTools.forEach(t => ((t as any).workflow_tags || []).forEach((tag: string) => {
-      wfFreq[tag] = (wfFreq[tag] || 0) + 1;
-    }));
-    const wfItems = Object.entries(wfFreq)
-      .sort((a, b) => b[1] - a[1]).slice(0, 6)
-      .map(([tag, count]) => ({
-        label: tag,
-        href: `/best-software?workflow=${encodeURIComponent(tag.toLowerCase().replace(/\s+/g, '-'))}`,
-        hub: 'best-software',
-        description: `${count} tool${count !== 1 ? 's' : ''}`,
-        icon: BS_WORKFLOW_ICON[tag],
-      }));
+    navTools.forEach(t => ((t as any).workflow_tags || []).forEach((tag: string) => { wfFreq[tag] = (wfFreq[tag] || 0) + 1; }));
+    const sortedWfs = Object.entries(wfFreq).sort((a, b) => b[1] - a[1]);
 
-    // Column 2: Browse by Category
-    const bsCatFreq: Record<string, number> = {};
-    navTools.forEach(t => { if (t.category_primary) bsCatFreq[t.category_primary] = (bsCatFreq[t.category_primary] || 0) + 1; });
-    const bsCatItems = Object.entries(bsCatFreq)
-      .sort((a, b) => b[1] - a[1]).slice(0, 6)
-      .map(([cat, count]) => ({
-        label: cat,
-        href: `/ai-tools?category=${encodeURIComponent(cat)}`,
-        hub: 'best-software',
-        description: `${count} tools`,
-        icon: CATEGORY_ICON_MAP[cat],
-      }));
-
-    // Column 3: Top Rated Tools
-    const topRatedItems = [...navTools]
-      .sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 5)
-      .map(t => ({
-        label: t.name,
-        href: `/tools/${t.slug}`,
-        hub: 'best-software',
-        logo: t.logo || undefined,
-        description: t.rating_score > 0 ? `★ ${t.rating_score}` : (t.category_primary || undefined),
-      }));
-
-    // Column 4: Recently Updated
-    const recentItems = [...navTools]
-      .filter(t => (t as any).last_updated)
-      .sort((a, b) => new Date((b as any).last_updated).getTime() - new Date((a as any).last_updated).getTime())
-      .slice(0, 5)
-      .map(t => {
-        const label = new Date((t as any).last_updated).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        return {
-          label: t.name,
-          href: `/tools/${t.slug}`,
+    // Column 1: Popular Rankings — alternating 2 categories + 2 workflows
+    const popularItems: MegaMenuColumn['items'] = [];
+    let ci = 0, wi = 0;
+    while (popularItems.length < 4 && (ci < sortedCats.length || wi < sortedWfs.length)) {
+      if (ci < sortedCats.length) {
+        const [cat, count] = sortedCats[ci++];
+        popularItems.push({
+          label: `Best ${cat} Tools 2026`,
+          href: `/best-software/${catSlug(cat)}`,
           hub: 'best-software',
-          logo: t.logo || undefined,
-          description: `Updated ${label}`,
-          badge: 'New' as const,
-        };
-      });
+          description: `${count} tools ranked`,
+          badge: ci === 1 ? 'Popular' : undefined,
+        });
+      }
+      if (popularItems.length < 4 && wi < sortedWfs.length) {
+        const [tag, count] = sortedWfs[wi++];
+        popularItems.push({
+          label: `Best Tools for ${tag} 2026`,
+          href: `/best-software/for/${wfSlug(tag)}`,
+          hub: 'best-software',
+          description: `${count} tools ranked`,
+        });
+      }
+    }
 
-    const cols: MegaMenuColumn[] = [
-      { heading: 'Browse by Workflow', items: wfItems.length ? wfItems : MEGA_MENUS['best-software'][2].items },
-      { heading: 'Browse by Category', items: bsCatItems.length ? bsCatItems : MEGA_MENUS['best-software'][1].items },
-      { heading: 'Top Rated Tools', items: topRatedItems.length ? topRatedItems : MEGA_MENUS['best-software'][0].items },
+    // Column 2: Rankings by Category
+    const bsCatItems: MegaMenuColumn['items'] = sortedCats.map(([cat, count]) => ({
+      label: cat,
+      href: `/best-software/${catSlug(cat)}`,
+      hub: 'best-software',
+      description: `${count} tools`,
+      icon: CATEGORY_ICON_MAP[cat],
+    }));
+
+    // Column 3: Rankings by Workflow
+    const bsWfItems: MegaMenuColumn['items'] = sortedWfs.map(([tag, count]) => ({
+      label: tag,
+      href: `/best-software/for/${wfSlug(tag)}`,
+      hub: 'best-software',
+      description: `${count} tools`,
+    }));
+
+    // Column 4: Latest Rankings — most recently updated ranking pages
+    const catMostRecent: Record<string, number> = {};
+    const wfMostRecent: Record<string, number> = {};
+    navTools.forEach(t => {
+      const d = t.last_updated ? new Date(t.last_updated).getTime() : 0;
+      if (!d) return;
+      if (t.category_primary && (!catMostRecent[t.category_primary] || d > catMostRecent[t.category_primary])) catMostRecent[t.category_primary] = d;
+      ((t as any).workflow_tags || []).forEach((tag: string) => {
+        if (!wfMostRecent[tag] || d > wfMostRecent[tag]) wfMostRecent[tag] = d;
+      });
+    });
+    const recentEntries = [
+      ...Object.entries(catMostRecent).map(([cat, d]) => ({ label: `Best ${cat} Tools 2026`, href: `/best-software/${catSlug(cat)}`, date: d })),
+      ...Object.entries(wfMostRecent).map(([tag, d]) => ({ label: `Best Tools for ${tag} 2026`, href: `/best-software/for/${wfSlug(tag)}`, date: d })),
+    ].sort((a, b) => b.date - a.date).slice(0, 4);
+    const latestItems: MegaMenuColumn['items'] = recentEntries.map(e => ({
+      label: e.label,
+      href: e.href,
+      hub: 'best-software',
+      badge: (now - e.date < 30 * DAY ? 'New' : undefined) as 'New' | undefined,
+      description: new Date(e.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+    }));
+
+    return [
+      { heading: 'Popular Rankings',       items: popularItems.length  ? popularItems  : MEGA_MENUS['best-software'][0].items },
+      { heading: 'Rankings by Category',   items: bsCatItems.length    ? bsCatItems    : MEGA_MENUS['best-software'][1].items },
+      { heading: 'Rankings by Workflow',   items: bsWfItems.length     ? bsWfItems     : MEGA_MENUS['best-software'][2].items },
+      { heading: 'Latest Rankings',        items: latestItems.length   ? latestItems   : MEGA_MENUS['best-software'][3].items },
     ];
-    if (recentItems.length) cols.push({ heading: 'Recently Updated', items: recentItems });
-    return cols;
   }, [navTools]);
 
   // ── Viewport listener ──────────────────────────────────────────────────────
@@ -713,6 +760,8 @@ const Navigation: React.FC<NavigationProps> = ({
           onItemClick={handleMegaItemClick}
           onMouseEnter={cancelClose}
           onMouseLeave={closeDropdown}
+          activeParams={activeParams}
+          activePath={pathname}
         />
       )}
 

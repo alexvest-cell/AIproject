@@ -23,6 +23,8 @@ function AIToolsHubInner({ tools }: Props) {
         router.replace(qs ? `/ai-tools?${qs}` : '/ai-tools', { scroll: false });
     };
 
+    const qs = searchParams.toString();
+
     return (
         <AIToolsHub
             articles={[]}
@@ -32,6 +34,7 @@ function AIToolsHubInner({ tools }: Props) {
             initialTools={tools}
             initialSearch={initialSearch}
             onSearchChange={handleSearchChange}
+            queryString={qs ? `?${qs}` : ''}
         />
     );
 }
