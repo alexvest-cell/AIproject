@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Section, Article } from '../types';
 import { Menu, X, Search, Bell, ChevronRight, ChevronDown, PenLine, Code2, ImageIcon, Zap, Layers, Users, Megaphone, Briefcase, LayoutGrid, Star, Rocket, Sparkles, Flame, MousePointer2, Video, Mic, TrendingUp, Check } from 'lucide-react';
 
@@ -314,6 +314,7 @@ const Navigation: React.FC<NavigationProps> = ({
   lastSyncTime
 }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const [activeParams, setActiveParams] = useState<URLSearchParams>(() => new URLSearchParams());
   useEffect(() => {
     setActiveParams(new URLSearchParams(window.location.search));
@@ -563,25 +564,26 @@ const Navigation: React.FC<NavigationProps> = ({
   const handleMegaItemClick = useCallback((item: MegaMenuColumn['items'][number]) => {
     setActiveDropdown(null);
     setIsMobileMenuOpen(false);
-    if (!onHubClick) return;
 
+    // /tools/[slug] pages use the old SPA pushState pattern — preserve exactly
     if (item.href.startsWith('/tools/')) {
       const slug = item.href.replace('/tools/', '');
-      // We can't call handleToolClick directly from Nav, so we push the state manually
       window.history.pushState({ view: 'tool', slug }, '', item.href);
       window.dispatchEvent(new PopStateEvent('popstate', { state: { view: 'tool', slug } }));
       return;
     }
 
-    const qsIndex = item.href.indexOf('?');
-    const qs = qsIndex > -1 ? item.href.substring(qsIndex) : '';
-
-    if (item.workflow) {
-      onHubClick(item.hub || 'ai-tools', item.workflow, qs);
-    } else {
-      onHubClick(item.hub || 'ai-tools', undefined, qs);
+    // Navigate directly to the full href — handles all path and query string cases
+    if (item.href) {
+      router.push(item.href);
+      return;
     }
-  }, [onHubClick]);
+
+    // Fallback — should not be reached with correct item data
+    if (onHubClick) {
+      onHubClick(item.hub || 'ai-tools', item.workflow, '');
+    }
+  }, [router, onHubClick]);
 
   // ── Search ─────────────────────────────────────────────────────────────────
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -725,8 +727,7 @@ const Navigation: React.FC<NavigationProps> = ({
                 >
                   <button
                     onClick={() => {
-                      if (onHubClick) onHubClick(cat.slug);
-                      else onCategorySelect(cat.id);
+                      router.push(`/${cat.slug}`);
                       setActiveDropdown(null);
                     }}
                     aria-haspopup={hasMega ? 'true' : undefined}
