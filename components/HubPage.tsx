@@ -472,8 +472,9 @@ export const AIToolsHub: React.FC<{
     });
 
     const sorted = [...filtered].sort((a, b) => {
-        if (sortBy === 'most-used') return (b.rating_score || 0) - (a.rating_score || 0);
-        if (sortBy === 'popular')   return (b.review_count || 0) - (a.review_count || 0);
+        if (sortBy === 'most-used') return (b.review_count || 0) - (a.review_count || 0);
+        if (sortBy === 'rating')    return (b.rating_score || 0) - (a.rating_score || 0);
+        if (sortBy === 'popular')   return (b.rating_score || 0) - (a.rating_score || 0);
         if (sortBy === 'price') {
             const pa = parseFloat((a.starting_price || '9999').replace(/[^0-9.]/g, ''));
             const pb = parseFloat((b.starting_price || '9999').replace(/[^0-9.]/g, ''));
@@ -825,7 +826,7 @@ export const AIToolsHub: React.FC<{
                             className="appearance-none bg-surface-card border border-border-subtle text-news-muted text-xs font-bold rounded-xl pl-3 py-2 pr-7 focus:outline-none focus:border-news-accent cursor-pointer hover:text-white hover:border-border-divider transition-colors"
                         >
                             <option value="most-used">Most Used</option>
-                            <option value="popular">Most Popular</option>
+                            <option value="rating">Top Rated</option>
                             <option value="newest">Newest</option>
                             <option value="price">Lowest Price</option>
                         </select>
