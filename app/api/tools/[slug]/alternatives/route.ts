@@ -14,20 +14,50 @@ export async function GET(request: Request, { params }: Params) {
         const tool = await Tool.findOne({ slug }).lean() as Record<string, unknown> | null;
         if (!tool) return NextResponse.json({ error: 'Tool not found' }, { status: 404 });
 
-        const candidates = await Tool.find({
-            slug: { $ne: slug },
-            status: 'Active',
-            category_tags: { $in: (tool.category_tags as string[]) || [] },
-        }).lean() as Record<string, unknown>[];
+        const MAX = 12;
+        const competitorSlugs = ((tool.competitors as string[]) || []).filter((s: string) => s !== slug);
 
-        const scored = candidates.map(t => {
-            const overlap = ((t.category_tags as string[]) || []).filter(tag =>
-                ((tool.category_tags as string[]) || []).includes(tag)
-            ).length;
-            return { ...t, _score: overlap * 10 + ((t.rating_score as number) || 0) };
-        });
-        scored.sort((a, b) => (b._score as number) - (a._score as number));
-        const alternatives = scored.slice(0, 12);
+        // ── Step 1: Explicit competitors ─────────────────────────────────────────
+        let explicitCompetitors: Record<string, unknown>[] = [];
+        if (competitorSlugs.length > 0) {
+            explicitCompetitors = await Tool.find({
+                slug: { $in: competitorSlugs },
+                status: 'Active',
+            }).sort({ rating_score: -1 }).lean() as Record<string, unknown>[];
+        }
+
+        const explicitSlugs = explicitCompetitors.map((t: any) => t.slug as string);
+
+        // ── Step 2: Category matches to fill remaining slots ─────────────────────
+        const remainingAfterExplicit = MAX - explicitCompetitors.length;
+        let categoryMatches: Record<string, unknown>[] = [];
+        if (remainingAfterExplicit > 0 && tool.category_primary) {
+            categoryMatches = await Tool.find({
+                category_primary: tool.category_primary,
+                status: 'Active',
+                slug: { $ne: slug, $nin: explicitSlugs },
+            }).sort({ rating_score: -1 }).limit(remainingAfterExplicit).lean() as Record<string, unknown>[];
+        }
+
+        // ── Step 3: Tertiary use-case fallback (only when total < 3) ────────────
+        const combined = [...explicitCompetitors, ...categoryMatches];
+        let useCaseMatches: Record<string, unknown>[] = [];
+        if (combined.length < 3) {
+            const usedSlugs = [slug, ...explicitSlugs, ...categoryMatches.map((t: any) => t.slug as string)];
+            const remainingAfterCategory = MAX - combined.length;
+            useCaseMatches = await Tool.find({
+                use_case_tags: { $in: (tool.use_case_tags as string[]) || [] },
+                status: 'Active',
+                slug: { $ne: slug, $nin: usedSlugs },
+            }).sort({ rating_score: -1 }).limit(remainingAfterCategory).lean() as Record<string, unknown>[];
+        }
+
+        // ── Step 4: Combine with source indicator ────────────────────────────────
+        const alternatives = [
+            ...explicitCompetitors.map((t: any) => ({ ...t, _alternativeSource: 'competitor' })),
+            ...categoryMatches.map((t: any) => ({ ...t, _alternativeSource: 'category' })),
+            ...useCaseMatches.map((t: any) => ({ ...t, _alternativeSource: 'use-case' })),
+        ].slice(0, MAX);
 
         const [comparisons, relatedArticles] = await Promise.all([
             Comparison.find({ $or: [{ tool_a_slug: slug }, { tool_b_slug: slug }, { tool_c_slug: slug }], status: 'published' }).lean(),
