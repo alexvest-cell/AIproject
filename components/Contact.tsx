@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Section } from '../types';
 import { Layers, ShieldCheck, Mail, FileText } from 'lucide-react';
 import { CATEGORIES } from '../data/categories';
+import { SITE_CONFIG } from '../data/siteConfig';
 
 interface ContactProps {
   onShowAbout: () => void;
@@ -48,7 +49,7 @@ const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCate
               Categories
             </h3>
             <ul className="space-y-3">
-              {CATEGORIES.map((cat) => (
+              {CATEGORIES.filter(c => c.slug !== 'reviews' || SITE_CONFIG.SHOW_REVIEWS).map((cat) => (
                 <li key={cat.id}>
                   <button
                     onClick={() => onCategorySelect && onCategorySelect(cat.id)}

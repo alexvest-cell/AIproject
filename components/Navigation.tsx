@@ -23,7 +23,8 @@ interface NavigationProps {
 }
 
 import { CATEGORIES } from '../data/categories';
-const navCategories = CATEGORIES;
+import { SITE_CONFIG } from '../data/siteConfig';
+const navCategories = CATEGORIES.filter(c => c.slug !== 'reviews' || SITE_CONFIG.SHOW_REVIEWS);
 
 // ─── Mega Menu Data ────────────────────────────────────────────────────────────
 
@@ -930,14 +931,16 @@ const Navigation: React.FC<NavigationProps> = ({
               <div className="space-y-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Research</p>
                 <div className="grid gap-2">
-                  <button 
-                    onClick={() => { onHubClick?.('reviews'); setIsMobileMenuOpen(false); }}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
-                  >
-                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Reviews</span>
-                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
-                  </button>
-                  <button 
+                  {SITE_CONFIG.SHOW_REVIEWS && (
+                    <button
+                      onClick={() => { onHubClick?.('reviews'); setIsMobileMenuOpen(false); }}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                    >
+                      <span className="text-sm font-bold text-gray-300 group-hover:text-white">Reviews</span>
+                      <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                    </button>
+                  )}
+                  <button
                     onClick={() => { onHubClick?.('comparisons'); setIsMobileMenuOpen(false); }}
                     className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
                   >

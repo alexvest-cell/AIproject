@@ -654,18 +654,6 @@ function App() {
               />
 
 
-              <div className="w-full bg-black py-12 border-t border-white/5">
-                <div className="container mx-auto px-4">
-                  <div className="flex justify-center">
-                    <AdUnit
-                      format="horizontal"
-                      variant="transparent"
-                      className="w-full h-32 md:h-48 bg-transparent"
-                      slotId={ADS_CONFIG.SLOTS.HOME_FOOTER}
-                    />
-                  </div>
-                </div>
-              </div>
 
             </>
           )}

@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import SiteNav from './SiteNav';
+import SiteFooter from './SiteFooter';
 import RankingPage from './RankingPage';
 import type { Tool } from '../types';
 
@@ -25,6 +26,7 @@ export default function RankingPageClient({ type, slug, tools }: Props) {
                 onRankingClick={(t, s) => router.push(t === 'workflow' ? `/best-ai-tools/for/${s}` : `/best-ai-tools/${s}`)}
                 onHubNavigate={(hub) => router.push(`/${hub}`)}
             />
+            <SiteFooter />
         </>
     );
 }
