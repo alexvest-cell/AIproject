@@ -477,33 +477,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         </div>
                     )}
 
-                    {/* Use Cases — bar layout matching Our Score */}
-                    {tool.use_case_tags?.length > 0 && (
-                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4 text-center">Use Cases</h3>
-                            <div className="space-y-3">
-                                {tool.use_case_tags.map((uc: string) => {
-                                    const se = ucScoresArr.find(s => s.use_case.toLowerCase() === uc.toLowerCase());
-                                    const sc = se?.score != null ? se.score : (() => { const m = (useCaseBreakdown[uc] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
-                                    const ucAnchor = `use-case-${uc.toLowerCase().replace(/\s+/g, '-')}`;
-                                    return (
-                                        <a key={uc} href={`#${ucAnchor}`}
-                                            onClick={(e: React.MouseEvent) => { e.preventDefault(); document.getElementById(ucAnchor)?.scrollIntoView({ behavior: 'smooth' }); }}
-                                            className="block group">
-                                            <div className="flex justify-between text-[10px] text-news-muted mb-1 group-hover:text-news-accent transition-colors">
-                                                <span className="font-bold uppercase tracking-widest">{uc}</span>
-                                                <span className="text-white font-bold">{sc != null ? sc.toFixed(1) : '—'}</span>
-                                            </div>
-                                            <div className="w-full bg-surface-alt rounded-full h-1.5">
-                                                <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: sc != null ? `${(sc / 10) * 100}%` : '0%' }} />
-                                            </div>
-                                        </a>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
                     {/* Platforms */}
                     {tool.supported_platforms?.length > 0 && (
                         <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
@@ -921,12 +894,18 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         const ucAnchor = `use-case-${uc.toLowerCase().replace(/\s+/g, '-')}`;
                                         return (
                                             <div key={uc} id={ucAnchor} className="bg-surface-card border border-border-subtle rounded-xl p-4 scroll-mt-24">
-                                                <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-1">{uc}</p>
-                                                {sc != null && (
-                                                    <div className="flex items-center gap-1 mb-2">
-                                                        <Star size={10} className="text-news-accent fill-news-accent" />
-                                                        <span className="text-sm font-bold text-news-accent">{sc}/10</span>
-                                                    </div>
+                                                {sc != null ? (
+                                                    <>
+                                                        <div className="flex justify-between items-center mb-1.5">
+                                                            <p className="text-xs font-bold uppercase tracking-widest text-news-accent">{uc}</p>
+                                                            <span className="text-xs font-bold text-white tabular-nums">{sc.toFixed(1)}</span>
+                                                        </div>
+                                                        <div className="w-full bg-surface-alt rounded-full h-1.5 mb-3">
+                                                            <div className="bg-news-accent h-1.5 rounded-full" style={{ width: `${(sc / 10) * 100}%` }} />
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-2">{uc}</p>
                                                 )}
                                                 {desc && <p className="text-sm text-news-text leading-relaxed">{desc}</p>}
                                             </div>
