@@ -105,6 +105,24 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set(['free']));
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
+    // Always fetch alternatives from the API (not from initialAlternatives, which was the wrong data source)
+    useEffect(() => {
+        const MAX_ALTERNATIVES = 8;
+        fetch(`/api/tools/${slug}/alternatives`)
+            .then(r => r.ok ? r.json() : { alternatives: [] })
+            .then(async (altData) => {
+                let alts: Tool[] = (altData.alternatives || []).slice(0, MAX_ALTERNATIVES);
+                if (alts.length === 0) {
+                    const popular = await fetch(`/api/tools?sort=popular&limit=9`)
+                        .then(r => r.ok ? r.json() : [])
+                        .catch(() => []);
+                    alts = (popular as Tool[]).filter((t: Tool) => t.slug !== slug).slice(0, MAX_ALTERNATIVES);
+                }
+                setAlternatives(alts);
+            })
+            .catch(() => {});
+    }, [slug]);
+
     useEffect(() => {
         if (initialTool) {
             // Data was pre-loaded server-side; skip the primary fetch
@@ -115,14 +133,11 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
         setError(null);
         // Scroll restoration managed by browser
 
-        const MAX_ALTERNATIVES = 8;
-
         Promise.all([
             fetch(`/api/tools/${slug}`).then(r => r.ok ? r.json() : Promise.reject('Tool not found')),
-            fetch(`/api/tools/${slug}/alternatives`).then(r => r.ok ? r.json() : { alternatives: [] }),
             fetch('/api/tools').then(r => r.ok ? r.json() : []).catch(() => [])
         ])
-            .then(async ([data, altData, toolsData]) => {
+            .then(([data, toolsData]) => {
                 setTool(data.tool);
                 setRelatedArticles(data.relatedArticles || []);
                 setReviews(data.reviews || []);
@@ -133,15 +148,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                 setStacks(data.stacks || []);
                 setUseCases(data.useCases || []);
                 setAllTools(Array.isArray(toolsData) ? toolsData : []);
-                let alts: Tool[] = (altData.alternatives || []).slice(0, MAX_ALTERNATIVES);
-                // Fallback: if no alternatives found, show popular tools (excluding this one)
-                if (alts.length === 0) {
-                    const popular = await fetch(`/api/tools?sort=popular&limit=9`)
-                        .then(r => r.ok ? r.json() : [])
-                        .catch(() => []);
-                    alts = (popular as Tool[]).filter((t: Tool) => t.slug !== slug).slice(0, MAX_ALTERNATIVES);
-                }
-                setAlternatives(alts);
 
                 if (data.tool) {
                     // Update Page Meta
@@ -262,6 +268,53 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     if (t.alternative_selection) sections.push({ id: 'alternatives-guide', label: 'When Not To Choose' });
 
     const pricingClass = PRICING_COLORS[tool.pricing_model] || 'bg-surface-alt text-news-muted border-border-subtle';
+
+    // ── Plans & Pricing — computed once, shared between mobile block and main content ──
+    const mobilePlanData = (() => {
+        if (!t.model_version_by_plan) return null;
+        const mvbpPriceMap: Record<string, string> = {};
+        const planTiersList = (t.model_version_by_plan as string)
+            .split('\n').filter((l: string) => l.trim())
+            .map((line: string) => {
+                const ci = line.indexOf(':');
+                const rawKey = ci > 0 ? line.slice(0, ci).trim() : line.trim();
+                const priceMatch = rawKey.match(/\(([^)]+)\)\s*$/);
+                const isPriceString = (s: string) => /[\$\d\/]/.test(s);
+                // Always strip parenthetical suffix for clean plan name and consistent lookup keys
+                const planName = priceMatch ? rawKey.replace(/\s*\([^)]+\)\s*$/, '').trim() : rawKey;
+                if (priceMatch && isPriceString(priceMatch[1])) mvbpPriceMap[planName.toLowerCase()] = priceMatch[1];
+                return { plan: planName, models: ci > 0 ? line.slice(ci + 1).trim() : '' };
+            });
+        const limitsMap: Record<string, string> = {};
+        const rateLimitsPriceMap: Record<string, string> = {};
+        if (t.rate_limits) {
+            (t.rate_limits as string).split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+                const ci = line.indexOf(':');
+                if (ci < 0) return;
+                const rawKey = line.slice(0, ci).trim();
+                const priceMatch = rawKey.match(/\(([^)]+)\)\s*$/);
+                // Always strip parenthetical suffix for consistent lookup keys
+                const planKey = priceMatch ? rawKey.replace(/\s*\([^)]+\)\s*$/, '').trim().toLowerCase() : rawKey.trim().toLowerCase();
+                if (priceMatch && /[\$\d\/]/.test(priceMatch[1])) rateLimitsPriceMap[planKey] = priceMatch[1];
+                limitsMap[planKey] = line.slice(ci + 1).trim();
+            });
+        }
+        const priceMap: Record<string, string> = {};
+        if (t.price_by_plan) {
+            (t.price_by_plan as string).split('\n').filter((l: string) => l.trim()).forEach((line: string) => {
+                const ci = line.indexOf(':');
+                if (ci > 0) priceMap[line.slice(0, ci).trim().toLowerCase()] = line.slice(ci + 1).trim();
+            });
+        } else {
+            Object.assign(priceMap, mvbpPriceMap);
+            Object.assign(priceMap, rateLimitsPriceMap);
+            if (!Object.keys(priceMap).length && t.starting_price) {
+                const tiers = parsePricingTiers(t.starting_price as string);
+                if (tiers) tiers.forEach(({ label, price }) => { priceMap[label.toLowerCase()] = price; });
+            }
+        }
+        return { planTiersList, limitsMap, priceMap };
+    })();
 
     const JumpNav = ({ sections }: { sections: { id: string, label: string }[] }) => {
         if (sections.length === 0) return null;
@@ -415,7 +468,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                 {/* ─── Mobile only: decision-critical blocks ─── */}
                 <div className="md:hidden space-y-4 mb-8">
 
-                    {/* Pricing */}
+                    {/* Pricing — hidden on mobile when Plans table exists (replaced by accordion below) */}
+                    {!t.model_version_by_plan && (
                     <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4">Pricing</h3>
                         <div className={`inline-block text-sm font-bold px-3 py-1 rounded-full border mb-3 ${pricingClass}`}>{tool.pricing_model}</div>
@@ -449,6 +503,56 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </a>
                         )}
                     </div>
+                    )}
+
+                    {/* Plans & Pricing accordion — mobile only, shown when Plans table exists */}
+                    {mobilePlanData && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Plans & Pricing</h3>
+                            <div className="space-y-1">
+                                {mobilePlanData.planTiersList.map((tier: { plan: string; models: string }, i: number) => {
+                                    const key = tier.plan.toLowerCase();
+                                    const isFree = key === 'free';
+                                    const isExpanded = expandedPlans.has(key);
+                                    const rawLimits = mobilePlanData.limitsMap[key] || '';
+                                    const limitDisplay = rawLimits.toLowerCase().includes('not publicly disclosed') ? '—' : (rawLimits || '—');
+                                    return (
+                                        <div key={i} className={`border rounded-xl overflow-hidden ${isFree ? 'border-news-accent/40' : 'border-border-subtle'}`}>
+                                            <button
+                                                onClick={() => setExpandedPlans(prev => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(key)) next.delete(key); else next.add(key);
+                                                    return next;
+                                                })}
+                                                className="w-full flex items-center justify-between px-4 py-3 bg-surface-card hover:bg-surface-hover transition-colors text-left"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-white">{tier.plan}</span>
+                                                    {isFree && <span className="text-[8px] font-bold uppercase tracking-widest text-news-accent border border-news-accent/30 px-1.5 py-0.5 rounded">FREE</span>}
+                                                </div>
+                                                <div className="flex items-center gap-3 flex-shrink-0">
+                                                    <span className="text-xs font-bold text-news-accent">{mobilePlanData.priceMap[key] || (isFree ? '$0' : '—')}</span>
+                                                    <ChevronDown size={14} className={`text-news-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                                </div>
+                                            </button>
+                                            {isExpanded && (
+                                                <div className="px-4 py-3 bg-surface-base border-t border-border-subtle space-y-2.5">
+                                                    <div>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent">Model</span>
+                                                        <p className="text-xs text-white mt-0.5 leading-snug">{tier.models || '—'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent">Usage Limits</span>
+                                                        <p className="text-xs text-news-muted mt-0.5 leading-snug">{limitDisplay}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Our Score */}
                     {tool.rating_score > 0 && (
@@ -690,8 +794,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         </table>
                                     </div>
 
-                                    {/* Mobile accordion */}
-                                    <div className="md:hidden space-y-1">
+                                    {/* Mobile accordion — hidden here; shown in top mobile block */}
+                                    <div className="hidden space-y-1">
                                         {planTiersList.map((tier: { plan: string; models: string }, i: number) => {
                                             const key = tier.plan.toLowerCase();
                                             const isFree = key === 'free';

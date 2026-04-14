@@ -20,7 +20,6 @@ export default function ToolPageClient({ tool, competitors, relatedTools, forCon
             <ToolPage
                 slug={tool.slug}
                 initialTool={tool}
-                initialAlternatives={competitors}
                 initialCompetitors={competitors}
                 initialRelatedTools={relatedTools}
                 forContext={forContext}
