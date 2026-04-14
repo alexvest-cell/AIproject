@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
 import { Comparison, Tool } from '../types';
 import { ArrowRight, Trophy, Check, X, TrendingUp, Target, Star, Zap, Medal, ChevronDown } from 'lucide-react';
 import { ArticleFAQ } from './article-layouts/SharedModules';
@@ -1520,6 +1521,21 @@ const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, 
                             ))}
                         </div>
                     </section>
+                )}
+
+                {/* Alternatives crosslinks */}
+                {tools.length >= 2 && (
+                    <div className="mt-10 pt-6 border-t border-border-divider flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                        {tools.filter((t: any) => t?.slug && t?.name).map((t: any, i: number) => (
+                            <React.Fragment key={t.slug}>
+                                {i > 0 && <span className="text-news-muted text-xs">·</span>}
+                                <Link href={`/tools/${t.slug}/alternatives`}
+                                    className="text-xs text-news-muted hover:text-teal-400 transition-colors">
+                                    See all <span className="text-teal-400">{t.name}</span> alternatives →
+                                </Link>
+                            </React.Fragment>
+                        ))}
+                    </div>
                 )}
 
                 {/* Related comparisons & rankings */}

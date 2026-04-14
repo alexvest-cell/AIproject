@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Tool, Article, Stack } from '../types';
 import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon, ChevronDown, Users, Tag } from 'lucide-react';
 import { RelatedContent } from './RelatedContent';
@@ -355,6 +356,14 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     className="inline-flex items-center gap-1.5 text-xs text-news-accent hover:underline font-medium">
                                     Want our full verdict? Read the {tool.name} Review 2026 <ArrowRight size={12} />
                                 </a>
+                            </div>
+                        )}
+                        {alternatives.length > 0 && (
+                            <div className="mt-3">
+                                <Link href={`/tools/${slug}/alternatives`}
+                                    className="inline-flex items-center gap-1 text-xs text-teal-400 hover:underline font-medium">
+                                    See {alternatives.length} Alternatives →
+                                </Link>
                             </div>
                         )}
                     </div>
@@ -1231,6 +1240,30 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         );
                                     })}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Alternatives */}
+                        {alternatives.length > 0 && (
+                            <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Alternatives</h3>
+                                <div className="divide-y divide-border-divider">
+                                    {alternatives.slice(0, 3).map((alt: any) => (
+                                        <Link key={alt.slug} href={`/tools/${alt.slug}`}
+                                            className="flex items-center gap-2 group py-2.5 first:pt-0 last:pb-0 hover:bg-surface-alt/40 -mx-1 px-1 rounded transition-colors">
+                                            {alt.logo && (
+                                                <div className="w-5 h-5 rounded bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5">
+                                                    <img src={alt.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                </div>
+                                            )}
+                                            <span className="text-xs text-news-muted group-hover:text-white transition-colors truncate">{alt.name}</span>
+                                        </Link>
+                                    ))}
+                                </div>
+                                <Link href={`/tools/${slug}/alternatives`}
+                                    className="mt-3 block text-xs text-teal-400 hover:underline font-medium">
+                                    See all {alternatives.length} alternatives →
+                                </Link>
                             </div>
                         )}
 
