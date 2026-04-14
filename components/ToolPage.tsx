@@ -477,6 +477,39 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         </div>
                     )}
 
+                    {/* Use Cases — inline after Our Score on mobile */}
+                    {tool.use_case_tags?.length > 0 && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-4">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4 text-center">Use Cases</h3>
+                            <div className="space-y-4">
+                                {tool.use_case_tags.map((uc: string) => {
+                                    const se = ucScoresArr.find(s => s.use_case.toLowerCase() === uc.toLowerCase());
+                                    const sc = se?.score != null ? se.score : (() => { const m = (useCaseBreakdown[uc] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
+                                    const desc = se?.description || (useCaseBreakdown[uc] ? useCaseBreakdown[uc].replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);
+                                    if (!desc && sc == null) return null;
+                                    return (
+                                        <div key={uc}>
+                                            {sc != null ? (
+                                                <>
+                                                    <div className="flex justify-between items-center mb-1.5">
+                                                        <p className="text-xs font-bold uppercase tracking-widest text-news-accent">{uc}</p>
+                                                        <span className="text-xs font-bold text-white tabular-nums">{sc.toFixed(1)}</span>
+                                                    </div>
+                                                    <div className="w-full bg-surface-alt rounded-full h-1.5 mb-2">
+                                                        <div className="bg-news-accent h-1.5 rounded-full" style={{ width: `${(sc / 10) * 100}%` }} />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <p className="text-xs font-bold uppercase tracking-widest text-news-accent mb-1">{uc}</p>
+                                            )}
+                                            {desc && <p className="text-xs text-news-text leading-relaxed">{desc}</p>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Platforms */}
                     {tool.supported_platforms?.length > 0 && (
                         <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
@@ -881,9 +914,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         )}
 
-                        {/* Use Cases */}
+                        {/* Use Cases — desktop only; mobile renders inline above after Our Score */}
                         {tool.use_case_tags?.length > 0 && (
-                            <section id="use-cases" className="scroll-mt-24">
+                            <section id="use-cases" className="scroll-mt-24 hidden md:block">
                                 <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Use Cases</h2>
                                 <div className="space-y-4">
                                     {tool.use_case_tags.map((uc: string) => {
