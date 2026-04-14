@@ -12,6 +12,7 @@ function AIToolsHubInner({ tools, initialQueryString }: Props) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialSearch = searchParams.get('search') || '';
+    const autoFocusSearch = searchParams.get('focus') === 'search';
 
     const handleSearchChange = (term: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -44,6 +45,8 @@ function AIToolsHubInner({ tools, initialQueryString }: Props) {
             onSearchChange={handleSearchChange}
             onWorkflowChange={handleWorkflowChange}
             queryString={queryString}
+            autoFocusSearch={autoFocusSearch}
+            onFocusSearchDone={() => router.replace('/ai-tools', { scroll: false })}
         />
     );
 }

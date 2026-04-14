@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { categorySlugToName, workflowNameToSlug } from '../lib/utils/slugs';
 import { Article, Tool, Comparison, Stack } from '../types';
-import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter, Video, Mic, Building2, Database, Clipboard, UserRound, Info } from 'lucide-react';
+import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter, Video, Mic, Building2, Database, Clipboard, UserRound, Info, Microscope, PenTool, Music } from 'lucide-react';
 
 type HubType = 'ai-tools' | 'best-ai-tools' | 'reviews' | 'comparisons' | 'use-cases' | 'guides' | 'news';
 
@@ -169,12 +169,22 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType }> 
 };
 
 const WORKFLOW_KEYWORDS: Record<string, string[]> = {
-    students:         ['student', 'academic', 'education'],
-    developers:       ['developer', 'development', 'coding', 'engineer'],
-    marketing:        ['market', 'marketing', 'content team', 'agency'],
-    startups:         ['startup', 'start-up', 'founder'],
-    creators:         ['creator', 'creative', 'writer', 'freelance'],
-    'small-business': ['small business', 'smb', 'small team'],
+    students:            ['student', 'academic', 'education'],
+    developers:          ['developer', 'development', 'coding', 'engineer'],
+    marketing:           ['market', 'marketing', 'content team', 'agency'],
+    startups:            ['startup', 'start-up', 'founder'],
+    creators:            ['creator', 'creative', 'writer', 'freelance'],
+    'small-business':    ['small business', 'smb', 'small team'],
+    enterprise:          ['enterprise', 'organization', 'compliance', 'sso', 'audit', 'team'],
+    researchers:         ['research', 'academic', 'analysis', 'study', 'scholar'],
+    designers:           ['design', 'designer', 'creative', 'visual', 'graphic', 'ui', 'ux'],
+    'sales-teams':       ['sales', 'crm', 'pipeline', 'lead', 'revenue', 'prospecting'],
+    agencies:            ['agency', 'agenc', 'client', 'marketing team', 'creative team'],
+    educators:           ['educat', 'teacher', 'teaching', 'course', 'learning', 'classroom'],
+    freelancers:         ['freelance', 'freelancer', 'solo', 'independent', 'contractor'],
+    'product-managers':  ['product manager', 'product team', 'roadmap', 'product management'],
+    'data-scientists':   ['data scientist', 'data science', 'machine learning', 'ml', 'analyst'],
+    musicians:           ['music', 'musician', 'audio', 'sound', 'producer', 'recording'],
 };
 
 const PRICING_OPTIONS = ['All', 'Free', 'Freemium', 'Paid', 'Enterprise', 'Trial', 'Open Source'];
@@ -189,12 +199,22 @@ const SUGGESTED_QUERIES = [
 ];
 
 const EXPLORE_BY_WORKFLOW = [
-    { label: 'Students',      icon: GraduationCap, key: 'students',      color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-    { label: 'Developers',    icon: Code2,          key: 'developers',    color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20' },
-    { label: 'Marketers',     icon: Megaphone,      key: 'marketing',     color: 'text-pink-400',   bg: 'bg-pink-500/10 border-pink-500/20' },
-    { label: 'Startups',      icon: Rocket,         key: 'startups',      color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
-    { label: 'Creators',      icon: PenLine,        key: 'creators',      color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
-    { label: 'Small Business',icon: Briefcase,      key: 'small-business',color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+    { label: 'Students',         icon: GraduationCap, key: 'students',         color: 'text-green-400',   bg: 'bg-green-500/10 border-green-500/20' },
+    { label: 'Developers',       icon: Code2,         key: 'developers',       color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20' },
+    { label: 'Marketers',        icon: Megaphone,     key: 'marketing',        color: 'text-pink-400',    bg: 'bg-pink-500/10 border-pink-500/20' },
+    { label: 'Startups',         icon: Rocket,        key: 'startups',         color: 'text-orange-400',  bg: 'bg-orange-500/10 border-orange-500/20' },
+    { label: 'Creators',         icon: PenLine,       key: 'creators',         color: 'text-purple-400',  bg: 'bg-purple-500/10 border-purple-500/20' },
+    { label: 'Small Business',   icon: Briefcase,     key: 'small-business',   color: 'text-yellow-400',  bg: 'bg-yellow-500/10 border-yellow-500/20' },
+    { label: 'Enterprise',       icon: Building2,     key: 'enterprise',       color: 'text-cyan-400',    bg: 'bg-cyan-500/10 border-cyan-500/20' },
+    { label: 'Researchers',      icon: Microscope,    key: 'researchers',      color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+    { label: 'Designers',        icon: PenTool,       key: 'designers',        color: 'text-rose-400',    bg: 'bg-rose-500/10 border-rose-500/20' },
+    { label: 'Sales Teams',      icon: TrendingUp,    key: 'sales-teams',      color: 'text-indigo-400',  bg: 'bg-indigo-500/10 border-indigo-500/20' },
+    { label: 'Agencies',         icon: Building2,     key: 'agencies',         color: 'text-violet-400',  bg: 'bg-violet-500/10 border-violet-500/20' },
+    { label: 'Educators',        icon: BookOpen,      key: 'educators',        color: 'text-teal-400',    bg: 'bg-teal-500/10 border-teal-500/20' },
+    { label: 'Freelancers',      icon: UserRound,     key: 'freelancers',      color: 'text-sky-400',     bg: 'bg-sky-500/10 border-sky-500/20' },
+    { label: 'Product Managers', icon: Clipboard,     key: 'product-managers', color: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
+    { label: 'Data Scientists',  icon: Database,      key: 'data-scientists',  color: 'text-lime-400',    bg: 'bg-lime-500/10 border-lime-500/20' },
+    { label: 'Musicians',        icon: Music,         key: 'musicians',        color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10 border-fuchsia-500/20' },
 ];
 
 // ─── Workflow config: category filters + display names ────────────────────────
@@ -390,7 +410,9 @@ export const AIToolsHub: React.FC<{
     initialSearch?: string;
     onSearchChange?: (term: string) => void;
     onWorkflowChange?: (slug: string | null) => void;
-}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick, initialTools, initialSearch, onSearchChange, onWorkflowChange }) => {
+    autoFocusSearch?: boolean;
+    onFocusSearchDone?: () => void;
+}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick, initialTools, initialSearch, onSearchChange, onWorkflowChange, autoFocusSearch, onFocusSearchDone }) => {
     const [tools, setTools] = useState<Tool[]>(initialTools ?? []);
     const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
@@ -404,6 +426,8 @@ export const AIToolsHub: React.FC<{
     const [search, setSearch] = useState(initialSearch ?? initialFilters.search);
     const [debouncedSearch, setDebouncedSearch] = useState(initialSearch ?? initialFilters.search);
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const [searchFocusRing, setSearchFocusRing] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [pricingFilter, setPricingFilter] = useState<string>(initialFilters.pricingFilter);
     const [platformFilter, setPlatformFilter] = useState(initialFilters.platformFilter);
@@ -455,6 +479,19 @@ export const AIToolsHub: React.FC<{
         }, 300);
         return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
     }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Auto-focus search when navigated here via ?focus=search
+    useEffect(() => {
+        if (!autoFocusSearch) return;
+        const timer = setTimeout(() => {
+            searchInputRef.current?.focus();
+            searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setSearchFocusRing(true);
+            setTimeout(() => setSearchFocusRing(false), 2000);
+            onFocusSearchDone?.();
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Reset pagination when filters change
     useEffect(() => { setVisibleCount(TOOLS_PER_PAGE); }, [debouncedSearch, pricingFilter, catFilter, useCaseFilter, sortBy, platformFilter, activeWorkflow, capFilters]);
@@ -625,13 +662,14 @@ export const AIToolsHub: React.FC<{
             <div className="relative">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-news-muted" />
                 <input
+                    ref={searchInputRef}
                     type="text"
                     value={search}
                     onChange={e => { setSearch(e.target.value); setShowSuggestions(true); }}
                     onFocus={() => setShowSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                     placeholder="Search tools — e.g. writing, automation, CRM, free AI…"
-                    className="w-full bg-surface-card border border-border-subtle rounded-2xl pl-11 pr-10 py-3.5 text-sm text-white placeholder:text-news-muted focus:outline-none focus:border-news-accent transition-colors"
+                    className={`w-full bg-surface-card border rounded-2xl pl-11 pr-10 py-3.5 text-sm text-white placeholder:text-news-muted focus:outline-none transition-all duration-500 ${searchFocusRing ? 'border-teal-400 ring-2 ring-teal-400/40 shadow-[0_0_12px_rgba(45,212,191,0.25)]' : 'border-border-subtle focus:border-news-accent'}`}
                 />
                 {search && (
                     <button onClick={() => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-news-muted hover:text-white">
@@ -706,13 +744,18 @@ export const AIToolsHub: React.FC<{
                         <Users size={18} className="text-news-accent" /> Explore by Workflow
                     </h2>
                     <p className="text-sm text-news-muted mb-5">Filter the full tool database by your role.</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
                         {EXPLORE_BY_WORKFLOW.map(({ label, icon: Icon, key, color, bg }) => {
                             const primaryUseCase = WORKFLOW_PRIMARY_USE_CASE[label] || '';
-                            const count = tools.filter(t =>
-                                workflowMatchesTool(t, key) ||
-                                (primaryUseCase ? t.use_case_tags?.some((u: string) => u.toLowerCase().includes(primaryUseCase.toLowerCase())) : false)
-                            ).length;
+                            const count = key === 'enterprise'
+                                ? tools.filter(t =>
+                                    workflowMatchesTool(t, key) ||
+                                    (t as any).pricing_model?.toLowerCase() === 'enterprise'
+                                ).length
+                                : tools.filter(t =>
+                                    workflowMatchesTool(t, key) ||
+                                    (primaryUseCase ? t.use_case_tags?.some((u: string) => u.toLowerCase().includes(primaryUseCase.toLowerCase())) : false)
+                                ).length;
                             if (count === 0) return null;
                             const isActive = activeWorkflow === key;
                             return (

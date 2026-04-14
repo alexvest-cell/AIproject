@@ -644,7 +644,7 @@ const Navigation: React.FC<NavigationProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-5">
-              <button onClick={toggleSearch} className={`transition-colors ${isSearchOpen ? 'text-news-accent' : 'text-gray-400 hover:text-white'}`} aria-label="Search">
+              <button onClick={() => router.push('/ai-tools?focus=search')} className="transition-colors text-gray-400 hover:text-white" aria-label="Search">
                 <Search size={22} />
               </button>
               <button className="text-white p-1 -mr-1" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'} aria-expanded={isMobileMenuOpen}>
@@ -685,7 +685,7 @@ const Navigation: React.FC<NavigationProps> = ({
                   </button>
                 </div>
               ) : (
-                <button onClick={toggleSearch} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group" aria-label="Open search">
+                <button onClick={() => router.push('/ai-tools?focus=search')} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group" aria-label="Search">
                   <Search size={18} />
                   <span className="text-xs font-bold uppercase tracking-widest group-hover:underline decoration-news-accent underline-offset-4">Search</span>
                 </button>
