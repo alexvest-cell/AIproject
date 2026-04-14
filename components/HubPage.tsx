@@ -340,7 +340,7 @@ function parseInitialFilters(queryString: string, workflowFilter?: string) {
         return {
             catFilter:     WORKFLOW_CONFIG[workflowFilter].catFilter || 'All',
             useCaseFilter: 'All',
-            pricingFilter: 'All',
+            pricingFilter: 'All' as string,
             platformFilter:'All',
             capFilters:    [] as string[],
             activeWorkflow:null as string | null,
@@ -405,7 +405,7 @@ export const AIToolsHub: React.FC<{
     const [debouncedSearch, setDebouncedSearch] = useState(initialSearch ?? initialFilters.search);
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [pricingFilter, setPricingFilter] = useState(initialFilters.pricingFilter);
+    const [pricingFilter, setPricingFilter] = useState<string>(initialFilters.pricingFilter);
     const [platformFilter, setPlatformFilter] = useState(initialFilters.platformFilter);
     const [catFilter, setCatFilter] = useState(initialFilters.catFilter);
     const [useCaseFilter, setUseCaseFilter] = useState(initialFilters.useCaseFilter);
@@ -720,7 +720,7 @@ export const AIToolsHub: React.FC<{
                                     if (isActive) {
                                         setActiveWorkflow(null);
                                         setUseCaseFilter('All');
-                                        if (key === 'enterprise' && pricingFilter === 'Enterprise') setPricingFilter('All');
+                                        if (key === 'enterprise' && (pricingFilter as string) === 'Enterprise') setPricingFilter('All');
                                         onWorkflowChange?.(null);
                                     } else {
                                         setActiveWorkflow(key);
