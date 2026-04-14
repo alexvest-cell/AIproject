@@ -280,7 +280,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     };
 
     return (
-        <div className="min-h-screen bg-surface-base text-news-text font-sans relative pt-[112px]">
+        <div className="min-h-screen bg-surface-base text-news-text font-sans relative pt-20 md:pt-[112px]">
             <style>{`
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -412,7 +412,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                     </div>
                 )}
 
-                {/* ─── Mobile only: decision-critical blocks (positions 2–6) ─── */}
+                {/* ─── Mobile only: decision-critical blocks ─── */}
                 <div className="md:hidden space-y-4 mb-8">
 
                     {/* Pricing */}
@@ -433,7 +433,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             );
                             return <p className="text-white font-semibold mb-3 text-sm">{tool.starting_price}</p>;
                         })()}
-                        {/* FREE_TIER shown here only when no Plans table (legacy records) */}
                         {!t.model_version_by_plan && t.free_tier != null && (
                             <div className="mt-2 mb-3 pt-3 border-t border-border-divider">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-news-accent mb-1">Free tier includes:</p>
@@ -450,6 +449,60 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </a>
                         )}
                     </div>
+
+                    {/* Our Score */}
+                    {tool.rating_score > 0 && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our Score</h3>
+                            <div className="flex items-center justify-center gap-1 text-news-accent mb-4">
+                                <Star size={18} fill="currentColor" />
+                                <span className="text-2xl font-black text-white">{tool.rating_score.toFixed(1)}</span>
+                                <span className="text-news-muted text-sm">/10</span>
+                            </div>
+                            {Object.keys(ratingBreakdown).length > 0 && (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border-divider pt-4">
+                                    {Object.entries(ratingBreakdown).map(([dim, score]) => (
+                                        <div key={dim}>
+                                            <div className="flex justify-between text-[10px] text-news-muted mb-1">
+                                                <span className="font-bold uppercase tracking-widest">{dim}</span>
+                                                <span className="text-white font-bold">{score.toFixed(1)}</span>
+                                            </div>
+                                            <div className="w-full bg-surface-alt rounded-full h-1.5">
+                                                <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: `${(score / 10) * 100}%` }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Use Cases — bar layout matching Our Score */}
+                    {tool.use_case_tags?.length > 0 && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-4 text-center">Use Cases</h3>
+                            <div className="space-y-3">
+                                {tool.use_case_tags.map((uc: string) => {
+                                    const se = ucScoresArr.find(s => s.use_case.toLowerCase() === uc.toLowerCase());
+                                    const sc = se?.score != null ? se.score : (() => { const m = (useCaseBreakdown[uc] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
+                                    const ucAnchor = `use-case-${uc.toLowerCase().replace(/\s+/g, '-')}`;
+                                    return (
+                                        <a key={uc} href={`#${ucAnchor}`}
+                                            onClick={(e: React.MouseEvent) => { e.preventDefault(); document.getElementById(ucAnchor)?.scrollIntoView({ behavior: 'smooth' }); }}
+                                            className="block group">
+                                            <div className="flex justify-between text-[10px] text-news-muted mb-1 group-hover:text-news-accent transition-colors">
+                                                <span className="font-bold uppercase tracking-widest">{uc}</span>
+                                                <span className="text-white font-bold">{sc != null ? sc.toFixed(1) : '—'}</span>
+                                            </div>
+                                            <div className="w-full bg-surface-alt rounded-full h-1.5">
+                                                <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: sc != null ? `${(sc / 10) * 100}%` : '0%' }} />
+                                            </div>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Platforms */}
                     {tool.supported_platforms?.length > 0 && (
@@ -501,54 +554,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         );
                     })()}
-
-                    {/* Score breakdown — 2-column grid for bars */}
-                    {tool.rating_score > 0 && (
-                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our Score</h3>
-                            <div className="flex items-center justify-center gap-1 text-news-accent mb-4">
-                                <Star size={18} fill="currentColor" />
-                                <span className="text-2xl font-black text-white">{tool.rating_score.toFixed(1)}</span>
-                                <span className="text-news-muted text-sm">/10</span>
-                            </div>
-                            {Object.keys(ratingBreakdown).length > 0 && (
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border-divider pt-4">
-                                    {Object.entries(ratingBreakdown).map(([dim, score]) => (
-                                        <div key={dim}>
-                                            <div className="flex justify-between text-[10px] text-news-muted mb-1">
-                                                <span className="font-bold uppercase tracking-widest">{dim}</span>
-                                                <span className="text-white font-bold">{score.toFixed(1)}</span>
-                                            </div>
-                                            <div className="w-full bg-surface-alt rounded-full h-1.5">
-                                                <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: `${(score / 10) * 100}%` }} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Use Cases chips — horizontal scrollable row */}
-                    {tool.use_case_tags?.length > 0 && (
-                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Use Cases</h3>
-                            <div className="flex flex-row flex-nowrap gap-2 overflow-x-auto hide-scrollbar pb-1">
-                                {tool.use_case_tags.map((uc: string) => {
-                                    const se = ucScoresArr.find(s => s.use_case.toLowerCase() === uc.toLowerCase());
-                                    const sc = se?.score != null ? se.score : (() => { const m = (useCaseBreakdown[uc] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
-                                    const ucAnchor = `use-case-${uc.toLowerCase().replace(/\s+/g, '-')}`;
-                                    return (
-                                        <a key={uc} href={`#${ucAnchor}`}
-                                            onClick={(e: React.MouseEvent) => { e.preventDefault(); document.getElementById(ucAnchor)?.scrollIntoView({ behavior: 'smooth' }); }}
-                                            className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/20 font-medium whitespace-nowrap">
-                                            {uc}{sc != null && <span className="ml-1 opacity-70">{sc.toFixed(1)}</span>}
-                                        </a>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
 
                 </div>
 
