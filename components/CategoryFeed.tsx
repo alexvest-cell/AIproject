@@ -73,7 +73,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
     let gridArticles = filteredArticles.filter(a => a.id !== heroArticle?.id);
 
     return (
-        <div className="min-h-screen bg-black pt-36 md:pt-28 pb-20">
+        <div className="min-h-screen bg-black pt-16 md:pt-28 pb-20">
             <div className="container mx-auto px-4 md:px-8">
 
                 {/* Unified Hero Section: Shared Background for Explainer and Hero Article */}

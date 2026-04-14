@@ -127,7 +127,7 @@ const StackPage: React.FC<StackPageProps> = ({
   const costEstimate = useMemo(() => data ? estimateMonthlyCost(data.tools) : null, [data]);
 
   if (loading) return (
-    <div className="min-h-screen bg-surface-base flex items-center justify-center pt-[112px]">
+    <div className="min-h-screen bg-surface-base flex items-center justify-center pt-16 md:pt-[112px]">
       <div className="flex flex-col items-center gap-4 text-news-muted">
         <div className="w-8 h-8 border-2 border-news-accent border-t-transparent rounded-full animate-spin" />
         <span className="text-sm uppercase tracking-widest">Loading Stack</span>
@@ -136,7 +136,7 @@ const StackPage: React.FC<StackPageProps> = ({
   );
 
   if (error || !data || !data.stack) return (
-    <div className="min-h-screen bg-surface-base flex flex-col items-center justify-center text-news-muted pt-[112px]">
+    <div className="min-h-screen bg-surface-base flex flex-col items-center justify-center text-news-muted pt-16 md:pt-[112px]">
       <AlertCircle size={48} className="mb-4 text-news-accent" />
       <p className="mb-4">{error || 'Stack not found'}</p>
       <button onClick={onBack} className="text-white hover:text-news-accent bg-surface-card px-4 py-2 border border-border-subtle rounded transition-colors text-sm">
@@ -183,7 +183,7 @@ const StackPage: React.FC<StackPageProps> = ({
   const setupTime = setupLabel(stack.setup_time_hours);
 
   return (
-    <div className="min-h-screen bg-surface-base text-news-text font-sans pt-[112px]">
+    <div className="min-h-screen bg-surface-base text-news-text font-sans pt-16 md:pt-[112px]">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden bg-surface-card border-b border-border-divider">

@@ -105,18 +105,17 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set(['free']));
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-    // Always fetch alternatives from the API (not from initialAlternatives, which was the wrong data source)
+    // Always fetch alternatives from the API — no client-side cap so count matches the alternatives page
     useEffect(() => {
-        const MAX_ALTERNATIVES = 8;
         fetch(`/api/tools/${slug}/alternatives`)
             .then(r => r.ok ? r.json() : { alternatives: [] })
             .then(async (altData) => {
-                let alts: Tool[] = (altData.alternatives || []).slice(0, MAX_ALTERNATIVES);
+                let alts: Tool[] = altData.alternatives || [];
                 if (alts.length === 0) {
                     const popular = await fetch(`/api/tools?sort=popular&limit=9`)
                         .then(r => r.ok ? r.json() : [])
                         .catch(() => []);
-                    alts = (popular as Tool[]).filter((t: Tool) => t.slug !== slug).slice(0, MAX_ALTERNATIVES);
+                    alts = (popular as Tool[]).filter((t: Tool) => t.slug !== slug).slice(0, 8);
                 }
                 setAlternatives(alts);
             })
@@ -333,7 +332,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     };
 
     return (
-        <div className="min-h-screen bg-surface-base text-news-text font-sans relative pt-20 md:pt-[112px]">
+        <div className="min-h-screen bg-surface-base text-news-text font-sans relative pt-16 md:pt-[112px]">
             <style>{`
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
                 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -922,48 +921,32 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                 {/* Audience Scores */}
                                 {t.workflow_tags?.length > 0 && (
                                     <div className="mt-6">
-                                        <p className="text-xs font-bold uppercase tracking-widest text-teal-400 mb-3">Audience Scores</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {(t.workflow_tags as string[]).map((wf: string) => {
-                                                const wfScore = wfBreakdownScore(t.workflow_breakdown, wf);
-                                                const wfEvidence = wfBreakdownEvidence(t.workflow_breakdown, wf);
-                                                const wfSlug = wf.toLowerCase().replace(/\s+/g, '-');
-                                                const tooltipOpen = activeTooltip === wf;
-                                                return (
-                                                    <div key={wf} className="relative">
-                                                        <a
-                                                            href={`/best-ai-tools/for/${wfSlug}`}
-                                                            className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-surface-alt border transition-colors ${tooltipOpen ? 'border-teal-500/50 text-white' : 'border-border-subtle text-news-text hover:border-teal-500/40 hover:text-white'}`}
-                                                            onMouseEnter={() => wfEvidence && setActiveTooltip(wf)}
-                                                            onMouseLeave={() => setActiveTooltip(null)}
-                                                            onClick={(e) => {
-                                                                if (wfEvidence && !tooltipOpen) {
-                                                                    e.preventDefault();
-                                                                    setActiveTooltip(wf);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <span>{wf}</span>
-                                                            {wfScore != null && (
-                                                                <span className="text-teal-400 font-bold">{wfScore}/10</span>
-                                                            )}
-                                                        </a>
-                                                        {tooltipOpen && wfEvidence && (
-                                                            <div className="absolute bottom-full left-0 mb-2 w-64 max-w-xs p-3 bg-surface-card border border-border-subtle rounded-xl shadow-lg z-20 text-xs text-news-text leading-relaxed">
-                                                                <strong className="text-teal-400 block mb-1">{wf}</strong>
-                                                                {wfEvidence}
-                                                                <button
-                                                                    className="absolute top-1.5 right-2 text-news-muted hover:text-white text-sm leading-none"
-                                                                    onClick={(e) => { e.preventDefault(); setActiveTooltip(null); }}
-                                                                    aria-label="Close"
-                                                                >
-                                                                    ×
-                                                                </button>
+                                        <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 border-b border-border-divider pb-2">Audience Scores</h2>
+                                        <div className="space-y-4">
+                                        {(t.workflow_tags as string[]).map((wf: string) => {
+                                            const wfScore = wfBreakdownScore(t.workflow_breakdown, wf);
+                                            const wfEvidence = wfBreakdownEvidence(t.workflow_breakdown, wf);
+                                            const wfSlug = wf.toLowerCase().replace(/\s+/g, '-');
+                                            if (!wfEvidence && wfScore == null) return null;
+                                            return (
+                                                <div key={wf} className="bg-surface-card border border-border-subtle rounded-xl p-4">
+                                                    {wfScore != null ? (
+                                                        <>
+                                                            <div className="flex justify-between items-center mb-1.5">
+                                                                <a href={`/best-ai-tools/for/${wfSlug}`} className="text-xs font-bold uppercase tracking-widest text-news-accent hover:underline">{wf}</a>
+                                                                <span className="text-xs font-bold text-white tabular-nums">{wfScore.toFixed(1)}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
+                                                            <div className="w-full bg-surface-alt rounded-full h-1.5 mb-3">
+                                                                <div className="bg-news-accent h-1.5 rounded-full" style={{ width: `${(wfScore / 10) * 100}%` }} />
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <a href={`/best-ai-tools/for/${wfSlug}`} className="text-xs font-bold uppercase tracking-widest text-news-accent hover:underline block mb-2">{wf}</a>
+                                                    )}
+                                                    {wfEvidence && <p className="text-sm text-news-text leading-relaxed">{wfEvidence}</p>}
+                                                </div>
+                                            );
+                                        })}
                                         </div>
                                     </div>
                                 )}

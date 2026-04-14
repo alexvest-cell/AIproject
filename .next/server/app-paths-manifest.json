@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/best-ai-tools/page": "app/best-ai-tools/page.js",
+  "/best-ai-tools/for/[slug]/page": "app/best-ai-tools/for/[slug]/page.js",
+  "/best-ai-tools/[slug]/page": "app/best-ai-tools/[slug]/page.js",
+  "/ai-tools/page": "app/ai-tools/page.js"
+}

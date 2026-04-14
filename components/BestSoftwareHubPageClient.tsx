@@ -12,7 +12,7 @@ export default function BestSoftwareHubPageClient({ tools }: Props) {
     return (
         <div className="min-h-screen bg-surface-base text-news-text font-sans">
             <SiteNav />
-            <div className="pt-[112px]">
+            <div className="pt-16 md:pt-[112px]">
                 <div className="container mx-auto px-4 md:px-8 py-10">
                     <BestSoftwareHub
                         articles={[]}

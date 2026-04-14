@@ -78,7 +78,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
   }, [toolSlug]);
 
   if (loading) return (
-    <div className="min-h-screen bg-surface-base flex items-center justify-center pt-[112px]">
+    <div className="min-h-screen bg-surface-base flex items-center justify-center pt-16 md:pt-[112px]">
       <div className="flex flex-col items-center gap-4 text-news-muted">
         <div className="w-8 h-8 border-2 border-news-accent border-t-transparent rounded-full animate-spin" />
         <span className="text-sm uppercase tracking-widest">Loading alternatives</span>
@@ -87,7 +87,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
   );
 
   if (error || !tool) return (
-    <div className="min-h-screen bg-surface-base flex items-center justify-center pt-[112px]">
+    <div className="min-h-screen bg-surface-base flex items-center justify-center pt-16 md:pt-[112px]">
       <div className="text-center">
         <p className="text-news-muted mb-4">{error || 'Tool not found'}</p>
         <button onClick={onBack} className="text-news-accent hover:underline text-sm">← Back</button>
@@ -103,7 +103,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
   const introText = `Looking for alternatives to ${tool.name}? These are the top ${alternatives.length} tools that offer similar ${useCaseText} — ranked by overall score and compared across features, pricing, and use cases.`;
 
   return (
-    <div className="min-h-screen bg-surface-base text-news-text font-sans pt-[112px]">
+    <div className="min-h-screen bg-surface-base text-news-text font-sans pt-16 md:pt-[112px]">
       <div className="container mx-auto px-4 md:px-8 py-10 max-w-5xl">
 
         {/* Back link */}

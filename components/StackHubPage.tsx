@@ -274,7 +274,7 @@ const StackHubPage: React.FC<StackHubPageProps> = ({ onStackClick, articles = []
   }
 
   return (
-    <div className="min-h-screen bg-surface-base text-news-text font-sans pt-[112px]">
+    <div className="min-h-screen bg-surface-base text-news-text font-sans pt-16 md:pt-[112px]">
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <div className="bg-surface-card border-b border-border-divider relative overflow-hidden">
