@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Tool, Comparison, Article } from '../types';
 import { ChevronLeft, ExternalLink, ArrowRight, Star, Zap, Shuffle, BookOpen, BarChart2, Check } from 'lucide-react';
 
@@ -9,6 +10,11 @@ interface AlternativesPageProps {
   onToolClick: (slug: string) => void;
   onArticleClick: (article: Article) => void;
   onComparisonClick: (slug: string) => void;
+  // Optional server-prefetched data — skips client-side fetch when provided
+  initialTool?: Tool | null;
+  initialAlternatives?: Tool[];
+  initialComparisons?: Comparison[];
+  initialRelatedArticles?: Article[];
 }
 
 const PRICING_COLORS: Record<string, string> = {
@@ -18,12 +24,10 @@ const PRICING_COLORS: Record<string, string> = {
   Enterprise: 'bg-orange-900/40 text-orange-400 border-orange-700/50',
 };
 
-const PRICING_BADGE_ICONS: Record<string, string> = {
-  Free: '🆓',
-  Freemium: '⚡',
-  Paid: '💎',
-  Enterprise: '🏢',
-};
+function isDiscontinued(t: any): boolean {
+  const d = ((t.short_description || '') + ' ' + (t.full_description || '')).toLowerCase();
+  return d.includes('discontinued') || d.includes('shut down') || d.includes('no longer available');
+}
 
 const AlternativesPage: React.FC<AlternativesPageProps> = ({
   toolSlug,
@@ -31,15 +35,20 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
   onToolClick,
   onArticleClick,
   onComparisonClick,
+  initialTool,
+  initialAlternatives,
+  initialComparisons,
+  initialRelatedArticles,
 }) => {
-  const [tool, setTool] = useState<Tool | null>(null);
-  const [alternatives, setAlternatives] = useState<Tool[]>([]);
-  const [comparisons, setComparisons] = useState<Comparison[]>([]);
-  const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tool, setTool] = useState<Tool | null>(initialTool ?? null);
+  const [alternatives, setAlternatives] = useState<Tool[]>(initialAlternatives ?? []);
+  const [comparisons, setComparisons] = useState<Comparison[]>(initialComparisons ?? []);
+  const [relatedArticles, setRelatedArticles] = useState<Article[]>(initialRelatedArticles ?? []);
+  const [loading, setLoading] = useState(!initialTool);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialTool) return; // Server-prefetched — skip client fetch
     setLoading(true);
     setError(null);
     window.scrollTo(0, 0);
@@ -54,7 +63,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
 
         if (data.tool) {
           document.title = `Best ${data.tool.name} Alternatives (2026) | ToolCurrent`;
-          const desc = `Looking for ${data.tool.name} alternatives? Compare the best ${(data.tool.category_tags || []).join(' and ')} tools and apps similar to ${data.tool.name}.`;
+          const desc = `The best alternatives to ${data.tool.name} in 2026. Compare features, pricing, and scores to find the right tool for your workflow.`;
           let metaDesc = document.querySelector('meta[name="description"]');
           if (!metaDesc) {
             metaDesc = document.createElement('meta');
@@ -62,38 +71,10 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
             document.head.appendChild(metaDesc);
           }
           metaDesc.setAttribute('content', desc);
-
-          // ItemList schema for SEO
-          const schema = {
-            '@context': 'https://schema.org',
-            '@type': 'ItemList',
-            name: `Best ${data.tool.name} Alternatives`,
-            description: desc,
-            itemListElement: (data.alternatives || []).map((alt: Tool, idx: number) => ({
-              '@type': 'ListItem',
-              position: idx + 1,
-              name: alt.name,
-              url: `https://toolcurrent.com/tools/${alt.slug}`,
-            })),
-          };
-          let el = document.getElementById('alt-schema');
-          if (!el) {
-            el = document.createElement('script');
-            el.id = 'alt-schema';
-            (el as HTMLScriptElement).type = 'application/ld+json';
-            document.head.appendChild(el);
-          }
-          el.textContent = JSON.stringify(schema);
         }
       })
       .catch(err => setError(typeof err === 'string' ? err : 'Failed to load alternatives'))
       .finally(() => setLoading(false));
-
-    return () => {
-      const el = document.getElementById('alt-schema');
-      if (el) el.remove();
-      document.title = 'ToolCurrent | Software Discovery & Intelligence';
-    };
   }, [toolSlug]);
 
   if (loading) return (
@@ -114,17 +95,24 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
     </div>
   );
 
+  const t = tool as any;
+  const topUseCases = (t.use_case_tags || []).slice(0, 2) as string[];
+  const useCaseText = topUseCases.length > 0
+    ? topUseCases.join(' and ').toLowerCase()
+    : 'similar capabilities';
+  const introText = `Looking for alternatives to ${tool.name}? These are the top ${alternatives.length} tools that offer similar ${useCaseText} — ranked by overall score and compared across features, pricing, and use cases.`;
+
   return (
     <div className="min-h-screen bg-surface-base text-news-text font-sans pt-[112px]">
       <div className="container mx-auto px-4 md:px-8 py-10 max-w-5xl">
 
-        {/* Back button */}
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-news-muted hover:text-white transition-colors text-xs font-bold uppercase tracking-widest mb-8"
+        {/* Back link */}
+        <Link
+          href={`/tools/${toolSlug}`}
+          className="inline-flex items-center gap-1 text-news-muted hover:text-white transition-colors text-xs mb-8"
         >
-          <ChevronLeft size={14} /> Back
-        </button>
+          <ChevronLeft size={14} /> Back to {tool.name}
+        </Link>
 
         {/* Hero */}
         <div className="mb-10 pb-10 border-b border-border-divider">
@@ -141,25 +129,34 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
               </h1>
             </div>
           </div>
+
           <p className="text-news-text text-lg leading-relaxed max-w-2xl mb-4">
-            Looking for alternatives to <strong className="text-white">{tool.name}</strong>?
-            We've curated the best {(tool.category_tags || []).join(' and ')} tools that offer
-            similar features—whether you need a different pricing model, more integrations, or a fresh approach.
+            {introText}
           </p>
+
+          {/* Category + use case badges — no keyword stuffing */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {(tool.category_tags || []).map(tag => (
-              <span key={tag} className="text-xs px-2 py-1 rounded-full bg-surface-alt text-news-muted border border-border-subtle">{tag}</span>
+            {t.category_primary && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 font-medium">
+                {t.category_primary}
+              </span>
+            )}
+            {topUseCases.map((uc: string) => (
+              <span key={uc} className="text-xs px-2.5 py-1 rounded-full bg-surface-alt text-news-text border border-border-subtle">
+                {uc}
+              </span>
             ))}
           </div>
-          <button
-            onClick={() => onToolClick(toolSlug)}
-            className="flex items-center gap-2 text-xs font-bold text-news-accent hover:text-white transition-colors"
+
+          <Link
+            href={`/tools/${toolSlug}`}
+            className="inline-flex items-center gap-2 text-xs font-bold text-news-accent hover:text-white transition-colors"
           >
             View {tool.name} full profile <ArrowRight size={12} />
-          </button>
+          </Link>
         </div>
 
-        {/* Top Alternatives Grid */}
+        {/* Top Alternatives */}
         {alternatives.length > 0 && (
           <section className="mb-12">
             <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-6 pb-2 border-b border-border-divider flex items-center gap-2">
@@ -168,11 +165,12 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
             </h2>
             <div className="space-y-4">
               {alternatives.map((alt, idx) => {
-                const pricingClass = PRICING_COLORS[alt.pricing_model] || 'bg-surface-alt text-news-muted border-border-subtle';
+                const pricingClass = PRICING_COLORS[(alt as any).pricing_model] || 'bg-surface-alt text-news-muted border-border-subtle';
+                const discontinued = isDiscontinued(alt);
                 return (
                   <div
                     key={alt.slug}
-                    className="bg-surface-card border border-border-subtle rounded-2xl p-5 md:p-6 hover:border-news-accent/30 transition-all group"
+                    className={`bg-surface-card border rounded-2xl p-5 md:p-6 transition-all group ${discontinued ? 'border-border-subtle opacity-70' : 'border-border-subtle hover:border-news-accent/30'}`}
                   >
                     <div className="flex items-start gap-4">
                       {/* Rank badge */}
@@ -191,26 +189,26 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
                       <div className="flex-grow min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <h3 className="text-white font-black text-lg group-hover:text-news-accent transition-colors">{alt.name}</h3>
+                          {discontinued && (
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-surface-alt text-news-muted border border-border-subtle">
+                              Discontinued
+                            </span>
+                          )}
                           <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${pricingClass}`}>
-                            {PRICING_BADGE_ICONS[alt.pricing_model]} {alt.pricing_model}
+                            {(alt as any).pricing_model}
                           </span>
-                          {alt.ai_enabled && (
+                          {(alt as any).ai_enabled && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 flex items-center gap-1">
                               <Zap size={9} /> AI
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {(alt.category_tags || []).slice(0, 3).map(tag => (
-                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-alt text-news-muted">{tag}</span>
-                          ))}
-                        </div>
                         <p className="text-news-text text-sm leading-relaxed line-clamp-2 mb-3">{alt.short_description}</p>
 
-                        {/* Key features badge row */}
+                        {/* Key features */}
                         {alt.key_features && alt.key_features.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mb-3">
-                            {alt.key_features.slice(0, 3).map((f, fi) => (
+                            {alt.key_features.slice(0, 3).map((f: string, fi: number) => (
                               <span key={fi} className="flex items-center gap-1 text-[10px] text-news-accent/80">
                                 <Check size={9} /> {f}
                               </span>
@@ -226,9 +224,9 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
                           >
                             View Tool
                           </button>
-                          {alt.affiliate_url && (
+                          {(alt as any).affiliate_url && !discontinued && (
                             <a
-                              href={alt.affiliate_url}
+                              href={(alt as any).affiliate_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs font-bold bg-surface-alt hover:bg-surface-hover text-white px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border border-border-subtle"
@@ -236,9 +234,9 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
                               Try Free <ExternalLink size={10} />
                             </a>
                           )}
-                          {alt.rating_score > 0 && (
+                          {(alt as any).rating_score > 0 && (
                             <span className="flex items-center gap-1 text-xs text-news-accent font-bold ml-auto">
-                              <Star size={11} fill="currentColor" /> {alt.rating_score.toFixed(1)}
+                              <Star size={11} fill="currentColor" /> {(alt as any).rating_score.toFixed(1)}
                             </span>
                           )}
                         </div>
@@ -259,9 +257,9 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
                 <BarChart2 size={14} className="text-news-accent" /> Head-to-Head Comparisons
               </h2>
               <div className="space-y-2">
-                {comparisons.map(c => (
+                {comparisons.map((c: any) => (
                   <button
-                    key={c.id}
+                    key={c._id || c.id}
                     onClick={() => onComparisonClick(c.slug)}
                     className="w-full text-left bg-surface-card hover:bg-surface-hover border border-border-subtle rounded-xl px-4 py-3 transition-all group flex items-center justify-between"
                   >
@@ -273,16 +271,16 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
             </section>
           )}
 
-          {/* Related Articles (Rankings + Guides) */}
+          {/* Related Articles */}
           {relatedArticles.length > 0 && (
             <section>
               <h2 className="text-base font-bold uppercase tracking-widest text-news-muted mb-4 pb-2 border-b border-border-divider flex items-center gap-2">
                 <BookOpen size={14} className="text-news-accent" /> Related Rankings & Guides
               </h2>
               <div className="space-y-2">
-                {relatedArticles.map(a => (
+                {relatedArticles.map((a: any) => (
                   <button
-                    key={a.id}
+                    key={a._id || a.id}
                     onClick={() => onArticleClick(a)}
                     className="w-full text-left bg-surface-card hover:bg-surface-hover border border-border-subtle rounded-xl px-4 py-3 transition-all group flex items-center justify-between"
                   >
@@ -303,12 +301,12 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
         {/* Back to tool CTA */}
         <div className="mt-12 pt-8 border-t border-border-divider text-center">
           <p className="text-news-muted text-sm mb-3">Still think {tool.name} is the right choice?</p>
-          <button
-            onClick={() => onToolClick(toolSlug)}
+          <Link
+            href={`/tools/${toolSlug}`}
             className="inline-flex items-center gap-2 bg-surface-card hover:bg-surface-hover border border-border-subtle text-white font-bold text-sm px-6 py-3 rounded-xl transition-all"
           >
             View full {tool.name} profile <ArrowRight size={14} />
-          </button>
+          </Link>
         </div>
       </div>
     </div>

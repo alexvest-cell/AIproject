@@ -53,11 +53,21 @@ export async function GET(request: Request, { params }: Params) {
         }
 
         // ── Step 4: Combine with source indicator ────────────────────────────────
-        const alternatives = [
+        const isDiscontinued = (t: any) => {
+            const d = ((t.short_description as string) || '').toLowerCase();
+            return d.includes('discontinued') || d.includes('shut down') || d.includes('no longer available');
+        };
+
+        const raw = [
             ...explicitCompetitors.map((t: any) => ({ ...t, _alternativeSource: 'competitor' })),
             ...categoryMatches.map((t: any) => ({ ...t, _alternativeSource: 'category' })),
             ...useCaseMatches.map((t: any) => ({ ...t, _alternativeSource: 'use-case' })),
         ].slice(0, MAX);
+
+        const alternatives = [
+            ...raw.filter(t => !isDiscontinued(t)),
+            ...raw.filter(t => isDiscontinued(t)),
+        ];
 
         const [comparisons, relatedArticles] = await Promise.all([
             Comparison.find({ $or: [{ tool_a_slug: slug }, { tool_b_slug: slug }, { tool_c_slug: slug }], status: 'published' }).lean(),
