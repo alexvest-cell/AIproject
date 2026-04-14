@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
+import { categorySlugToName } from '../lib/utils/slugs';
 import {
     ArrowLeft, Star, ArrowRight, BarChart2, Layers, Award,
     TrendingUp, ChevronRight, Info,
@@ -116,7 +117,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
         if (type === 'workflow') {
             return ALL_WORKFLOW_TAGS.find(t => labelToSlug(t) === slug) || slugToLabel(slug);
         }
-        return CATEGORY_PRIMARY_VALUES.find(c => labelToSlug(c) === slug) || slugToLabel(slug);
+        return categorySlugToName(slug) || CATEGORY_PRIMARY_VALUES.find(c => labelToSlug(c) === slug) || slugToLabel(slug);
     }, [type, slug]);
 
     // Set page title + meta description
@@ -143,8 +144,8 @@ const RankingPage: React.FC<RankingPageProps> = ({
             document.head.appendChild(canonEl);
         }
         const canonPath = type === 'workflow'
-            ? `/best-software/for/${slug}`
-            : `/best-software/${slug}`;
+            ? `/best-ai-tools/for/${slug}`
+            : `/best-ai-tools/${slug}`;
         canonEl.setAttribute('href', `${window.location.origin}${canonPath}`);
     }, [type, label, slug]);
 
@@ -240,7 +241,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
                     onClick={onBack}
                     className="text-xs text-news-accent font-bold flex items-center gap-1 hover:underline"
                 >
-                    <ArrowLeft size={12} /> Back to Best Software
+                    <ArrowLeft size={12} /> Back to Best AI Tools
                 </button>
             </div>
         );
@@ -262,10 +263,10 @@ const RankingPage: React.FC<RankingPageProps> = ({
                         </button>
                         <ChevronRight size={10} />
                         <button
-                            onClick={() => onHubNavigate?.('best-software')}
+                            onClick={() => onHubNavigate?.('best-ai-tools')}
                             className="hover:text-white transition-colors"
                         >
-                            Best Software
+                            Best AI Tools
                         </button>
                         <ChevronRight size={10} />
                         {type === 'workflow' && (

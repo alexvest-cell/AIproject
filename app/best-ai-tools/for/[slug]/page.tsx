@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title: `Best AI Tools for ${label} (2026) | ToolCurrent`,
         description: `Top-ranked AI tools for ${label}. Scored and ranked by workflow performance.`,
-        alternates: { canonical: `https://toolcurrent.com/best-software/for/${slug}` },
+        alternates: { canonical: `https://toolcurrent.com/best-ai-tools/for/${slug}` },
     };
 }
 
@@ -47,7 +47,7 @@ export default async function WorkflowRankingPage({ params }: Props) {
 
     // ── JSON-LD Schemas ──────────────────────────────────────────────────────
     const rankingTitle = `Best AI Tools for ${workflowLabel} (2026)`;
-    const rankingUrl = `/best-software/for/${slug}`;
+    const rankingUrl = `/best-ai-tools/for/${slug}`;
     const rankingDescription = `Top-ranked AI tools for ${workflowLabel}. Scored and ranked by workflow performance.`;
 
     const itemListSchema = {
@@ -70,7 +70,7 @@ export default async function WorkflowRankingPage({ params }: Props) {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Best Software', item: 'https://toolcurrent.com/best-software' },
+            { '@type': 'ListItem', position: 1, name: 'Best AI Tools', item: 'https://toolcurrent.com/best-ai-tools' },
             { '@type': 'ListItem', position: 2, name: rankingTitle, item: `https://toolcurrent.com${rankingUrl}` },
         ],
     };

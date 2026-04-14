@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Section } from '../types';
 import { Layers, ShieldCheck, Mail, FileText } from 'lucide-react';
 import { CATEGORIES } from '../data/categories';
@@ -10,8 +10,29 @@ interface ContactProps {
   onCategorySelect?: (category: string) => void;
 }
 
+const catSlug = (cat: string) =>
+    cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
 const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCategorySelect }) => {
   const currentYear = new Date().getFullYear();
+  const [popularRankings, setPopularRankings] = useState<{ title: string; url: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/tools')
+      .then(r => r.ok ? r.json() : [])
+      .then((tools: any[]) => {
+        const counts: Record<string, number> = {};
+        for (const t of tools) {
+          if (t.category_primary) counts[t.category_primary] = (counts[t.category_primary] ?? 0) + 1;
+        }
+        const top4 = Object.entries(counts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([cat]) => ({ title: `Best ${cat} Tools`, url: `/best-ai-tools/${catSlug(cat)}` }));
+        setPopularRankings(top4);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <footer id={Section.CONTACT} className="bg-black border-t border-white/10 pt-20 pb-8 rounded-t-[3rem] mt-12">
@@ -40,33 +61,20 @@ const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCate
             </ul>
           </div>
 
-          {/* Column 2: Popular Guides */}
+          {/* Column 2: Popular Rankings */}
           <div>
-            <h3 className="text-white font-bold text-lg mb-6">Popular Guides</h3>
+            <h3 className="text-white font-bold text-lg mb-6">Popular Rankings</h3>
             <ul className="space-y-3">
+              {popularRankings.map((r) => (
+                <li key={r.url}>
+                  <a href={r.url} className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
+                    {r.title}
+                  </a>
+                </li>
+              ))}
               <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
-                  Building Autonomous Agents
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
-                  LLM Fine-tuning 101
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
-                  RAG Architecture Patterns
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
-                  Prompt Engineering Guide
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
-                  AI Ethics Checklist
+                <a href="/best-ai-tools" className="text-news-accent hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
+                  View all rankings →
                 </a>
               </li>
             </ul>
@@ -82,7 +90,7 @@ const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCate
                 </button>
               </li>
               <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
+                <a href="/editorial-policy" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
                   Editorial Policy
                 </a>
               </li>
@@ -99,22 +107,22 @@ const Contact: React.FC<ContactProps> = ({ onShowAbout, onSubscribeClick, onCate
             <h3 className="text-white font-bold text-lg mb-6">Legal</h3>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
+                <a href="/privacy-policy" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
+                <a href="/cookie-policy" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
                   Cookie Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
+                <a href="/terms-of-service" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
                   Terms of Service
                 </a>
               </li>
               <li>
-                <a href="#" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
+                <a href="/disclaimer" className="text-zinc-400 hover:text-white transition-colors text-sm hover:translate-x-1 duration-300 block">
                   Disclaimer
                 </a>
               </li>

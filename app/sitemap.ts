@@ -4,23 +4,18 @@ import Article from '@/lib/models/Article';
 import Tool from '@/lib/models/Tool';
 import Comparison from '@/lib/models/Comparison';
 import Stack from '@/lib/models/Stack';
+import { categorySlugToName, categoryNameToSlug } from '@/lib/utils/slugs';
 
 const BASE = 'https://toolcurrent.com';
 
 export const revalidate = 3600;
 
-function labelToSlug(label: string): string {
-    return label.toLowerCase()
-        .replace(/\s*&\s*/g, '-')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-');
-}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const staticPages: MetadataRoute.Sitemap = [
         { url: BASE, changeFrequency: 'daily', priority: 1.0 },
         { url: `${BASE}/ai-tools`, changeFrequency: 'daily', priority: 0.8 },
-        { url: `${BASE}/best-software`, changeFrequency: 'daily', priority: 0.8 },
+        { url: `${BASE}/best-ai-tools`, changeFrequency: 'daily', priority: 0.8 },
         { url: `${BASE}/reviews`, changeFrequency: 'daily', priority: 0.8 },
         { url: `${BASE}/comparisons`, changeFrequency: 'daily', priority: 0.8 },
         { url: `${BASE}/stacks`, changeFrequency: 'daily', priority: 0.8 },
@@ -66,13 +61,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.7,
         }));
 
-        // Category ranking pages — only include slugs where at least one tool exists
+        // Category ranking pages — only include slugs that map to a known category
         const categorySet = new Set<string>();
         for (const t of tools) {
-            if (t.category_primary) categorySet.add(labelToSlug(t.category_primary));
+            if (t.category_primary) {
+                const slug = categoryNameToSlug(t.category_primary);
+                if (categorySlugToName(slug) !== null) categorySet.add(slug);
+            }
         }
         const categoryRankingPages: MetadataRoute.Sitemap = [...categorySet].map(slug => ({
-            url: `${BASE}/best-software/${slug}`,
+            url: `${BASE}/best-ai-tools/${slug}`,
             changeFrequency: 'weekly' as const,
             priority: 0.7,
         }));
@@ -85,7 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             }
         }
         const workflowRankingPages: MetadataRoute.Sitemap = [...workflowSet].map(slug => ({
-            url: `${BASE}/best-software/for/${slug}`,
+            url: `${BASE}/best-ai-tools/for/${slug}`,
             changeFrequency: 'weekly' as const,
             priority: 0.7,
         }));

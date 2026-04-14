@@ -11,6 +11,7 @@ interface ToolPageProps {
     onComparisonClick: (slug: string) => void;
     onAlternativesClick: (slug: string) => void;
     onStackClick?: (slug: string) => void;
+    onDismissContext?: () => void;
     // Server-prefetched data — skips client-side fetch when provided
     initialTool?: Tool;
     initialAlternatives?: Tool[];
@@ -86,7 +87,7 @@ const USE_CASE_VALUES = [
     'Customer Support', 'Data Analysis', 'Design', 'Education', 'Personal Productivity', 'Marketing',
 ] as const;
 
-const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick, initialTool, initialAlternatives, initialCompetitors, initialRelatedTools, forContext }) => {
+const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onComparisonClick, onAlternativesClick, onStackClick, onDismissContext, initialTool, initialAlternatives, initialCompetitors, initialRelatedTools, forContext }) => {
     const [tool, setTool] = useState<Tool | null>(initialTool ?? null);
     const [alternatives, setAlternatives] = useState<Tool[]>(initialAlternatives ?? []);
     const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
@@ -328,7 +329,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             ))}
                             {/* secondary_tags are SEO-only — not rendered */}
                             {(tool.category_primary || tool.category_tags.length > 0) && (
-                                <a href={`/best-software?category=${encodeURIComponent(tool.category_primary || tool.category_tags[0])}`}
+                                <a href={`/best-ai-tools?category=${encodeURIComponent(tool.category_primary || tool.category_tags[0])}`}
                                    className="text-xs px-2 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 hover:bg-news-accent/20 transition-colors font-medium">
                                     Best {tool.category_primary || tool.category_tags[0]} Software →
                                 </a>
@@ -361,10 +362,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
                 {/* ── For-context banner ───────────────────────────────────── */}
                 {forContext && forContextLabel && (
-                    <div className="border-l-4 border-teal-500 bg-teal-500/[.03] rounded-r-xl p-4 mb-8">
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-6">
-                            {/* Left: icon + context label */}
-                            <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="border-l-4 border-teal-500 bg-teal-500/[.03] rounded-r-xl px-4 py-3 mb-8 inline-flex flex-col gap-2">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2">
                                 {isWorkflowContext
                                     ? <Users size={13} className="text-teal-400 flex-shrink-0" />
                                     : <Tag size={13} className="text-teal-400 flex-shrink-0" />
@@ -373,8 +373,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     {isWorkflowContext ? `Viewing for ${forContextLabel}` : `Viewing in ${forContextLabel}`}
                                 </span>
                             </div>
-                            {/* Center: score */}
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="flex items-center gap-1.5">
                                 <Star size={13} fill="currentColor" className="text-teal-400" />
                                 <span className="text-sm font-semibold text-white">
                                     {bannerScore != null
@@ -383,20 +382,24 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     }
                                 </span>
                             </div>
-                            {/* Right: evidence + back link */}
-                            <div className="flex-1 min-w-0">
-                                {bannerEvidence && (
-                                    <p className="text-sm text-news-muted leading-relaxed line-clamp-2 mb-2">{bannerEvidence}</p>
-                                )}
-                                <a
-                                    href={isWorkflowContext ? `/best-software/for/${forContext}` : `/best-software/${forContext}`}
-                                    className="inline-flex items-center gap-1 text-xs text-teal-400 hover:underline font-medium"
+                            {onDismissContext && (
+                                <button
+                                    onClick={onDismissContext}
+                                    aria-label="Remove context"
+                                    title="View standard page"
+                                    className="ml-2 text-gray-600 hover:text-white transition-colors flex-shrink-0"
                                 >
-                                    <ChevronLeft size={12} />
-                                    Back to Best {forContextLabel} Tools
-                                </a>
-                            </div>
+                                    <X size={16} />
+                                </button>
+                            )}
                         </div>
+                        <a
+                            href={isWorkflowContext ? `/best-ai-tools/for/${forContext}` : `/best-ai-tools/${forContext}`}
+                            className="inline-flex items-center gap-1 text-xs text-teal-400 hover:underline font-medium"
+                        >
+                            <ChevronLeft size={12} />
+                            Back to Best {forContextLabel} Tools
+                        </a>
                     </div>
                 )}
 
@@ -652,10 +655,10 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                             </td>
                                                             <td className="px-4 py-3 text-news-text leading-snug">{tier.models || '—'}</td>
                                                             <td className="px-4 py-3 text-news-muted leading-snug">{limitDisplay}</td>
-                                                            <td className="px-4 py-3 whitespace-nowrap">
+                                                            <td className="px-4 py-3 w-40">
                                                                 {(() => {
                                                                     const p = priceMap[tier.plan.toLowerCase()];
-                                                                    if (p) return <span className={`font-bold ${isFree ? 'text-news-accent' : 'text-white'}`}>{p}</span>;
+                                                                    if (p) return <span className={`font-bold leading-snug ${isFree ? 'text-news-accent' : 'text-white'}`}>{p}</span>;
                                                                     if (isFree) return <span className="font-bold text-news-accent">Free</span>;
                                                                     return <span className="text-news-muted">—</span>;
                                                                 })()}
@@ -805,7 +808,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                 return (
                                                     <div key={wf} className="relative">
                                                         <a
-                                                            href={`/best-software/for/${wfSlug}`}
+                                                            href={`/best-ai-tools/for/${wfSlug}`}
                                                             className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-surface-alt border transition-colors ${tooltipOpen ? 'border-teal-500/50 text-white' : 'border-border-subtle text-news-text hover:border-teal-500/40 hover:text-white'}`}
                                                             onMouseEnter={() => wfEvidence && setActiveTooltip(wf)}
                                                             onMouseLeave={() => setActiveTooltip(null)}
@@ -967,16 +970,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             </div>
                         )}
 
-                        {/* Build a Stack banner */}
-                        <div className="border border-news-accent/20 bg-news-accent/5 rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-sm text-news-text">
-                                Using <span className="font-semibold text-white">{tool.name}</span> in your workflow?
-                            </p>
-                            <a href={stacks.length > 0 ? `/stacks?tool=${tool.slug}` : '/stacks'}
-                                className="text-xs font-bold text-news-accent hover:underline whitespace-nowrap">
-                                See recommended stacks →
-                            </a>
-                        </div>
+                        {/* Build a Stack banner — hidden until stacks feature is live */}
 
                         {/* Reviews */}
                         {reviews.length > 0 && (
@@ -1248,7 +1242,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     {(t.workflow_tags as string[]).map((wf: string) => (
                                         <a
                                             key={wf}
-                                            href={`/best-software/for/${wf.toLowerCase().replace(/\s+/g, '-')}`}
+                                            href={`/best-ai-tools/for/${wf.toLowerCase().replace(/\s+/g, '-')}`}
                                             className="text-[11px] px-2.5 py-1 rounded-full bg-surface-alt border border-border-subtle text-teal-400 hover:border-teal-500/40 hover:bg-teal-500/5 transition-colors font-medium"
                                         >
                                             {wf}

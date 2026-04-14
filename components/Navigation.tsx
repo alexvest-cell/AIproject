@@ -114,45 +114,45 @@ const MEGA_MENUS: Record<string, MegaMenuColumn[]> = {
       ],
     },
   ],
-  'best-software': [
+  'best-ai-tools': [
     {
       heading: 'Popular Rankings',
       items: [
-        { label: 'Best AI Writing Tools',    href: '/best-software/ai-writing-tools', hub: 'best-software', description: 'Top AI tools for writing, research, and editing', badge: 'Popular' },
-        { label: 'Best Automation Tools',    href: '/best-software/automation-tools', hub: 'best-software', description: 'Platforms for automating workflows', badge: 'Popular' },
-        { label: 'Best AI Coding Assistants', href: '/best-software/ai-coding-assistants', hub: 'best-software', description: 'AI tools to accelerate development' },
-        { label: 'Best Productivity Apps',   href: '/best-software/productivity-apps', hub: 'best-software', description: 'Stay organized and focused' },
-        { label: 'Best CRM Platforms',       href: '/best-software/crm-software', hub: 'best-software', description: 'Manage customer relationships effectively' },
+        { label: 'Best AI Writing Tools',    href: '/best-ai-tools/ai-writing-tools', hub: 'best-ai-tools', description: 'Top AI tools for writing, research, and editing', badge: 'Popular' },
+        { label: 'Best Automation Tools',    href: '/best-ai-tools/automation-tools', hub: 'best-ai-tools', description: 'Platforms for automating workflows', badge: 'Popular' },
+        { label: 'Best AI Coding Assistants', href: '/best-ai-tools/ai-coding-assistants', hub: 'best-ai-tools', description: 'AI tools to accelerate development' },
+        { label: 'Best Productivity Apps',   href: '/best-ai-tools/productivity-apps', hub: 'best-ai-tools', description: 'Stay organized and focused' },
+        { label: 'Best CRM Platforms',       href: '/best-ai-tools/crm-software', hub: 'best-ai-tools', description: 'Manage customer relationships effectively' },
       ],
     },
     {
       heading: 'Rankings by Category',
       items: [
-        { label: 'AI Tools',              href: '/best-software?category=ai-tools',    hub: 'best-software', category: 'AI Tools', icon: Sparkles },
-        { label: 'Productivity Software', href: '/best-software?category=productivity', hub: 'best-software', category: 'Productivity', icon: Layers },
-        { label: 'Automation Platforms',  href: '/best-software?category=automation',  hub: 'best-software', category: 'Automation', icon: Zap },
-        { label: 'Developer Tools',       href: '/best-software?category=developer-tools', hub: 'best-software', category: 'Developer Tools', icon: LayoutGrid },
-        { label: 'Marketing Software',    href: '/best-software?category=marketing',   hub: 'best-software', category: 'Marketing', icon: Megaphone },
-        { label: 'Business Software',     href: '/best-software?category=business',    hub: 'best-software', category: 'Business', icon: Briefcase },
+        { label: 'AI Tools',              href: '/best-ai-tools?category=ai-tools',    hub: 'best-ai-tools', category: 'AI Tools', icon: Sparkles },
+        { label: 'Productivity Software', href: '/best-ai-tools?category=productivity', hub: 'best-ai-tools', category: 'Productivity', icon: Layers },
+        { label: 'Automation Platforms',  href: '/best-ai-tools?category=automation',  hub: 'best-ai-tools', category: 'Automation', icon: Zap },
+        { label: 'Developer Tools',       href: '/best-ai-tools?category=developer-tools', hub: 'best-ai-tools', category: 'Developer Tools', icon: LayoutGrid },
+        { label: 'Marketing Software',    href: '/best-ai-tools?category=marketing',   hub: 'best-ai-tools', category: 'Marketing', icon: Megaphone },
+        { label: 'Business Software',     href: '/best-ai-tools?category=business',    hub: 'best-ai-tools', category: 'Business', icon: Briefcase },
       ],
     },
     {
       heading: 'Rankings by Use Case',
       items: [
-        { label: 'Best Tools for Students',      href: '/best-software?workflow=students',      hub: 'best-software', workflow: 'students' },
-        { label: 'Best Tools for Startups',      href: '/best-software?workflow=startups',      hub: 'best-software', workflow: 'startups' },
-        { label: 'Best Tools for Creators',      href: '/best-software?workflow=creators',      hub: 'best-software', workflow: 'creators' },
-        { label: 'Best Tools for Small Business', href: '/best-software?workflow=small-business', hub: 'best-software', workflow: 'small-business' },
-        { label: 'Best Tools for Developers',    href: '/best-software?workflow=developers',    hub: 'best-software', workflow: 'developers' },
+        { label: 'Best Tools for Students',      href: '/best-ai-tools?workflow=students',      hub: 'best-ai-tools', workflow: 'students' },
+        { label: 'Best Tools for Startups',      href: '/best-ai-tools?workflow=startups',      hub: 'best-ai-tools', workflow: 'startups' },
+        { label: 'Best Tools for Creators',      href: '/best-ai-tools?workflow=creators',      hub: 'best-ai-tools', workflow: 'creators' },
+        { label: 'Best Tools for Small Business', href: '/best-ai-tools?workflow=small-business', hub: 'best-ai-tools', workflow: 'small-business' },
+        { label: 'Best Tools for Developers',    href: '/best-ai-tools?workflow=developers',    hub: 'best-ai-tools', workflow: 'developers' },
       ],
     },
     {
       heading: 'Latest Rankings',
       items: [
-        { label: 'Best AI Agents 2026',         href: '/best-software/ai-agents',         hub: 'best-software', description: 'The future of autonomous workflows', badge: 'New' },
-        { label: 'Best Video AI Tools',         href: '/best-software/video-ai-tools',    hub: 'best-software', description: 'Create stunning video with AI' },
-        { label: 'Best AI Research Tools',      href: '/best-software/ai-research-tools', hub: 'best-software', description: 'Accelerate your information gathering' },
-        { label: 'Best Project Management Apps', href: '/best-software/project-management',hub: 'best-software', description: 'Keep your team on track' },
+        { label: 'Best AI Agents 2026',         href: '/best-ai-tools/ai-agents',         hub: 'best-ai-tools', description: 'The future of autonomous workflows', badge: 'New' },
+        { label: 'Best Video AI Tools',         href: '/best-ai-tools/video-ai-tools',    hub: 'best-ai-tools', description: 'Create stunning video with AI' },
+        { label: 'Best AI Research Tools',      href: '/best-ai-tools/ai-research-tools', hub: 'best-ai-tools', description: 'Accelerate your information gathering' },
+        { label: 'Best Project Management Apps', href: '/best-ai-tools/project-management',hub: 'best-ai-tools', description: 'Keep your team on track' },
       ],
     },
   ],
@@ -175,7 +175,7 @@ const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect
   const isItemActive = (item: MegaMenuColumn['items'][number]): boolean => {
     if (!activePath) return false;
 
-    if (slug === 'best-software') {
+    if (slug === 'best-ai-tools') {
       // Path-based: active when current page IS the ranking page the item links to
       return activePath === item.href;
     }
@@ -403,7 +403,7 @@ const Navigation: React.FC<NavigationProps> = ({
   }, [navTools]);
 
   const bsNavColumns = React.useMemo((): MegaMenuColumn[] => {
-    if (!navTools.length) return MEGA_MENUS['best-software'];
+    if (!navTools.length) return MEGA_MENUS['best-ai-tools'];
 
     const catSlug = (cat: string) => cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-');
     const wfSlug  = (tag: string) => tag.toLowerCase().replace(/\s+/g, '-');
@@ -427,8 +427,8 @@ const Navigation: React.FC<NavigationProps> = ({
         const [cat, count] = sortedCats[ci++];
         popularItems.push({
           label: `Best ${cat} Tools 2026`,
-          href: `/best-software/${catSlug(cat)}`,
-          hub: 'best-software',
+          href: `/best-ai-tools/${catSlug(cat)}`,
+          hub: 'best-ai-tools',
           description: `${count} tools ranked`,
           badge: ci === 1 ? 'Popular' : undefined,
         });
@@ -437,8 +437,8 @@ const Navigation: React.FC<NavigationProps> = ({
         const [tag, count] = sortedWfs[wi++];
         popularItems.push({
           label: `Best Tools for ${tag} 2026`,
-          href: `/best-software/for/${wfSlug(tag)}`,
-          hub: 'best-software',
+          href: `/best-ai-tools/for/${wfSlug(tag)}`,
+          hub: 'best-ai-tools',
           description: `${count} tools ranked`,
         });
       }
@@ -447,8 +447,8 @@ const Navigation: React.FC<NavigationProps> = ({
     // Column 2: Rankings by Category
     const bsCatItems: MegaMenuColumn['items'] = sortedCats.map(([cat, count]) => ({
       label: cat,
-      href: `/best-software/${catSlug(cat)}`,
-      hub: 'best-software',
+      href: `/best-ai-tools/${catSlug(cat)}`,
+      hub: 'best-ai-tools',
       description: `${count} tools`,
       icon: CATEGORY_ICON_MAP[cat],
     }));
@@ -456,8 +456,8 @@ const Navigation: React.FC<NavigationProps> = ({
     // Column 3: Rankings by Workflow
     const bsWfItems: MegaMenuColumn['items'] = sortedWfs.map(([tag, count]) => ({
       label: tag,
-      href: `/best-software/for/${wfSlug(tag)}`,
-      hub: 'best-software',
+      href: `/best-ai-tools/for/${wfSlug(tag)}`,
+      hub: 'best-ai-tools',
       description: `${count} tools`,
     }));
 
@@ -473,22 +473,22 @@ const Navigation: React.FC<NavigationProps> = ({
       });
     });
     const recentEntries = [
-      ...Object.entries(catMostRecent).map(([cat, d]) => ({ label: `Best ${cat} Tools 2026`, href: `/best-software/${catSlug(cat)}`, date: d })),
-      ...Object.entries(wfMostRecent).map(([tag, d]) => ({ label: `Best Tools for ${tag} 2026`, href: `/best-software/for/${wfSlug(tag)}`, date: d })),
+      ...Object.entries(catMostRecent).map(([cat, d]) => ({ label: `Best ${cat} Tools 2026`, href: `/best-ai-tools/${catSlug(cat)}`, date: d })),
+      ...Object.entries(wfMostRecent).map(([tag, d]) => ({ label: `Best Tools for ${tag} 2026`, href: `/best-ai-tools/for/${wfSlug(tag)}`, date: d })),
     ].sort((a, b) => b.date - a.date).slice(0, 4);
     const latestItems: MegaMenuColumn['items'] = recentEntries.map(e => ({
       label: e.label,
       href: e.href,
-      hub: 'best-software',
+      hub: 'best-ai-tools',
       badge: (now - e.date < 30 * DAY ? 'New' : undefined) as 'New' | undefined,
       description: new Date(e.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     }));
 
     return [
-      { heading: 'Popular Rankings',       items: popularItems.length  ? popularItems  : MEGA_MENUS['best-software'][0].items },
-      { heading: 'Rankings by Category',   items: bsCatItems.length    ? bsCatItems    : MEGA_MENUS['best-software'][1].items },
-      { heading: 'Rankings by Workflow',   items: bsWfItems.length     ? bsWfItems     : MEGA_MENUS['best-software'][2].items },
-      { heading: 'Latest Rankings',        items: latestItems.length   ? latestItems   : MEGA_MENUS['best-software'][3].items },
+      { heading: 'Popular Rankings',       items: popularItems.length  ? popularItems  : MEGA_MENUS['best-ai-tools'][0].items },
+      { heading: 'Rankings by Category',   items: bsCatItems.length    ? bsCatItems    : MEGA_MENUS['best-ai-tools'][1].items },
+      { heading: 'Rankings by Workflow',   items: bsWfItems.length     ? bsWfItems     : MEGA_MENUS['best-ai-tools'][2].items },
+      { heading: 'Latest Rankings',        items: latestItems.length   ? latestItems   : MEGA_MENUS['best-ai-tools'][3].items },
     ];
   }, [navTools]);
 
@@ -753,10 +753,10 @@ const Navigation: React.FC<NavigationProps> = ({
       </div>
 
       {/* ── Desktop Mega Menu Panel (portal, desktop ≥1024px only) ─────────── */}
-      {isDesktop && activeDropdown && (MEGA_MENUS[activeDropdown] || activeDropdown === 'ai-tools' || activeDropdown === 'best-software') && (
+      {isDesktop && activeDropdown && (MEGA_MENUS[activeDropdown] || activeDropdown === 'ai-tools' || activeDropdown === 'best-ai-tools') && (
         <MegaMenuPanel
           slug={activeDropdown}
-          columns={activeDropdown === 'ai-tools' ? aiToolsColumns : activeDropdown === 'best-software' ? bsNavColumns : MEGA_MENUS[activeDropdown]}
+          columns={activeDropdown === 'ai-tools' ? aiToolsColumns : activeDropdown === 'best-ai-tools' ? bsNavColumns : MEGA_MENUS[activeDropdown]}
           anchorRect={anchorRect}
           onItemClick={handleMegaItemClick}
           onMouseEnter={cancelClose}
@@ -865,26 +865,26 @@ const Navigation: React.FC<NavigationProps> = ({
                     )}
                   </div>
 
-                  {/* Best Software Accordion */}
+                  {/* Best AI Tools Accordion */}
                   <div className="flex flex-col gap-1">
                     <button 
-                      onClick={() => setMobileExpanded(mobileExpanded === 'best-software' ? null : 'best-software')}
-                      className={`flex items-center justify-between p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all text-left ${mobileExpanded === 'best-software' ? 'border-blue-500/40 bg-surface-hover shadow-[0_0_20px_rgba(59,130,246,0.1)]' : ''}`}
+                      onClick={() => setMobileExpanded(mobileExpanded === 'best-ai-tools' ? null : 'best-ai-tools')}
+                      className={`flex items-center justify-between p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all text-left ${mobileExpanded === 'best-ai-tools' ? 'border-blue-500/40 bg-surface-hover shadow-[0_0_20px_rgba(59,130,246,0.1)]' : ''}`}
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
                           <Star size={18} className="text-blue-400" />
                         </div>
-                        <span className="text-sm font-bold text-white">Best Software</span>
+                        <span className="text-sm font-bold text-white">Best AI Tools</span>
                       </div>
-                      <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${mobileExpanded === 'best-software' ? 'rotate-180 text-blue-400' : ''}`} />
+                      <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${mobileExpanded === 'best-ai-tools' ? 'rotate-180 text-blue-400' : ''}`} />
                     </button>
 
-                    {/* Best Software Sub-sections */}
-                    {mobileExpanded === 'best-software' && (
+                    {/* Best AI Tools Sub-sections */}
+                    {mobileExpanded === 'best-ai-tools' && (
                       <div className="pl-4 mt-2 space-y-2 animate-fade-in border-l-2 border-border-divider ml-7">
                         {bsNavColumns.map((col, ci) => {
-                          const colKey = `best-software-${ci}`;
+                          const colKey = `best-ai-tools-${ci}`;
                           const isSubExpanded = mobileSubExpanded === colKey;
                           return (
                             <div key={ci} className="flex flex-col gap-1">

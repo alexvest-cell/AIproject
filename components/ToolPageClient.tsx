@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import SiteNav from './SiteNav';
+import SiteFooter from './SiteFooter';
 import ToolPage from './ToolPage';
 import type { Tool } from '../types';
 
@@ -28,7 +29,9 @@ export default function ToolPageClient({ tool, competitors, relatedTools, forCon
                 onComparisonClick={(s) => router.push(`/compare/${s}`)}
                 onAlternativesClick={(s) => router.push(`/tools/${s}/alternatives`)}
                 onStackClick={(s) => router.push(`/stacks/${s}`)}
+                onDismissContext={() => router.replace(`/tools/${tool.slug}`)}
             />
+            <SiteFooter />
         </>
     );
 }

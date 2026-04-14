@@ -1,7 +1,7 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Section, Article, Comparison, Tool } from '../types';
-import { ArrowRight, Filter, ExternalLink, Star } from 'lucide-react';
+import { ArrowRight, Filter, Star, ArrowLeftRight } from 'lucide-react';
 import AdUnit from './AdUnit';
 import { ADS_CONFIG } from '../data/adsConfig';
 
@@ -15,32 +15,37 @@ interface PortfolioProps {
     onToolClick?: (slug: string) => void;
 }
 
+// ── Slug helpers ──────────────────────────────────────────────────────────────
+const catSlug = (cat: string) =>
+    cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const wfSlug = (wf: string) =>
+    wf.toLowerCase().replace(/\s+/g, '-');
+
 // ─── Section Header ──────────────────────────────────────────────────────────
 const SectionHeader: React.FC<{
     label?: string;
     title: string;
-    hub?: string;
-    onHubClick?: (h: string) => void;
-}> = ({ label, title, hub, onHubClick }) => (
+    viewAllHref?: string;
+    viewAllLabel?: string;
+}> = ({ label, title, viewAllHref, viewAllLabel = 'View all' }) => (
     <div className="flex items-end justify-between mb-6">
         <div>
             {label && <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">{label}</p>}
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">{title}</h2>
         </div>
-        {hub && onHubClick && (
-            <button
-                onClick={() => onHubClick(hub)}
+        {viewAllHref && (
+            <a
+                href={viewAllHref}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors group/btn"
             >
-                View all <ArrowRight size={12} className="group-hover/btn:translate-x-0.5 transition-transform" />
-            </button>
+                {viewAllLabel} <ArrowRight size={12} className="group-hover/btn:translate-x-0.5 transition-transform" />
+            </a>
         )}
     </div>
 );
 
 // ─── Ranking Card (Best-of articles) ─────────────────────────────────────────
 const RankingCard: React.FC<{ article: Article; rank?: number; onClick: () => void }> = ({ article, rank, onClick }) => {
-    // In a real app, this would come from the article data. For now, we'll derive or use a fallback.
     const toolCount = (article as any).tool_count || Math.floor(Math.random() * 10) + 5;
     const category = article.topic || (Array.isArray(article.category) ? article.category[0] : article.category) || 'AI Tools';
 
@@ -98,13 +103,13 @@ const ComparisonCard: React.FC<{ comparison: Comparison; onClick: () => void }> 
 };
 
 // ─── Compact Tool Card ────────────────────────────────────────────────────────
-const ToolListCard: React.FC<{ tool: Tool; onClick: () => void }> = ({ tool, onClick }) => (
-    <button
-        onClick={onClick}
-        className="group w-full text-left flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] hover:-translate-y-0.5 transition-all"
+const ToolListCard: React.FC<{ tool: Tool; href: string }> = ({ tool, href }) => (
+    <a
+        href={href}
+        className="group w-full text-left flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] hover:-translate-y-0.5 transition-all no-underline"
     >
         {tool.logo ? (
-            <img src={tool.logo} alt={tool.name} className="w-10 h-10 rounded-lg object-contain bg-surface-base p-1 flex-shrink-0 shadow-inner" loading="lazy" />
+            <img src={tool.logo} alt={tool.name} className="w-10 h-10 rounded-lg object-contain bg-white p-1 flex-shrink-0 shadow-inner" loading="lazy" />
         ) : (
             <div className="w-10 h-10 rounded-lg bg-surface-base shadow-inner flex items-center justify-center flex-shrink-0 text-base font-black text-news-muted">
                 {tool.name[0]}
@@ -128,29 +133,8 @@ const ToolListCard: React.FC<{ tool: Tool; onClick: () => void }> = ({ tool, onC
                 <span className="text-xs font-bold text-white">{tool.rating_score}</span>
             </div>
         )}
-    </button>
+    </a>
 );
-
-// ─── News Row ─────────────────────────────────────────────────────────────────
-const NewsRow: React.FC<{ article: Article; onClick: () => void }> = ({ article, onClick }) => (
-    <button
-        onClick={onClick}
-        className="group w-full text-left flex gap-3 p-3 border border-border-subtle bg-surface-card shadow-elevation hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] hover:bg-surface-hover hover:-translate-y-0.5 rounded-xl transition-all"
-    >
-        <div className="w-20 h-14 flex-shrink-0 overflow-hidden rounded-lg">
-            <img src={article.imageUrl} alt={article.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-80 group-hover:opacity-100" />
-        </div>
-        <div className="flex-grow min-w-0">
-            <h3 className="text-xs font-bold text-white leading-snug line-clamp-2 group-hover:text-news-accent transition-colors mb-1">{article.title}</h3>
-            <div className="flex items-center gap-2 text-[10px] text-news-muted">
-                <span className="font-bold text-news-accent/80">{article.topic || (Array.isArray(article.category) ? article.category[0] : article.category)}</span>
-                <span>·</span>
-                <span>{article.date}</span>
-            </div>
-        </div>
-    </button>
-);
-
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const Portfolio: React.FC<PortfolioProps> = ({
@@ -176,11 +160,75 @@ const Portfolio: React.FC<PortfolioProps> = ({
             .catch(() => { });
     }, []);
 
+    // ── Best Software ranking cards ───────────────────────────────────────────
+    const rankingCards = useMemo(() => {
+        if (tools.length === 0) return [];
+
+        // Top 2 categories by count
+        const catGroups: Record<string, Tool[]> = {};
+        tools.forEach(t => {
+            if (!t.category_primary) return;
+            if (!catGroups[t.category_primary]) catGroups[t.category_primary] = [];
+            catGroups[t.category_primary].push(t);
+        });
+        const sortedCats = Object.entries(catGroups)
+            .map(([cat, catTools]) => ({ cat, count: catTools.length, tools: catTools }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 2);
+
+        // Top 2 workflows by count
+        const wfGroups: Record<string, Tool[]> = {};
+        tools.forEach(t => {
+            for (const wf of ((t as any).workflow_tags || [])) {
+                if (!wfGroups[wf]) wfGroups[wf] = [];
+                wfGroups[wf].push(t);
+            }
+        });
+        const sortedWfs = Object.entries(wfGroups)
+            .map(([wf, wfTools]) => ({ wf, count: wfTools.length, tools: wfTools }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 2);
+
+        const cards: { title: string; url: string; count: number; topTools: Tool[] }[] = [];
+        for (let i = 0; i < 2; i++) {
+            if (sortedCats[i]) {
+                const topTools = [...sortedCats[i].tools]
+                    .sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0))
+                    .slice(0, 3);
+                cards.push({
+                    title: `Best ${sortedCats[i].cat} Tools 2026`,
+                    url: `/best-ai-tools/${catSlug(sortedCats[i].cat)}`,
+                    count: sortedCats[i].count,
+                    topTools,
+                });
+            }
+            if (sortedWfs[i]) {
+                const topTools = [...sortedWfs[i].tools]
+                    .sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0))
+                    .slice(0, 3);
+                cards.push({
+                    title: `Best Tools for ${sortedWfs[i].wf} 2026`,
+                    url: `/best-ai-tools/for/${wfSlug(sortedWfs[i].wf)}`,
+                    count: sortedWfs[i].count,
+                    topTools,
+                });
+            }
+        }
+        return cards.slice(0, 4);
+    }, [tools]);
+
+    // ── Recently added tools (by last_updated desc) ───────────────────────────
+    const newTools = useMemo(() =>
+        [...tools]
+            .filter(t => (t as any).last_updated)
+            .sort((a, b) => new Date((b as any).last_updated).getTime() - new Date((a as any).last_updated).getTime())
+            .slice(0, 6),
+        [tools]
+    );
+
     // ── Filter helpers ────────────────────────────────────────────────────────
     const exclude = (arr: Article[]) => arr.filter(a => !excludedArticleIds.includes(a.id));
-
-    const byType = (type: string) =>
-        exclude(articles).filter(a => (a as any).article_type === type);
+    const byType = (type: string) => exclude(articles).filter(a => (a as any).article_type === type);
 
     // ── Search mode ───────────────────────────────────────────────────────────
     if (searchQuery) {
@@ -225,22 +273,17 @@ const Portfolio: React.FC<PortfolioProps> = ({
     // ── Section data ──────────────────────────────────────────────────────────
     const bestOf = byType('best-of').slice(0, 6);
     const comparisonsArticles = byType('comparison').slice(0, 4);
-    const reviews = byType('review').slice(0, 4);
-    const guides = byType('guide').slice(0, 4);
-    const news = byType('news').slice(0, 8);
-    const useCases = byType('use-case').slice(0, 4);
 
     return (
         <div className="w-full text-news-text">
-            {/* ── SECTION 1: Popular Best Software Rankings (Base Surface) ─────────────────── */}
+            {/* ── SECTION 1: Popular Best Software Rankings ─────────────────── */}
             {bestOf.length > 0 && (
                 <section id={Section.NEWS} className="py-20 bg-surface-base">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Rankings"
-                            title="Popular Best Software"
-                            hub="best-software"
-                            onHubClick={onHubClick}
+                            title="Popular Best AI Tools"
+                            viewAllHref="/best-ai-tools"
                         />
                         <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
                             {bestOf.map((a, i) => (
@@ -257,39 +300,68 @@ const Portfolio: React.FC<PortfolioProps> = ({
                 </section>
             )}
 
-            {/* ── TRENDING AI TOOLS SECTION (New) ────────────────────────────────────────── */}
+            {/* ── SECTION 2: Trending AI Tools ──────────────────────────────── */}
             {tools.length > 0 && (
                 <section className="py-20 bg-surface-alt border-y border-border-divider">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Discovery"
                             title="Trending AI Tools"
-                            hub="ai-tools"
-                            onHubClick={onHubClick}
+                            viewAllHref="/ai-tools"
                         />
-                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             {tools.slice(0, 10).map(t => (
-                                <div key={t.id} className="min-w-[240px] md:min-w-0 snap-start">
-                                    <ToolListCard
-                                        tool={t}
-                                        onClick={() => onToolClick?.(t.slug)}
-                                    />
-                                </div>
+                                <ToolListCard key={t.id} tool={t} href={`/tools/${t.slug}`} />
                             ))}
                         </div>
                     </div>
                 </section>
             )}
 
-            {/* ── SECTION 2: Trending Comparisons (Alternating Surface) ──────────────────────────── */}
+            {/* ── SECTION 3: Best Software Rankings ────────────────────────── */}
+            {rankingCards.length > 0 && (
+                <section className="py-20 bg-surface-base border-b border-border-divider">
+                    <div className="container mx-auto px-4 md:px-8">
+                        <SectionHeader
+                            label="Curated Rankings"
+                            title="Best AI Tool Rankings"
+                            viewAllHref="/best-ai-tools"
+                            viewAllLabel="View all rankings"
+                        />
+                        <p className="text-sm text-news-muted -mt-3 mb-6">Top-rated tools ranked and scored across all categories.</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {rankingCards.map((card, i) => (
+                                <a
+                                    key={i}
+                                    href={card.url}
+                                    className="group flex flex-col gap-3 p-5 rounded-2xl bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-border-divider transition-all no-underline"
+                                >
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-news-accent">Best Of</span>
+                                    <h3 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{card.title}</h3>
+                                    <span className="text-[10px] text-news-muted">{card.count} tools ranked</span>
+                                    <div className="flex items-center -space-x-2 mt-auto">
+                                        {card.topTools.map((t, j) => (
+                                            t.logo
+                                                ? <img key={j} src={t.logo} alt={t.name} className="w-7 h-7 rounded-full bg-white border-2 border-surface-card object-contain p-0.5 flex-shrink-0" loading="lazy" />
+                                                : <div key={j} className="w-7 h-7 rounded-full bg-surface-base border-2 border-surface-card flex items-center justify-center text-[9px] font-bold text-news-muted flex-shrink-0">{t.name[0]}</div>
+                                        ))}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-news-accent group-hover:underline">View Rankings →</span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* ── SECTION 4: Trending Comparisons ──────────────────────────── */}
             {comparisons.length > 0 && (
                 <section className="py-20 bg-surface-alt border-y border-border-divider">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Tool vs Tool"
                             title="Trending Comparisons"
-                            hub="comparisons"
-                            onHubClick={onHubClick}
+                            viewAllHref="/comparisons"
                         />
                         <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
                             {comparisons.slice(0, 3).map(c => (
@@ -305,23 +377,19 @@ const Portfolio: React.FC<PortfolioProps> = ({
                 </section>
             )}
 
-            {/* ── SECTION 3: Recently Reviewed Tools (Base Surface) ───────────────────────── */}
-            {tools.length > 0 && (
+            {/* ── SECTION 5: New Tools ─────────────────────────────────────── */}
+            {(newTools.length > 0 || tools.length > 0) && (
                 <section className="py-20 bg-surface-base">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
-                            label="Software Reviews"
-                            title="Recently Reviewed Tools"
-                            hub="ai-tools"
-                            onHubClick={onHubClick}
+                            label="Recently Added"
+                            title="New Tools"
+                            viewAllHref="/ai-tools"
                         />
                         <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
-                            {tools.slice(0, 6).map(t => (
+                            {(newTools.length > 0 ? newTools : tools.slice(0, 6)).map(t => (
                                 <div key={t.id} className="min-w-[280px] md:min-w-0 snap-start">
-                                    <ToolListCard
-                                        tool={t}
-                                        onClick={() => onToolClick?.(t.slug)}
-                                    />
+                                    <ToolListCard tool={t} href={`/tools/${t.slug}`} />
                                 </div>
                             ))}
                         </div>
@@ -329,86 +397,28 @@ const Portfolio: React.FC<PortfolioProps> = ({
                 </section>
             )}
 
-            {/* ── SECTION 4: Latest Guides & Reviews in a grid (Alternating Surface) ─────────────── */}
-            {false && (reviews.length > 0 || guides.length > 0 || useCases.length > 0) && (
-                <section className="py-20 bg-surface-alt border-y border-border-divider">
-                    <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/*  Reviews */}
-                        {reviews.length > 0 && (
-                            <div>
-                                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-divider">
-                                    <div>
-                                        <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-0.5">In-Depth</p>
-                                        <h3 className="text-base font-black text-white">Reviews</h3>
-                                    </div>
-                                    {onHubClick && <button onClick={() => onHubClick('reviews')} className="text-xs text-news-muted hover:text-white transition-colors"><ArrowRight size={12} /></button>}
-                                </div>
-                                <div className="space-y-3">
-                                    {reviews.map(a => <NewsRow key={a.id} article={a} onClick={() => onArticleClick(a)} />)}
-                                </div>
+            {/* ── Compare Tools crosslink banner ───────────────────────────── */}
+            <section className="py-12 bg-surface-base border-t border-border-divider">
+                <div className="container mx-auto px-4 md:px-8">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-surface-card border border-border-subtle">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-news-accent/10 border border-news-accent/20 flex items-center justify-center flex-shrink-0">
+                                <ArrowLeftRight size={16} className="text-news-accent" />
                             </div>
-                        )}
-
-                        {/* Guides */}
-                        {guides.length > 0 && (
                             <div>
-                                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-divider">
-                                    <div>
-                                        <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-0.5">How-To</p>
-                                        <h3 className="text-base font-black text-white">Guides</h3>
-                                    </div>
-                                    {onHubClick && <button onClick={() => onHubClick('guides')} className="text-xs text-news-muted hover:text-white transition-colors"><ArrowRight size={12} /></button>}
-                                </div>
-                                <div className="space-y-3">
-                                    {guides.map(a => <NewsRow key={a.id} article={a} onClick={() => onArticleClick(a)} />)}
-                                </div>
+                                <p className="text-sm font-bold text-white">Not sure which tool is right for you?</p>
+                                <p className="text-xs text-news-muted">Compare tools side by side — features, pricing, and use cases head to head.</p>
                             </div>
-                        )}
-
-                        {/* Use Cases */}
-                        {useCases.length > 0 && (
-                            <div>
-                                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-divider">
-                                    <div>
-                                        <p className="text-[9px] font-bold uppercase tracking-widest text-news-accent mb-0.5">Real-World</p>
-                                        <h3 className="text-base font-black text-white">Use Cases</h3>
-                                    </div>
-                                    {onHubClick && <button onClick={() => onHubClick('use-cases')} className="text-xs text-news-muted hover:text-white transition-colors"><ArrowRight size={12} /></button>}
-                                </div>
-                                <div className="space-y-3">
-                                    {useCases.map(a => <NewsRow key={a.id} article={a} onClick={() => onArticleClick(a)} />)}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </section>
-            )}
-
-            {/* ── SECTION 5: Latest Intelligence — News (Base Surface) ────── */}
-            {false && news.length > 0 && (
-                <section className="py-20 bg-surface-base pb-32">
-                    <div className="container mx-auto px-4 md:px-8">
-                        <SectionHeader
-                            label="Latest"
-                            title="Latest Intelligence"
-                            hub="news"
-                            onHubClick={onHubClick}
-                        />
-                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
-                            {news.map(a => (
-                                <div key={a.id} onClick={() => onArticleClick(a)} className="group cursor-pointer bg-surface-card border border-border-subtle shadow-elevation hover:shadow-elevation-hover hover:bg-surface-hover hover:-translate-y-1 transition-all rounded-xl overflow-hidden p-4 min-w-[260px] md:min-w-0 snap-start">
-                                    <div className="w-full aspect-[4/3] overflow-hidden rounded-lg mb-4 bg-surface-base">
-                                        <img src={a.imageUrl} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100" />
-                                    </div>
-                                    <p className="text-[10px] uppercase font-bold text-news-accent tracking-widest mb-2">{a.topic || (Array.isArray(a.category) ? a.category[0] : a.category)}</p>
-                                    <h3 className="font-bold text-white leading-snug line-clamp-3 mb-2">{a.title}</h3>
-                                    <p className="text-xs text-news-muted">{a.date}</p>
-                                </div>
-                            ))}
                         </div>
+                        <a
+                            href="/comparisons"
+                            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-news-accent text-news-accent text-xs font-bold hover:bg-news-accent hover:text-[#0B0F14] transition-all whitespace-nowrap no-underline"
+                        >
+                            Browse Comparisons →
+                        </a>
                     </div>
-                </section>
-            )}
+                </div>
+            </section>
 
         </div>
     );

@@ -15,11 +15,11 @@ export const CATEGORIES: CategoryDefinition[] = [
         imageUrl: "https://placehold.co/1200x800?text=AI+Tools"
     },
     {
-        id: "Best Software",
-        label: "Best Software",
-        slug: "best-software",
+        id: "Best AI Tools",
+        label: "Best AI Tools",
+        slug: "best-ai-tools",
         description: "Curated best-of lists for every workflow, use case, and industry. Updated regularly as the market evolves.",
-        imageUrl: "https://placehold.co/1200x800?text=Best+Software"
+        imageUrl: "https://placehold.co/1200x800?text=Best+AI+Tools"
     },
     {
         id: "Reviews",

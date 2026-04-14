@@ -2,6 +2,7 @@
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SiteNav from './SiteNav';
+import SiteFooter from './SiteFooter';
 import { AIToolsHub } from './HubPage';
 import type { Tool } from '../types';
 
@@ -14,11 +15,16 @@ function AIToolsHubInner({ tools, initialQueryString }: Props) {
 
     const handleSearchChange = (term: string) => {
         const params = new URLSearchParams(searchParams.toString());
-        if (term) {
-            params.set('search', term);
-        } else {
-            params.delete('search');
-        }
+        if (term) params.set('search', term);
+        else params.delete('search');
+        const qs = params.toString();
+        router.replace(qs ? `/ai-tools?${qs}` : '/ai-tools', { scroll: false });
+    };
+
+    const handleWorkflowChange = (slug: string | null) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (slug) params.set('workflow', slug);
+        else params.delete('workflow');
         const qs = params.toString();
         router.replace(qs ? `/ai-tools?${qs}` : '/ai-tools', { scroll: false });
     };
@@ -36,6 +42,7 @@ function AIToolsHubInner({ tools, initialQueryString }: Props) {
             initialTools={tools}
             initialSearch={initialSearch}
             onSearchChange={handleSearchChange}
+            onWorkflowChange={handleWorkflowChange}
             queryString={queryString}
         />
     );
@@ -52,6 +59,7 @@ export default function AIToolsHubPageClient({ tools, initialQueryString }: Prop
                     </Suspense>
                 </div>
             </div>
+            <SiteFooter />
         </div>
     );
 }

@@ -8,7 +8,7 @@ import { generateSlug } from '@/lib/slug';
 function revalidateToolPages(tool: any) {
     revalidatePath(`/tools/${tool.slug}`);
     revalidatePath('/ai-tools');
-    revalidatePath('/best-software');
+    revalidatePath('/best-ai-tools');
     revalidatePath('/comparisons');
     revalidatePath('/');
     for (const competitor of tool.competitors || []) {
@@ -21,11 +21,11 @@ function revalidateToolPages(tool: any) {
     }
     for (const workflow of tool.workflow_tags || []) {
         const workflowSlug = (workflow as string).toLowerCase().replace(/\s+/g, '-');
-        revalidatePath(`/best-software/for/${workflowSlug}`);
+        revalidatePath(`/best-ai-tools/for/${workflowSlug}`);
     }
     if (tool.category_primary) {
         const categorySlug = (tool.category_primary as string).toLowerCase().replace(/\s+/g, '-');
-        revalidatePath(`/best-software/${categorySlug}`);
+        revalidatePath(`/best-ai-tools/${categorySlug}`);
     }
 }
 

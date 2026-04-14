@@ -22,7 +22,7 @@ export default function RankingPageClient({ type, slug, tools }: Props) {
                 onBack={() => router.back()}
                 onToolClick={(s, forParam) => router.push(forParam ? `/tools/${s}?for=${encodeURIComponent(forParam)}` : `/tools/${s}`)}
                 onComparisonClick={(s) => router.push(`/compare/${s}`)}
-                onRankingClick={(t, s) => router.push(t === 'workflow' ? `/best-software/for/${s}` : `/best-software/${s}`)}
+                onRankingClick={(t, s) => router.push(t === 'workflow' ? `/best-ai-tools/for/${s}` : `/best-ai-tools/${s}`)}
                 onHubNavigate={(hub) => router.push(`/${hub}`)}
             />
         </>

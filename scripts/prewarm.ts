@@ -44,12 +44,12 @@ async function prewarm() {
 
         for (const workflow of tool.workflow_tags || []) {
             const workflowSlug = (workflow as string).toLowerCase().replace(/\s+/g, '-');
-            urls.push(`${BASE_URL}/best-software/for/${workflowSlug}`);
+            urls.push(`${BASE_URL}/best-ai-tools/for/${workflowSlug}`);
         }
 
         if (tool.category_primary) {
             const categorySlug = (tool.category_primary as string).toLowerCase().replace(/\s+/g, '-');
-            urls.push(`${BASE_URL}/best-software/${categorySlug}`);
+            urls.push(`${BASE_URL}/best-ai-tools/${categorySlug}`);
         }
     }
 

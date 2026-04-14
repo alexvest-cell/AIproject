@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import SiteNav from './SiteNav';
+import SiteFooter from './SiteFooter';
 import { BestSoftwareHub } from './HubPage';
 import type { Tool } from '../types';
 
@@ -23,6 +24,7 @@ export default function BestSoftwareHubPageClient({ tools }: Props) {
                     />
                 </div>
             </div>
+            <SiteFooter />
         </div>
     );
 }

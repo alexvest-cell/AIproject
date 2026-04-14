@@ -62,15 +62,15 @@ function App() {
     if (path.startsWith('/tools/')) return 'tool';
     if (path.startsWith('/compare/')) return 'comparison';
     if (path.startsWith('/categories/')) return 'tool-category';
-    if (path.startsWith('/best-software/for/')) return 'ranking';
-    const hubPaths = ['/ai-tools', '/best-software', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
+    if (path.startsWith('/best-ai-tools/for/')) return 'ranking';
+    const hubPaths = ['/ai-tools', '/best-ai-tools', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
     if (hubPaths.includes(path)) return 'hub';
     return 'home';
   });
   // Hub/Tool/Comparison slug routing
   const [activeHub, setActiveHub] = useState<string>(() => {
     const path = window.location.pathname;
-    const hubPaths = ['/ai-tools', '/best-software', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
+    const hubPaths = ['/ai-tools', '/best-ai-tools', '/reviews', '/comparisons', '/use-cases', '/guides', '/news'];
     return hubPaths.includes(path) ? path.replace('/', '') : '';
   });
   const [activeToolSlug, setActiveToolSlug] = useState<string>('');
@@ -80,12 +80,12 @@ function App() {
   const [activeStackSlug, setActiveStackSlug] = useState<string>('');
   const [activeRankingSlug, setActiveRankingSlug] = useState<string>(() => {
     const path = window.location.pathname;
-    if (path.startsWith('/best-software/for/')) return path.replace('/best-software/for/', '');
+    if (path.startsWith('/best-ai-tools/for/')) return path.replace('/best-ai-tools/for/', '');
     return '';
   });
   const [activeRankingType, setActiveRankingType] = useState<'workflow' | 'category'>(() => {
     const path = window.location.pathname;
-    if (path.startsWith('/best-software/for/')) return 'workflow';
+    if (path.startsWith('/best-ai-tools/for/')) return 'workflow';
     return 'category';
   });
   const [activeCategorySlug, setActiveCategorySlug] = useState<string>(() => {
@@ -221,20 +221,20 @@ function App() {
           window.history.replaceState({ view: 'article', articleId: foundArticle.id }, '', preferredPath);
         }
       }
-    } else if (pathname.startsWith('/best-software/for/')) {
+    } else if (pathname.startsWith('/best-ai-tools/for/')) {
       // Workflow ranking page
-      const workflowSlug = pathname.replace('/best-software/for/', '');
+      const workflowSlug = pathname.replace('/best-ai-tools/for/', '');
       if (workflowSlug) {
         setActiveRankingSlug(workflowSlug);
         setActiveRankingType('workflow');
         setView('ranking');
         window.history.replaceState({ view: 'ranking', rankingType: 'workflow', slug: workflowSlug }, '', pathname);
       } else {
-        setActiveHub('best-software');
+        setActiveHub('best-ai-tools');
         setView('hub');
       }
-    } else if (pathname.startsWith('/best-software/') && articles.length > 0) {
-      const identifier = pathname.replace('/best-software/', '');
+    } else if (pathname.startsWith('/best-ai-tools/') && articles.length > 0) {
+      const identifier = pathname.replace('/best-ai-tools/', '');
       if (identifier) {
         let foundArticle = articles.find(a => a.slug === identifier);
         if (!foundArticle) {
@@ -244,7 +244,7 @@ function App() {
         if (foundArticle) {
           setCurrentArticle(foundArticle);
           setView('article');
-          const preferredPath = `/best-software/${foundArticle.slug || foundArticle.id}`;
+          const preferredPath = `/best-ai-tools/${foundArticle.slug || foundArticle.id}`;
           if (pathname !== preferredPath) {
             window.history.replaceState({ view: 'article', articleId: foundArticle.id }, '', preferredPath);
           }
@@ -256,13 +256,13 @@ function App() {
           window.history.replaceState({ view: 'ranking', rankingType: 'category', slug: identifier }, '', pathname);
         }
       } else {
-        // Just /best-software/
-        setActiveHub('best-software');
+        // Just /best-ai-tools/
+        setActiveHub('best-ai-tools');
         setWorkflowFilter(params.get('workflow') || '');
         setUrlQueryString(window.location.search);
         setView('hub');
       }
-    } else if (pathname === '/ai-tools' || pathname === '/best-software' || pathname === '/comparisons' ||
+    } else if (pathname === '/ai-tools' || pathname === '/best-ai-tools' || pathname === '/comparisons' ||
                pathname === '/reviews' || pathname === '/use-cases' || pathname === '/guides' || pathname === '/news') {
       const hub = pathname.replace('/', '');
       const wf = params.get('workflow') || '';
@@ -366,12 +366,12 @@ function App() {
 
         if (path === '/about') {
           setView('about');
-        } else if (path.startsWith('/best-software/for/')) {
-          const wfSlug = path.replace('/best-software/for/', '');
+        } else if (path.startsWith('/best-ai-tools/for/')) {
+          const wfSlug = path.replace('/best-ai-tools/for/', '');
           setActiveRankingSlug(wfSlug);
           setActiveRankingType('workflow');
           setView('ranking');
-        } else if (path === '/ai-tools' || path === '/best-software' || path === '/comparisons' ||
+        } else if (path === '/ai-tools' || path === '/best-ai-tools' || path === '/comparisons' ||
                    path === '/reviews' || path === '/use-cases' || path === '/guides' || path === '/news') {
           const wf = event.state?.workflow || '';
           setActiveHub(path.replace('/', ''));
@@ -440,7 +440,7 @@ function App() {
     
     // Use prettier URL for rankings if it's a 'best-of' article
     const isRanking = (article as any).article_type === 'best-of' || (Array.isArray(article.category) ? article.category : [article.category]).includes('Best Of');
-    const path = isRanking ? `/best-software/${identifier}` : `/article/${identifier}`;
+    const path = isRanking ? `/best-ai-tools/${identifier}` : `/article/${identifier}`;
     
     window.history.pushState({ view: 'article', articleId: article.id }, '', path);
   };
@@ -474,7 +474,7 @@ function App() {
     setActiveRankingType(type);
     setView('ranking');
     window.scrollTo(0, 0);
-    const path = type === 'workflow' ? `/best-software/for/${slug}` : `/best-software/${slug}`;
+    const path = type === 'workflow' ? `/best-ai-tools/for/${slug}` : `/best-ai-tools/${slug}`;
     window.history.pushState({ view: 'ranking', rankingType: type, slug }, '', path);
   };
 

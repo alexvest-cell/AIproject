@@ -193,7 +193,7 @@ export default async function ToolPage({ params, searchParams }: Props) {
             '@type': 'ListItem',
             position: 2,
             name: tool.category_primary,
-            item: `https://toolcurrent.com/best-software/${catToSlug(tool.category_primary)}`,
+            item: `https://toolcurrent.com/best-ai-tools/${catToSlug(tool.category_primary)}`,
         });
     }
     breadcrumbItems.push({

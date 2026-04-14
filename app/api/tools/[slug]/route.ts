@@ -74,7 +74,7 @@ export async function PUT(request: Request, { params }: Params) {
         // Revalidate cached pages for this tool
         revalidatePath(`/tools/${updated.slug}`);
         revalidatePath('/ai-tools');
-        revalidatePath('/best-software');
+        revalidatePath('/best-ai-tools');
         revalidatePath('/comparisons');
         revalidatePath('/');
         for (const competitor of (updated.competitors as string[]) || []) {
@@ -86,10 +86,10 @@ export async function PUT(request: Request, { params }: Params) {
             }
         }
         for (const workflow of (updated.workflow_tags as string[]) || []) {
-            revalidatePath(`/best-software/for/${workflow.toLowerCase().replace(/\s+/g, '-')}`);
+            revalidatePath(`/best-ai-tools/for/${workflow.toLowerCase().replace(/\s+/g, '-')}`);
         }
         if (updated.category_primary) {
-            revalidatePath(`/best-software/${(updated.category_primary as string).toLowerCase().replace(/\s+/g, '-')}`);
+            revalidatePath(`/best-ai-tools/${(updated.category_primary as string).toLowerCase().replace(/\s+/g, '-')}`);
         }
 
         const hasRelevantChanges = INVALIDATING_FIELDS.some(field => {

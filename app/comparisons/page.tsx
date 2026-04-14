@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
-import AppClient from '@/app/AppClient';
+import ComparisonsHubPageClient from '@/components/ComparisonsHubPageClient';
 
 export const metadata: Metadata = {
-    title: 'Comparisons | ToolCurrent',
-    description: 'Explore comparisons on ToolCurrent.',
+    title: 'AI Tool Comparisons (2026) | ToolCurrent',
+    description: 'Compare any two AI tools side by side. See scores, features, and a clear verdict.',
+    alternates: { canonical: 'https://toolcurrent.com/comparisons' },
 };
 
 export const revalidate = 3600;
 
 export default function Page() {
-    return <AppClient />;
+    return <ComparisonsHubPageClient />;
 }

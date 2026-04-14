@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, ChevronRight, Zap, Scale, List, GraduationCap, Rocket, Terminal, Megaphone, Palette, Building2, Workflow, Building, Layers } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, ChevronRight, Scale, List, GraduationCap, Rocket, Terminal, Megaphone, Palette, Building2, Building, Layers, Microscope } from 'lucide-react';
 import { Stack } from '../types';
 
 interface HeroProps {
@@ -13,15 +14,15 @@ interface HeroProps {
     onStackClick?: (slug: string) => void;
 }
 
-const USE_CASES = [
-    { label: 'Students',      icon: GraduationCap, hub: 'ai-tools', workflow: 'students' },
-    { label: 'Startups',      icon: Rocket,        hub: 'ai-tools', workflow: 'startups' },
-    { label: 'Developers',    icon: Terminal,      hub: 'ai-tools', workflow: 'developers' },
-    { label: 'Marketers',     icon: Megaphone,     hub: 'ai-tools', workflow: 'marketing' },
-    { label: 'Creators',      icon: Palette,       hub: 'ai-tools', workflow: 'creators' },
-    { label: 'Small Business', icon: Building2,    hub: 'ai-tools', workflow: 'small-business' },
-    { label: 'Automation',    icon: Workflow,      hub: 'ai-tools', workflow: 'automation' },
-    { label: 'Enterprise',    icon: Building,      hub: 'ai-tools', workflow: 'enterprise' },
+const WORKFLOW_CARDS = [
+    { label: 'Students',       icon: GraduationCap, href: '/ai-tools?workflow=students' },
+    { label: 'Startups',       icon: Rocket,        href: '/ai-tools?workflow=startups' },
+    { label: 'Developers',     icon: Terminal,      href: '/ai-tools?workflow=developers' },
+    { label: 'Marketers',      icon: Megaphone,     href: '/ai-tools?workflow=marketers' },
+    { label: 'Creators',       icon: Palette,       href: '/ai-tools?workflow=content-creators' },
+    { label: 'Small Business', icon: Building2,     href: '/ai-tools?workflow=small-business' },
+    { label: 'Researchers',    icon: Microscope,    href: '/ai-tools?workflow=researchers' },
+    { label: 'Enterprise',     icon: Building,      href: '/ai-tools?pricing=enterprise' },
 ];
 
 const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
@@ -47,10 +48,6 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
         }).catch(() => {});
     }, []);
 
-    const handleHub = (hub: string, workflow?: string) => {
-        if (onHubClick) onHubClick(hub, workflow);
-    };
-
     return (
         <section className="relative w-full bg-surface-base text-white pt-36 md:pt-40 pb-0 overflow-x-hidden">
 
@@ -71,8 +68,6 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
 
             <div className="container mx-auto px-4 md:px-8 relative z-10">
 
-
-
                 {/* ── Headline */}
                 <div className="text-center max-w-4xl mx-auto mb-8">
                     <h1 className="text-4xl md:text-6xl xl:text-7xl font-black tracking-tighter leading-[0.95] mb-6 text-white">
@@ -92,18 +87,18 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
 
                 {/* ── Primary CTAs */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-                    <button
-                        onClick={() => handleHub('best-software')}
+                    <Link
+                        href="/best-ai-tools"
                         className="flex items-center gap-2 bg-news-accent text-[#0B0F14] font-black px-8 py-4 rounded-xl text-sm uppercase tracking-widest hover:bg-news-accentHover transition-all transform hover:scale-[1.02] shadow-lg shadow-news-accent/20 w-full sm:w-auto justify-center"
                     >
-                        <List size={18} /> Browse Best Software
-                    </button>
-                    <button
-                        onClick={() => handleHub('ai-tools')}
+                        <List size={18} /> Browse Best AI Tools
+                    </Link>
+                    <Link
+                        href="/ai-tools"
                         className="flex items-center gap-2 bg-transparent border-2 border-news-accent text-news-accent font-black px-8 py-4 rounded-xl text-sm uppercase tracking-widest hover:bg-news-accent hover:text-[#0B0F14] transition-all transform hover:scale-[1.02] w-full sm:w-auto justify-center"
                     >
                         <Scale size={18} /> Explore AI Tools
-                    </button>
+                    </Link>
                 </div>
 
                 {/* ── Micro Platform Explanation */}
@@ -129,29 +124,28 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                     ))}
                 </div>
 
-                {/* ── Explore by use case */}
+                {/* ── Explore by workflow */}
                 <div className="mb-0 pb-16">
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Discovery</p>
                             <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">Find Tools for Your Workflow</h2>
                         </div>
-                        <button
-                            onClick={() => handleHub('ai-tools')}
+                        <Link
+                            href="/ai-tools"
                             className="hidden sm:flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors"
                         >
                             View all tools <ArrowRight size={12} />
-                        </button>
+                        </Link>
                     </div>
 
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {USE_CASES.map((uc, i) => {
+                        {WORKFLOW_CARDS.map((uc, i) => {
                             const IconComponent = uc.icon;
                             return (
-                                <button
+                                <Link
                                     key={i}
-                                    onClick={() => handleHub(uc.hub, uc.workflow)}
+                                    href={uc.href}
                                     className="group flex items-center justify-between p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:shadow-elevation-hover hover:border-border-divider hover:-translate-y-0.5 transition-all text-left min-h-[56px]"
                                 >
                                     <div className="flex items-center gap-3">
@@ -161,13 +155,13 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                                         <span className="text-sm font-bold text-news-text group-hover:text-white transition-colors">{uc.label}</span>
                                     </div>
                                     <ChevronRight size={14} className="text-news-muted group-hover:text-news-accentHover group-hover:translate-x-0.5 transition-all" />
-                                </button>
+                                </Link>
                             );
                         })}
                     </div>
                 </div>
 
-                {/* ── Build a Complete Software Stack */}
+                {/* ── Build a Complete Software Stack (hidden) */}
                 {false && stacks.length > 0 && (
                     <div className="mb-0 pb-16">
                         <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
@@ -177,14 +171,13 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                                 <p className="text-sm text-news-muted mt-2 max-w-2xl">Discover curated stacks of tools that work seamlessly together for specific workflows.</p>
                             </div>
                             <button
-                                onClick={() => handleHub('stacks')}
+                                onClick={() => onHubClick?.('stacks')}
                                 className="flex flex-shrink-0 items-center gap-1 text-xs text-news-accent hover:text-white transition-colors font-bold"
                             >
                                 Explore All Stacks <ArrowRight size={12} />
                             </button>
                         </div>
 
-                        {/* Mobile: Horizontal Scroll | Desktop: Grid */}
                         <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-4 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
                             {stacks.map(stack => (
                                 <button
@@ -202,7 +195,6 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                                         </div>
                                     </div>
                                     <p className="text-xs text-news-text mb-4 line-clamp-2 flex-grow">{stack.short_description}</p>
-                                    
                                     <div className="mb-4">
                                         <p className="text-[9px] font-bold text-news-muted uppercase tracking-widest mb-2">Tools included:</p>
                                         <div className="flex flex-wrap gap-2">
@@ -218,11 +210,8 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                                             )}
                                         </div>
                                     </div>
-
                                     <div className="pt-4 border-t border-border-divider/50 flex items-center justify-between mt-auto">
-                                        <span className="text-[10px] text-news-accent font-bold uppercase tracking-tight">
-                                            View Stack Details
-                                        </span>
+                                        <span className="text-[10px] text-news-accent font-bold uppercase tracking-tight">View Stack Details</span>
                                         <ArrowRight size={14} className="text-news-muted group-hover:text-white group-hover:translate-x-0.5 transition-all" />
                                     </div>
                                 </button>

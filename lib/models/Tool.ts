@@ -76,7 +76,8 @@ const toolSchema = new mongoose.Schema({
             validator: function(arr: string[]) {
                 const VALID = ['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
                                'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
-                               'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists'];
+                               'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists',
+                               'Musicians'];
                 return arr.every(v => VALID.includes(v));
             },
             message: 'workflow_tags contains invalid value(s).',

@@ -1,9 +1,11 @@
 'use client';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import Link from 'next/link';
+import { categorySlugToName, workflowNameToSlug } from '../lib/utils/slugs';
 import { Article, Tool, Comparison, Stack } from '../types';
-import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter, Video, Mic, Building2, Database, Clipboard, UserRound } from 'lucide-react';
+import { ArrowRight, Star, PenLine, Code2, ImageIcon, Zap, Layers, LayoutGrid, Users, Megaphone, Search, X, ChevronDown, TrendingUp, Briefcase, BookOpen, Headphones, Rocket, Brain, GraduationCap, Workflow, Flame, Radio, BarChart2, Filter, Video, Mic, Building2, Database, Clipboard, UserRound, Info } from 'lucide-react';
 
-type HubType = 'ai-tools' | 'best-software' | 'reviews' | 'comparisons' | 'use-cases' | 'guides' | 'news';
+type HubType = 'ai-tools' | 'best-ai-tools' | 'reviews' | 'comparisons' | 'use-cases' | 'guides' | 'news';
 
 interface HubPageProps {
     hub: HubType;
@@ -25,8 +27,8 @@ const HUB_META: Record<HubType, { label: string; description: string; titleTag: 
         titleTag: 'AI Tools Directory: Explore & Discover Software (2026)',
         showTools: true
     },
-    'best-software': {
-        label: 'Best Software',
+    'best-ai-tools': {
+        label: 'Best AI Tools',
         description: 'Curated rankings and expert recommendations across AI tools and software — scored and compared so you can decide faster.',
         titleTag: 'Best AI Software & Tools: 2026 Rankings & Reviews',
         articleType: 'best-of'
@@ -226,12 +228,72 @@ const POPULAR_CATEGORIES = [
 
 // Maps workflow card key → canonical workflow_tags values stored in DB
 const WORKFLOW_TAG_LABELS: Record<string, string[]> = {
-    'students':       ['Students'],
-    'developers':     ['Developers'],
-    'marketing':      ['Marketers'],
-    'startups':       ['Startups'],
-    'creators':       ['Content Creators'],
-    'small-business': ['Small Business'],
+    'students':         ['Students'],
+    'developers':       ['Developers'],
+    'marketing':        ['Marketers'],
+    'startups':         ['Startups'],
+    'creators':         ['Content Creators'],
+    'small-business':   ['Small Business'],
+    'enterprise':       ['Enterprise'],
+    'researchers':      ['Researchers'],
+    'designers':        ['Designers'],
+    'sales-teams':      ['Sales Teams'],
+    'agencies':         ['Agencies'],
+    'educators':        ['Educators'],
+    'freelancers':      ['Freelancers'],
+    'product-managers': ['Product Managers'],
+    'data-scientists':  ['Data Scientists'],
+    'musicians':        ['Musicians'],
+};
+
+// Normalizes homepage workflow slugs → hub internal keys
+const WORKFLOW_SLUG_TO_KEY: Record<string, string> = {
+    'marketers':        'marketing',
+    'content-creators': 'creators',
+    'researchers':      'researchers',
+    'enterprise':       'enterprise',
+};
+
+// Maps ALL_WORKFLOW_TAGS display names → internal filter key used by workflowMatchesTool
+const WORKFLOW_LABEL_TO_KEY: Record<string, string> = {
+    'Students':         'students',
+    'Developers':       'developers',
+    'Marketers':        'marketing',
+    'Content Creators': 'creators',
+    'Startups':         'startups',
+    'Small Business':   'small-business',
+    'Enterprise':       'enterprise',
+    'Researchers':      'researchers',
+    'Designers':        'designers',
+    'Sales Teams':      'sales-teams',
+    'Agencies':         'agencies',
+    'Educators':        'educators',
+    'Freelancers':      'freelancers',
+    'Product Managers': 'product-managers',
+    'Data Scientists':  'data-scientists',
+    'Musicians':        'musicians',
+};
+const WORKFLOW_KEY_TO_LABEL: Record<string, string> =
+    Object.fromEntries(Object.entries(WORKFLOW_LABEL_TO_KEY).map(([l, k]) => [k, l]));
+
+// Maps workflow display label → primary use_case for hybrid OR count/filter
+const WORKFLOW_PRIMARY_USE_CASE: Record<string, string> = {
+    'Students':         'Education',
+    'Developers':       'Coding',
+    'Marketers':        'Marketing',
+    'Content Creators': 'Content Creation',
+    'Startups':         'Automation',
+    'Small Business':   'Automation',
+    'Enterprise':       '',
+    'Researchers':      'Research',
+    'Designers':        'Design',
+    'Sales Teams':      'Sales',
+    'Agencies':         'Marketing',
+    'Educators':        'Education',
+    'Freelancers':      'Content Creation',
+    'Product Managers': 'Automation',
+    'Data Scientists':  'Data Analysis',
+    'Musicians':        'Audio Generation',
 };
 
 type CapChip = { label: string; field: keyof Tool; values: string[] };
@@ -247,32 +309,6 @@ const CAP_CHIPS: CapChip[] = [
 ];
 
 // ─── URL slug → filter value helpers ─────────────────────────────────────────
-
-function slugToCategory(slug: string): string {
-    const map: Record<string, string> = {
-        'ai-chatbots':         'AI Chatbots',
-        'ai-writing':          'AI Writing',
-        'ai-image-generation': 'AI Image Generation',
-        'ai-image':            'AI Image Generation',   // legacy
-        'ai-video':            'AI Video',
-        'ai-audio':            'AI Audio',
-        'productivity':        'Productivity',
-        'automation':          'Automation',
-        'design':              'Design',
-        'development':         'Development',
-        'developer-tools':     'Developer Tools',       // legacy
-        'ai-coding':           'Developer Tools',       // legacy
-        'marketing':           'Marketing',
-        'marketing-tools':     'Marketing Tools',       // legacy
-        'sales-crm':           'Sales & CRM',
-        'crm':                 'CRM',                  // legacy
-        'customer-support':    'Customer Support',
-        'data-analysis':       'Data Analysis',
-        'seo-tools':           'SEO Tools',
-        'other':               'Other',
-    };
-    return map[slug] || 'All';
-}
 
 function slugToUseCase(slug: string): string {
     const map: Record<string, string> = {
@@ -314,7 +350,7 @@ function parseInitialFilters(queryString: string, workflowFilter?: string) {
     const params = new URLSearchParams(queryString.replace(/^\?/, ''));
 
     const catSlug = params.get('category');
-    const catFilter = catSlug ? slugToCategory(catSlug) : 'All';
+    const catFilter = catSlug ? (categorySlugToName(catSlug) || 'All') : 'All';
 
     const useCaseSlug = params.get('use_case');
     const useCaseFilter = useCaseSlug ? slugToUseCase(useCaseSlug) : 'All';
@@ -333,8 +369,9 @@ function parseInitialFilters(queryString: string, workflowFilter?: string) {
     const chip = capabilitySlug ? CAP_CHIPS.find(c => c.label.toLowerCase().replace(/\s+/g, '-') === capabilitySlug) : null;
     const capFilters = chip ? [chip.label] : [];
 
-    // Workflow stores the raw slug key (used as key into WORKFLOW_TAG_LABELS / WORKFLOW_KEYWORDS)
-    const activeWorkflow = params.get('workflow') || null;
+    // Normalize homepage slugs (e.g. 'marketers') → hub internal keys (e.g. 'marketing')
+    const rawWorkflow = params.get('workflow') || null;
+    const activeWorkflow = rawWorkflow ? (WORKFLOW_SLUG_TO_KEY[rawWorkflow] || rawWorkflow) : null;
 
     const search = params.get('search') || '';
 
@@ -352,7 +389,8 @@ export const AIToolsHub: React.FC<{
     initialTools?: Tool[];
     initialSearch?: string;
     onSearchChange?: (term: string) => void;
-}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick, initialTools, initialSearch, onSearchChange }) => {
+    onWorkflowChange?: (slug: string | null) => void;
+}> = ({ onToolClick, articles, onArticleClick, onComparisonClick, workflowFilter, queryString, onStackClick, initialTools, initialSearch, onSearchChange, onWorkflowChange }) => {
     const [tools, setTools] = useState<Tool[]>(initialTools ?? []);
     const [stacks, setStacks] = useState<Stack[]>([]);
     const [loading, setLoading] = useState(true);
@@ -375,7 +413,9 @@ export const AIToolsHub: React.FC<{
     const [visibleCount, setVisibleCount] = useState(TOOLS_PER_PAGE);
     const [activeWorkflow, setActiveWorkflow] = useState<string | null>(initialFilters.activeWorkflow);
     const [capFilters, setCapFilters] = useState<string[]>(initialFilters.capFilters);
+    const [showFilterInfo, setShowFilterInfo] = useState(false);
     const toolGridRef = useRef<HTMLDivElement>(null);
+    const filterInfoRef = useRef<HTMLDivElement>(null);
     const isFirstMount = useRef(true);
 
     // Sync query string to filters — skips first mount (state already initialized correctly)
@@ -459,16 +499,31 @@ export const AIToolsHub: React.FC<{
             t.use_case_tags?.some((u: string) => u.toLowerCase().includes(q));
         const matchPrice    = pricingFilter === 'All' || t.pricing_model === pricingFilter;
         const matchCat      = catFilter === 'All' || t.category_primary === catFilter || t.category_tags?.some((c: string) => c.toLowerCase().includes(catFilter.toLowerCase()));
-        const matchUse      = useCaseFilter === 'All' || t.use_case_tags?.some((u: string) => u.toLowerCase().includes(useCaseFilter.toLowerCase()));
         const matchPlatform = platformFilter === 'All' || t.supported_platforms?.some((p: string) => p.toLowerCase().includes(platformFilter.toLowerCase()));
-        const matchWorkflow = !activeWorkflow || workflowMatchesTool(t, activeWorkflow);
         const matchCaps     = capFilters.length === 0 || capFilters.every(label => {
             const chip = CAP_CHIPS.find(c => c.label === label);
             if (!chip) return true;
             const val = (t as any)[chip.field];
             return Array.isArray(val) ? val.some((v: string) => chip.values.includes(v)) : chip.values.includes(val);
         });
-        return matchSearch && matchPrice && matchCat && matchUse && matchPlatform && matchWorkflow && matchCaps;
+        // Hybrid OR logic: when activeWorkflow is set, use workflow tag match OR primary use_case match
+        // Primary use case is looked up internally — useCaseFilter only reflects explicit user selection
+        let matchWorkflowAndUse: boolean;
+        if (activeWorkflow) {
+            const wfLabel = WORKFLOW_KEY_TO_LABEL[activeWorkflow] || '';
+            const primaryUseCase = wfLabel ? (WORKFLOW_PRIMARY_USE_CASE[wfLabel] || '') : '';
+            const matchWf = workflowMatchesTool(t, activeWorkflow);
+            const matchPrimaryUC = primaryUseCase
+                ? t.use_case_tags?.some((u: string) => u.toLowerCase().includes(primaryUseCase.toLowerCase()))
+                : false;
+            // AND with explicit use case filter if user set one separately
+            const matchExplicitUC = useCaseFilter === 'All' || t.use_case_tags?.some((u: string) => u.toLowerCase().includes(useCaseFilter.toLowerCase()));
+            matchWorkflowAndUse = (matchWf || matchPrimaryUC) && matchExplicitUC;
+        } else {
+            const matchUse  = useCaseFilter === 'All' || t.use_case_tags?.some((u: string) => u.toLowerCase().includes(useCaseFilter.toLowerCase()));
+            matchWorkflowAndUse = matchUse;
+        }
+        return matchSearch && matchPrice && matchCat && matchWorkflowAndUse && matchPlatform && matchCaps;
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -486,7 +541,7 @@ export const AIToolsHub: React.FC<{
     const visible = sorted.slice(0, visibleCount);
     const hasActiveFilters = pricingFilter !== 'All' || catFilter !== 'All' || useCaseFilter !== 'All' || platformFilter !== 'All' || !!search || !!activeWorkflow || capFilters.length > 0;
 
-    const clearAllFilters = () => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); setPricingFilter('All'); setCatFilter('All'); setUseCaseFilter('All'); setPlatformFilter('All'); setActiveWorkflow(null); setCapFilters([]); };
+    const clearAllFilters = () => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); setPricingFilter('All'); setCatFilter('All'); setUseCaseFilter('All'); setPlatformFilter('All'); setActiveWorkflow(null); setCapFilters([]); onWorkflowChange?.(null); };
 
     const dynCatFilters = React.useMemo(() => {
         const freq: Record<string, number> = {};
@@ -499,6 +554,47 @@ export const AIToolsHub: React.FC<{
         tools.forEach(t => t.use_case_tags?.forEach(u => { freq[u] = (freq[u] || 0) + 1; }));
         return ['All', ...Object.entries(freq).sort((a, b) => b[1] - a[1]).map(([k]) => k)];
     }, [tools]);
+
+    // Workflow options for dropdown: all 16 workflows with non-zero hybrid count
+    const dynWorkflowOptions = React.useMemo(() => {
+        return Object.entries(WORKFLOW_KEY_TO_LABEL)
+            .filter(([key, label]) => {
+                const primaryUseCase = WORKFLOW_PRIMARY_USE_CASE[label] || '';
+                return tools.some(t =>
+                    workflowMatchesTool(t, key) ||
+                    (primaryUseCase ? t.use_case_tags?.some((u: string) => u.toLowerCase().includes(primaryUseCase.toLowerCase())) : false)
+                );
+            })
+            .map(([key, label]) => ({ key, label }));
+    }, [tools, workflowMatchesTool]);
+
+    const handleWorkflowDropdownChange = useCallback((label: string) => {
+        if (label === 'All') {
+            setActiveWorkflow(null);
+            setUseCaseFilter('All');
+            if (pricingFilter === 'Enterprise') setPricingFilter('All');
+            onWorkflowChange?.(null);
+        } else {
+            const key = WORKFLOW_LABEL_TO_KEY[label];
+            if (!key) return;
+            setActiveWorkflow(key);
+            if (key === 'enterprise') setPricingFilter('Enterprise');
+            onWorkflowChange?.(workflowNameToSlug(label));
+            setTimeout(() => toolGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+        }
+    }, [pricingFilter, onWorkflowChange]);
+
+    // Click-outside to close filter info tooltip
+    useEffect(() => {
+        if (!showFilterInfo) return;
+        const handler = (e: MouseEvent) => {
+            if (filterInfoRef.current && !filterInfoRef.current.contains(e.target as Node)) {
+                setShowFilterInfo(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showFilterInfo]);
 
     if (loading) return <div className="flex items-center justify-center py-24 text-gray-500"><div className="w-6 h-6 border-2 border-news-accent border-t-transparent rounded-full animate-spin mr-3" /> Loading tools…</div>;
 
@@ -612,13 +708,26 @@ export const AIToolsHub: React.FC<{
                     <p className="text-sm text-news-muted mb-5">Filter the full tool database by your role.</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         {EXPLORE_BY_WORKFLOW.map(({ label, icon: Icon, key, color, bg }) => {
-                            const count = tools.filter(t => workflowMatchesTool(t, key)).length;
+                            const primaryUseCase = WORKFLOW_PRIMARY_USE_CASE[label] || '';
+                            const count = tools.filter(t =>
+                                workflowMatchesTool(t, key) ||
+                                (primaryUseCase ? t.use_case_tags?.some((u: string) => u.toLowerCase().includes(primaryUseCase.toLowerCase())) : false)
+                            ).length;
                             if (count === 0) return null;
                             const isActive = activeWorkflow === key;
                             return (
                                 <button key={key} onClick={() => {
-                                    setActiveWorkflow(isActive ? null : key);
-                                    if (!isActive) setTimeout(() => toolGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                    if (isActive) {
+                                        setActiveWorkflow(null);
+                                        setUseCaseFilter('All');
+                                        if (key === 'enterprise' && pricingFilter === 'Enterprise') setPricingFilter('All');
+                                        onWorkflowChange?.(null);
+                                    } else {
+                                        setActiveWorkflow(key);
+                                        if (key === 'enterprise') setPricingFilter('Enterprise');
+                                        onWorkflowChange?.(workflowNameToSlug(label));
+                                        setTimeout(() => toolGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                    }
                                 }}
                                     className={`group flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all text-center hover:-translate-y-0.5 ${isActive ? 'border-news-accent bg-news-accent/10' : bg}`}
                                 >
@@ -674,10 +783,10 @@ export const AIToolsHub: React.FC<{
                         <h3 className="text-lg font-black text-white mb-2">Looking for the Best Tools?</h3>
                         <p className="text-sm text-news-muted max-w-md leading-relaxed">Looking for ranked recommendations? Browse Best Software for curated rankings, head-to-head comparisons, and expert recommendations.</p>
                     </div>
-                    <a href="/best-software"
+                    <a href="/best-ai-tools"
                         className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-black hover:bg-yellow-500/20 transition-colors whitespace-nowrap"
                     >
-                        Best Software Hub <ArrowRight size={14} />
+                        Best AI Tools Hub <ArrowRight size={14} />
                     </a>
                 </section>
             )}
@@ -688,7 +797,7 @@ export const AIToolsHub: React.FC<{
                     <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
                         <Flame size={20} className="text-news-accent" /> Trending Tools
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         {TRENDING_TOOL_SLUGS.map(slug => {
                             const tool = tools.find(t => t.slug === slug);
                             if (!tool) return null;
@@ -765,10 +874,30 @@ export const AIToolsHub: React.FC<{
                 </div>
             </section>
 
+            {/* ── Filter explanation line ──────────────────────────────── */}
+            <div className="flex items-center gap-2 -mt-8" ref={filterInfoRef}>
+                <button
+                    onClick={() => setShowFilterInfo(v => !v)}
+                    className="flex items-center gap-1.5 text-[10px] text-news-muted hover:text-white transition-colors"
+                    aria-label="Filter legend"
+                >
+                    <Info size={12} className="text-news-muted" />
+                    <span className="hidden sm:inline">Categories = type of tool · Use Cases = what you can do · Workflows = who it&apos;s built for</span>
+                    <span className="sm:hidden">Filter guide</span>
+                </button>
+                {showFilterInfo && (
+                    <div className="absolute mt-7 z-20 bg-surface-card border border-border-subtle rounded-xl p-3 shadow-elevation text-[11px] text-news-muted max-w-xs leading-relaxed">
+                        <p><span className="text-white font-bold">Categories</span> — the type of tool (e.g. AI Writing, Automation)</p>
+                        <p className="mt-1"><span className="text-white font-bold">Use Cases</span> — what you can do with it (e.g. Content Creation, Coding)</p>
+                        <p className="mt-1"><span className="text-white font-bold">Workflows</span> — who it&apos;s built for (e.g. Developers, Marketers)</p>
+                    </div>
+                )}
+            </div>
+
             {/* ── Filter bar ───────────────────────────────────────────── */}
             <section ref={toolGridRef}>
                 {/* Filter dropdowns — shared desktop + mobile */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
                     {([
                         { label: 'All Categories', opts: dynCatFilters,    value: catFilter,     set: setCatFilter },
                         { label: 'All Pricing',    opts: PRICING_OPTIONS,  value: pricingFilter, set: setPricingFilter },
@@ -796,6 +925,24 @@ export const AIToolsHub: React.FC<{
                             </div>
                         );
                     })}
+                    {/* Workflow dropdown — 5th column */}
+                    <div className="relative">
+                        <select
+                            value={activeWorkflow ? (WORKFLOW_KEY_TO_LABEL[activeWorkflow] || activeWorkflow) : 'All'}
+                            onChange={e => handleWorkflowDropdownChange(e.target.value)}
+                            className={`w-full appearance-none pl-3 pr-8 py-2.5 rounded-xl text-xs font-bold border transition-all focus:outline-none cursor-pointer ${
+                                activeWorkflow
+                                    ? 'bg-news-accent/10 border-news-accent/50 text-news-accent'
+                                    : 'bg-surface-card border-border-subtle text-news-muted hover:border-border-divider hover:text-white'
+                            }`}
+                        >
+                            <option value="All">All Workflows</option>
+                            {dynWorkflowOptions.map(({ label }) => (
+                                <option key={label} value={label}>{label}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={11} className={`absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${activeWorkflow ? 'text-news-accent' : 'text-news-muted'}`} />
+                    </div>
                 </div>
 
                 {/* Count + sort + clear row */}
@@ -807,10 +954,10 @@ export const AIToolsHub: React.FC<{
                                 {[
                                     search && { label: `"${search}"`, clear: () => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); } },
                                     catFilter !== 'All' && { label: catFilter, clear: () => setCatFilter('All') },
-                                    pricingFilter !== 'All' && { label: pricingFilter, clear: () => setPricingFilter('All') },
+                                    pricingFilter !== 'All' && !(activeWorkflow === 'enterprise' && pricingFilter === 'Enterprise') && { label: pricingFilter, clear: () => setPricingFilter('All') },
                                     platformFilter !== 'All' && { label: platformFilter, clear: () => setPlatformFilter('All') },
-                                    useCaseFilter !== 'All' && { label: useCaseFilter, clear: () => setUseCaseFilter('All') },
-                                    activeWorkflow && { label: EXPLORE_BY_WORKFLOW.find(w => w.key === activeWorkflow)?.label || activeWorkflow, clear: () => setActiveWorkflow(null) },
+                                    activeWorkflow && { label: `Workflow: ${WORKFLOW_KEY_TO_LABEL[activeWorkflow] || activeWorkflow}`, clear: () => { setActiveWorkflow(null); setUseCaseFilter('All'); if (pricingFilter === 'Enterprise') setPricingFilter('All'); onWorkflowChange?.(null); } },
+                                    (!activeWorkflow && useCaseFilter !== 'All') && { label: useCaseFilter, clear: () => setUseCaseFilter('All') },
                                     ...capFilters.map(cap => ({ label: cap, clear: () => setCapFilters(prev => prev.filter(c => c !== cap)) })),
                                 ].filter(Boolean).map((chip: any) => (
                                     <span key={chip.label} className="flex items-center gap-1 text-[10px] bg-news-accent/15 text-news-accent border border-news-accent/30 rounded-full px-2 py-0.5">
@@ -881,11 +1028,10 @@ export const AIToolsHub: React.FC<{
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {onComparisonClick && (
-                                                <button onClick={() => onComparisonClick('comparisons')}
-                                                    className="text-[10px] font-bold text-news-muted hover:text-white border border-border-subtle hover:border-news-accent/40 px-2 py-1 rounded-lg transition-colors"
-                                                >Compare</button>
-                                            )}
+                                            <Link
+                                                href={`/comparisons?tool=${tool.slug}`}
+                                                className="text-[10px] font-bold text-news-muted hover:text-white border border-border-subtle hover:border-news-accent/40 px-2 py-1 rounded-lg transition-colors"
+                                            >Compare</Link>
                                             <button onClick={() => onToolClick(tool.slug)}
                                                 className="text-[10px] font-bold text-news-accent hover:text-white flex items-center gap-1 transition-colors"
                                             >View <ArrowRight size={10} /></button>
@@ -983,6 +1129,7 @@ const WORKFLOW_ICON_MAP: Record<string, React.ElementType> = {
     'Freelancers':       UserRound,
     'Product Managers':  Clipboard,
     'Data Scientists':   Database,
+    'Musicians':         Headphones,
 };
 
 const WORKFLOW_COLOR_MAP: Record<string, string> = {
@@ -1001,12 +1148,14 @@ const WORKFLOW_COLOR_MAP: Record<string, string> = {
     'Freelancers':       'text-sky-400',
     'Product Managers':  'text-amber-400',
     'Data Scientists':   'text-lime-400',
+    'Musicians':         'text-fuchsia-400',
 };
 
 const ALL_WORKFLOW_TAGS = [
     'Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
     'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
     'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists',
+    'Musicians',
 ];
 
 const BS_TRUST = [
@@ -1017,16 +1166,12 @@ const BS_TRUST = [
 
 const BS_SEO = [
     {
-        h2: 'The Best Software Rankings in 2026',
-        body: 'Finding the right software in 2026 is harder than it used to be. There are now hundreds of AI-powered tools competing in every category — from writing and coding to marketing automation and project management. Our rankings cut through the noise by testing each tool against a consistent methodology: features, real-world performance, pricing transparency, and integration depth.',
+        h2: 'The Best AI Tool Rankings in 2026',
+        body: 'Finding the right AI tool in 2026 is harder than it used to be. There are now hundreds of AI-powered tools competing in every category — from writing and coding to marketing automation and project management. Our rankings cut through the noise by testing each tool against a consistent methodology: features, real-world performance, pricing transparency, and integration depth.',
     },
     {
-        h2: 'How We Rank Software',
+        h2: 'How We Rank AI Tools',
         body: 'Every ranking on ToolCurrent is built from structured evaluation criteria, not editorial opinion alone. We assess tools across five dimensions: core feature set, ease of onboarding, pricing fairness, integration ecosystem, and AI-native capability. Tools are re-evaluated quarterly to reflect product updates and market shifts.',
-    },
-    {
-        h2: 'AI Tools vs Traditional Software',
-        body: 'The line between AI tools and traditional software is blurring fast. The rankings here cover both — because the right stack in 2026 often mixes established platforms with newer AI-native tools. Whether you need a CRM that has bolted on AI features or a purpose-built AI agent, our rankings help you find the best in each category.',
     },
 ];
 
@@ -1102,25 +1247,25 @@ export const BestSoftwareHub: React.FC<{
         if (sortedCats.length > 0) {
             const { cat, count, tools } = sortedCats[0];
             const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
-            cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-software/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
+            cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-ai-tools/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
         }
         // 2. Highest avg-score workflow (min 3 tools with scores)
         if (sortedWfs.length > 0) {
             const { tag, count, tools, avgScore } = sortedWfs[0];
             const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
-            cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-software/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
+            cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-ai-tools/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
         }
         // 3. Second most populated category
         if (sortedCats.length > 1) {
             const { cat, count, tools } = sortedCats[1];
             const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
-            cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-software/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
+            cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-ai-tools/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
         }
         // 4. Second highest scoring workflow
         if (sortedWfs.length > 1) {
             const { tag, count, tools, avgScore } = sortedWfs[1];
             const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
-            cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-software/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
+            cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-ai-tools/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
         }
         // 5. Best Free AI Tools
         const freeTools = allTools.filter(t => t.pricing_model === 'Free' || t.pricing_model === 'Freemium');
@@ -1129,11 +1274,11 @@ export const BestSoftwareHub: React.FC<{
         const topFreeCat = Object.entries(freeCatFreq).sort((a, b) => b[1] - a[1])[0];
         const freeCatSlug = topFreeCat ? catSlug(topFreeCat[0]) : 'ai-chatbots';
         const topFreeTools = [...freeTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
-        cards.push({ title: 'Best Free AI Tools 2026', url: `/best-software/${freeCatSlug}`, description: 'Free and freemium AI tools that deliver real value without a paid plan.', count: freeTools.length, topTools: topFreeTools });
+        cards.push({ title: 'Best Free AI Tools 2026', url: `/best-ai-tools/${freeCatSlug}`, description: 'Free and freemium AI tools that deliver real value without a paid plan.', count: freeTools.length, topTools: topFreeTools });
         // 6. Top Rated Tools
         const topRatedTools = [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
         const topCatSlug = sortedCats.length > 0 ? catSlug(sortedCats[0].cat) : 'ai-chatbots';
-        cards.push({ title: 'Top Rated Tools 2026', url: `/best-software/${topCatSlug}`, description: 'The highest-rated AI tools across all categories, scored by features, pricing, and performance.', count: allTools.length, topTools: topRatedTools });
+        cards.push({ title: 'Top Rated Tools 2026', url: `/best-ai-tools/${topCatSlug}`, description: 'The highest-rated AI tools across all categories, scored by features, pricing, and performance.', count: allTools.length, topTools: topRatedTools });
 
         return cards.slice(0, 6);
     }, [allTools]);
@@ -1257,7 +1402,7 @@ export const BestSoftwareHub: React.FC<{
                             return (
                                 <a
                                     key={tag}
-                                    href={`/best-software/for/${wfSlug}`}
+                                    href={`/best-ai-tools/for/${wfSlug}`}
                                     className="group flex flex-col items-center gap-2 px-3 py-4 rounded-2xl border bg-surface-card border-border-subtle hover:bg-surface-hover hover:border-border-divider transition-all text-center no-underline"
                                 >
                                     <Icon size={20} className={`flex-shrink-0 ${color}`} />
@@ -1284,14 +1429,14 @@ export const BestSoftwareHub: React.FC<{
                         <LayoutGrid size={20} className="text-news-accent" /> Browse by Category
                     </h2>
                     <p className="text-sm text-news-muted mb-6">Explore rankings in every major software category.</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {catData.map(({ cat, topTool, count }) => {
                             const meta = CATEGORY_META[cat];
                             const Icon = meta?.icon || Layers;
                             return (
                                 <a
                                     key={cat}
-                                    href={`/best-software/${cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-')}`}
+                                    href={`/best-ai-tools/${cat.toLowerCase().replace(/\s*&\s*/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-')}`}
                                     className="group w-full text-left bg-surface-card border border-border-subtle hover:bg-surface-hover hover:-translate-y-0.5 hover:border-news-accent/40 rounded-2xl transition-all p-5 flex items-start gap-4 no-underline"
                                 >
                                     <div className="w-10 h-10 rounded-xl bg-news-accent/10 border border-news-accent/20 flex items-center justify-center flex-shrink-0">
@@ -1335,7 +1480,7 @@ export const BestSoftwareHub: React.FC<{
                         <Radio size={18} className="text-news-accent" /> Recently Updated
                     </h2>
                     <p className="text-sm text-news-muted mb-6">Rankings refreshed with the latest product updates and pricing.</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                         {recentTools.map(tool => {
                             const updatedLabel = new Date(tool.last_updated!).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                             return (
@@ -1344,14 +1489,14 @@ export const BestSoftwareHub: React.FC<{
                                     onClick={() => onToolClick?.(tool.slug)}
                                     className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-surface-card border border-border-subtle hover:border-news-accent/50 hover:-translate-y-0.5 transition-all text-center"
                                 >
-                                    <div className="relative">
+                                    <div className="flex flex-col items-center gap-1.5">
                                         <div className="w-12 h-12 rounded-2xl bg-white border border-border-subtle flex items-center justify-center p-2 flex-shrink-0">
                                             {tool.logo
                                                 ? <img src={tool.logo} alt={tool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
                                                 : <Layers size={18} className="text-news-muted" />
                                             }
                                         </div>
-                                        <span className="absolute -top-1.5 -right-1.5 text-[7px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black uppercase tracking-widest whitespace-nowrap">
+                                        <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-black uppercase tracking-widest whitespace-nowrap">
                                             UPDATED
                                         </span>
                                     </div>
@@ -1396,48 +1541,53 @@ export const BestSoftwareHub: React.FC<{
                 </div>
             </section>
 
-            {/* ── 6. Compare Tools CTA ──────────────────────────────────── */}
-            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-7 flex flex-col gap-4 max-w-2xl">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                    <BarChart2 size={18} className="text-blue-400" />
+            {/* ── 6 & 7. CTA pair ───────────────────────────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Compare Tools */}
+                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-7 flex flex-col gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                        <BarChart2 size={18} className="text-blue-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-black text-white mb-2">Compare Tools Side by Side</h3>
+                        <p className="text-sm text-news-muted leading-relaxed mb-4">Not sure which tool is right for you? Our comparison pages break down features, pricing, and use cases head to head.</p>
+                    </div>
+                    <button
+                        onClick={() => onComparisonClick?.('comparisons')}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-black hover:bg-blue-500/20 transition-colors self-start mt-auto"
+                    >
+                        Browse Comparisons <ArrowRight size={13} />
+                    </button>
                 </div>
-                <div>
-                    <h3 className="text-base font-black text-white mb-2">Compare Tools Side by Side</h3>
-                    <p className="text-sm text-news-muted leading-relaxed mb-4">Not sure which tool is right for you? Our comparison pages break down features, pricing, and use cases head to head.</p>
-                </div>
-                <button
-                    onClick={() => onComparisonClick?.('comparisons')}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-black hover:bg-blue-500/20 transition-colors self-start"
-                >
-                    Browse Comparisons <ArrowRight size={13} />
-                </button>
-            </div>
 
-            {/* ── 7. AI Tools Back-Link Banner ──────────────────────────── */}
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-7 flex flex-col sm:flex-row sm:items-center gap-5">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                    <Search size={20} className="text-emerald-400" />
+                {/* AI Tools Directory */}
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-7 flex flex-col gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                        <Search size={18} className="text-emerald-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-black text-white mb-2">Just exploring? Try the AI Tools Directory</h3>
+                        <p className="text-sm text-news-muted leading-relaxed mb-4">Not ready to pick a winner yet? Browse 200+ AI tools by category, platform, and use case — no ranking bias, just exploration.</p>
+                    </div>
+                    <button
+                        onClick={() => onHubNavigate?.('ai-tools')}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black hover:bg-emerald-500/20 transition-colors self-start mt-auto"
+                    >
+                        Explore AI Tools <ArrowRight size={13} />
+                    </button>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-black text-white mb-1">Just exploring? Try the AI Tools Directory</h3>
-                    <p className="text-sm text-news-muted leading-relaxed">Not ready to pick a winner yet? Browse 200+ AI tools by category, platform, and use case — no ranking bias, just exploration.</p>
-                </div>
-                <button
-                    onClick={() => onHubNavigate?.('ai-tools')}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black hover:bg-emerald-500/20 transition-colors whitespace-nowrap flex-shrink-0"
-                >
-                    Explore AI Tools <ArrowRight size={13} />
-                </button>
             </div>
 
             {/* ── 11. SEO Content Block ──────────────────────────────────── */}
-            <section className="border-t border-border-divider pt-12 space-y-8">
+            <section className="border-t border-border-divider pt-12">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                 {BS_SEO.map((block, i) => (
-                    <div key={i} className="max-w-3xl">
+                    <div key={i}>
                         <h2 className="text-lg font-black text-white mb-3">{block.h2}</h2>
                         <p className="text-sm text-news-muted leading-relaxed">{block.body}</p>
                     </div>
                 ))}
+                </div>
             </section>
 
         </div>
@@ -1693,11 +1843,13 @@ const PairCard: React.FC<{ pair: GenPair; onClick: () => void }> = ({ pair, onCl
 // ─── Comparisons Hub ──────────────────────────────────────────────────────────
 const COMP_CATEGORIES = ['All', 'AI Assistants', 'Productivity Tools', 'Automation Platforms', 'AI Writing', 'Developer Tools', 'Image Generation'];
 
-const ComparisonsHub: React.FC<{
+export const ComparisonsHub: React.FC<{
     onComparisonClick: (s: string, uc?: string) => void;
     articles: Article[];
     onArticleClick: (a: Article) => void;
-}> = ({ onComparisonClick, articles, onArticleClick }) => {
+    initialToolSlug?: string;
+    onToolAChange?: (slug: string | null) => void;
+}> = ({ onComparisonClick, articles, onArticleClick, initialToolSlug, onToolAChange }) => {
     // ── Core data state ──────────────────────────────────────────────────────
     const [tools, setTools] = useState<Tool[]>([]);
     const [cmsPairs, setCmsPairs] = useState<Comparison[]>([]);
@@ -1707,8 +1859,8 @@ const ComparisonsHub: React.FC<{
     const [catFilter, setCatFilter] = useState('All');
     const [sortBy, setSortBy] = useState<'popular' | 'rated'>('popular');
 
-    // ── Tool selector state ──────────────────────────────────────────────────
-    const [builderA, setBuilderA] = useState('');
+    // ── Tool selector state — builderA initialized from URL param ────────────
+    const [builderA, setBuilderA] = useState(initialToolSlug || '');
     const [builderB, setBuilderB] = useState('');
     const [builderC, setBuilderC] = useState('');
     const [builderUC, setBuilderUC] = useState('');
@@ -1835,7 +1987,7 @@ const ComparisonsHub: React.FC<{
                     </p>
 
                     {/* Crosslink banner */}
-                    <a href="/best-software"
+                    <a href="/best-ai-tools"
                         className="inline-flex items-center gap-1.5 text-xs font-medium text-news-accent border border-news-accent/30 bg-news-accent/5 rounded-lg px-3 py-2 hover:bg-news-accent/10 transition-colors">
                         Not sure which tools to compare? Browse Best Software to find your options
                         <ArrowRight size={11} />
@@ -1864,7 +2016,7 @@ const ComparisonsHub: React.FC<{
                         <div className="relative flex-1">
                             <select
                                 value={builderA}
-                                onChange={e => { setBuilderA(e.target.value); setBuilderB(''); setBuilderC(''); setBuilderUC(''); }}
+                                onChange={e => { const s = e.target.value; setBuilderA(s); setBuilderB(''); setBuilderC(''); setBuilderUC(''); onToolAChange?.(s || null); }}
                                 className={`w-full appearance-none bg-surface-base border border-border-subtle text-sm font-medium rounded-xl px-4 py-2.5 pr-9 focus:outline-none focus:border-news-accent cursor-pointer transition-colors ${builderA ? 'text-white' : 'text-news-muted'}`}
                             >
                                 <option value="" disabled>Select Tool A</option>
@@ -1881,7 +2033,7 @@ const ComparisonsHub: React.FC<{
                                 value={builderB}
                                 onChange={e => { setBuilderB(e.target.value); setBuilderC(''); setBuilderUC(''); }}
                                 disabled={!builderA}
-                                className={`w-full appearance-none bg-surface-base border border-border-subtle text-sm font-medium rounded-xl px-4 py-2.5 pr-9 focus:outline-none focus:border-news-accent cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${builderB ? 'text-white' : 'text-news-muted'}`}
+                                className={`w-full appearance-none bg-surface-base text-sm font-medium rounded-xl px-4 py-2.5 pr-9 focus:outline-none focus:border-news-accent cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed ${builderB ? 'text-white' : 'text-news-muted'} ${builderA && !builderB ? 'border border-news-accent/50 shadow-[0_0_0_2px_rgba(43,212,195,0.12)]' : 'border border-border-subtle'}`}
                             >
                                 <option value="" disabled>Select Tool B</option>
                                 {toolsForB.map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
@@ -1917,6 +2069,13 @@ const ComparisonsHub: React.FC<{
                             Compare <ArrowRight size={14} />
                         </button>
                     </div>
+
+                    {/* Prompt — shown when Tool A is pre-selected but Tool B is empty */}
+                    {builderA && !builderB && toolObjA && (
+                        <p className="mt-3 text-xs text-news-accent/70">
+                            Now select a tool to compare with {toolObjA.name} →
+                        </p>
+                    )}
 
                     {/* Use case selector — revealed after A and B both selected */}
                     {builderA && builderB && (
@@ -2004,7 +2163,7 @@ const ComparisonsHub: React.FC<{
                 {filteredPairs.length === 0 ? (
                     <div className="py-12 text-center">
                         <p className="text-sm text-news-muted mb-3">No comparisons available in this category yet.</p>
-                        <a href={`/best-software?category=${encodeURIComponent(catFilter)}`}
+                        <a href={`/best-ai-tools?category=${encodeURIComponent(catFilter)}`}
                             className="text-xs text-news-accent hover:underline font-medium">
                             Browse {catFilter} tools →
                         </a>
@@ -2031,10 +2190,10 @@ const ComparisonsHub: React.FC<{
                 <section className="pt-10 border-t border-border-divider">
                     <div className="flex items-end justify-between mb-5">
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Best Software</p>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Best AI Tools</p>
                             <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">Related Rankings</h2>
                         </div>
-                        <a href="/best-software" className="text-xs text-news-accent hover:underline font-medium flex items-center gap-1 mb-1 flex-shrink-0">
+                        <a href="/best-ai-tools" className="text-xs text-news-accent hover:underline font-medium flex items-center gap-1 mb-1 flex-shrink-0">
                             Browse all rankings <ArrowRight size={11} />
                         </a>
                     </div>
@@ -3090,7 +3249,7 @@ const HubPage: React.FC<HubPageProps> = ({ hub: rawHub, articles, onArticleClick
         } else if (sort === 'rating') {
             dynamicLabel = 'Top Rated AI Tools';
         }
-    } else if (hub === 'best-software' && (queryString || workflowFilter)) {
+    } else if (hub === 'best-ai-tools' && (queryString || workflowFilter)) {
         const params = new URLSearchParams(queryString || '');
         const cat = params.get('category');
         const wf = workflowFilter || params.get('workflow');
@@ -3123,7 +3282,7 @@ const HubPage: React.FC<HubPageProps> = ({ hub: rawHub, articles, onArticleClick
 
     const renderContent = () => {
         if (hub === 'ai-tools') return <AIToolsHub onToolClick={onToolClick} articles={articles} onArticleClick={onArticleClick} onComparisonClick={onComparisonClick} workflowFilter={workflowFilter} queryString={queryString} onStackClick={onStackClick} />;
-        if (hub === 'best-software') return <BestSoftwareHub articles={articles} onArticleClick={onArticleClick} onToolClick={onToolClick} onComparisonClick={onComparisonClick} onHubNavigate={onHubNavigate} workflowFilter={workflowFilter} queryString={queryString} />;
+        if (hub === 'best-ai-tools') return <BestSoftwareHub articles={articles} onArticleClick={onArticleClick} onToolClick={onToolClick} onComparisonClick={onComparisonClick} onHubNavigate={onHubNavigate} workflowFilter={workflowFilter} queryString={queryString} />;
         if (hub === 'comparisons') return <ComparisonsHub onComparisonClick={onComparisonClick} articles={articles} onArticleClick={onArticleClick} />;
         if (hub === 'reviews') return <ReviewsHub articles={articles} onArticleClick={onArticleClick} onComparisonClick={onComparisonClick} />;
         if (hub === 'use-cases') return <UseCasesHubInner articles={articles} onArticleClick={onArticleClick} />;

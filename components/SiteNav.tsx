@@ -16,7 +16,7 @@ export default function SiteNav() {
             onSubscribeClick={() => {}}
             onShowAbout={() => router.push('/about')}
             activeCategory=""
-            onCategorySelect={(cat) => router.push(`/ai-tools?category=${encodeURIComponent(cat)}`)}
+            onCategorySelect={(cat) => { if (cat === 'All') { router.push('/'); return; } router.push(`/ai-tools?category=${encodeURIComponent(cat)}`); }}
             onHubClick={(hub, workflow, qs) => {
                 let url = `/${hub}`;
                 if (workflow) url += `?workflow=${encodeURIComponent(workflow)}`;

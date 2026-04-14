@@ -659,7 +659,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
         const WORKFLOW_TAG_OPTS = ['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups',
             'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams',
-            'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists'];
+            'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists', 'Musicians'];
         const rawWT = parseArr(extracted['WORKFLOW_TAGS']);
         const workflow_tags = rawWT
             .map(w => WORKFLOW_TAG_OPTS.find(v => v.toLowerCase() === w.toLowerCase()))
@@ -3643,7 +3643,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <label className="block text-xs text-gray-400 mb-1">Workflow Tags <span className="text-gray-600">(select 1–4)</span></label>
                                         <p className="text-[11px] text-gray-500 mb-3">Select 1–4 workflow types this tool is built for or well suited to.</p>
                                         <div className="grid grid-cols-2 gap-2">
-                                            {(['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups', 'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams', 'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists'] as const).map(tag => {
+                                            {(['Students', 'Developers', 'Marketers', 'Content Creators', 'Startups', 'Small Business', 'Enterprise', 'Researchers', 'Designers', 'Sales Teams', 'Agencies', 'Educators', 'Freelancers', 'Product Managers', 'Data Scientists', 'Musicians'] as const).map(tag => {
                                                 const selected: string[] = Array.isArray(toolForm.workflow_tags) ? toolForm.workflow_tags : [];
                                                 const isSelected = selected.includes(tag);
                                                 const atMax = selected.length >= 4;
