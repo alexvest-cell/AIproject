@@ -76,24 +76,30 @@ export default async function ComparePage({ params, searchParams }: Props) {
         const parts = slug.split('-vs-');
         if (parts.length < 2) notFound();
         const slugA = parts[0];
-        const slugB = parts.slice(1).join('-vs-');
-        const [toolA, toolB] = await Promise.all([
+        const slugB = parts[1];
+        const slugC = parts.length >= 3 ? parts[2] : null;
+        const [toolA, toolB, toolC] = await Promise.all([
             Tool.findOne({ slug: slugA, status: 'Active' }).lean(),
             Tool.findOne({ slug: slugB, status: 'Active' }).lean(),
+            slugC ? Tool.findOne({ slug: slugC, status: 'Active' }).lean() : Promise.resolve(null),
         ]);
         if (!toolA || !toolB) notFound();
         tA = toolA as any;
         tB = toolB as any;
+        tC = (toolC as any) ?? null;
+        const titleParts = [tA.name, tB.name, ...(tC ? [tC.name] : [])];
         initialData = {
             id: slug,
             slug,
-            title: `${tA.name} vs ${tB.name}`,
+            title: titleParts.join(' vs '),
             tool_a_slug: slugA,
             tool_b_slug: slugB,
+            tool_c_slug: slugC ?? undefined,
             tool_a: tA,
             tool_b: tB,
+            tool_c: tC ?? undefined,
             status: 'published' as const,
-            comparison_type: '1v1' as const,
+            comparison_type: slugC ? '1v1v1' : '1v1' as const,
             generated_output: null,
         };
     }
