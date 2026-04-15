@@ -525,6 +525,24 @@ const Navigation: React.FC<NavigationProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // ── Lock body scroll when mobile menu is open ──────────────────────────────
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [isMobileMenuOpen]);
+
   // ── Sync search value ──────────────────────────────────────────────────────
   useEffect(() => {
     setSearchValue(searchQuery);
@@ -768,18 +786,20 @@ const Navigation: React.FC<NavigationProps> = ({
       )}
 
       {/* ── Mobile Menu Drawer ─────────────────────────────────────────────────── */}
-      <div 
+      <div
         className={`fixed inset-0 z-[100] md:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{ height: '100dvh' }}
       >
         {/* Backdrop overlay */}
-        <div 
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        <div
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
         />
-        
+
         {/* Drawer Content */}
-        <div 
-          className={`absolute top-0 right-0 h-full w-[85%] max-w-[320px] bg-surface-base border-l border-border-divider shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        <div
+          className={`absolute top-0 right-0 w-[85%] max-w-[320px] bg-surface-base border-l border-border-divider shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          style={{ height: '100dvh' }}
         >
           {/* Drawer Header */}
           <div className="flex items-center justify-between px-6 h-16 border-b border-border-divider flex-shrink-0">
@@ -801,18 +821,24 @@ const Navigation: React.FC<NavigationProps> = ({
                 <div className="grid gap-2">
                   {/* AI Tools Accordion */}
                   <div className="flex flex-col gap-1">
-                    <button 
-                      onClick={() => setMobileExpanded(mobileExpanded === 'ai-tools' ? null : 'ai-tools')}
-                      className={`flex items-center justify-between p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all text-left ${mobileExpanded === 'ai-tools' ? 'border-news-accent/40 bg-surface-hover shadow-[0_0_20px_rgba(255,100,50,0.1)]' : ''}`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-news-accent/10 flex items-center justify-center">
+                    <div className={`flex items-center rounded-xl bg-surface-card border border-border-subtle transition-all ${mobileExpanded === 'ai-tools' ? 'border-news-accent/40 bg-surface-hover shadow-[0_0_20px_rgba(255,100,50,0.1)]' : 'hover:border-news-accent/30'}`}>
+                      <button
+                        onClick={() => { router.push('/ai-tools'); setIsMobileMenuOpen(false); }}
+                        className="flex items-center gap-4 p-3 flex-1 text-left"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-news-accent/10 flex items-center justify-center flex-shrink-0">
                           <Sparkles size={18} className="text-news-accent" />
                         </div>
                         <span className="text-sm font-bold text-white">AI Tools</span>
-                      </div>
-                      <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${mobileExpanded === 'ai-tools' ? 'rotate-180 text-news-accent' : ''}`} />
-                    </button>
+                      </button>
+                      <button
+                        onClick={() => setMobileExpanded(mobileExpanded === 'ai-tools' ? null : 'ai-tools')}
+                        className="px-3 py-3 border-l border-border-subtle text-gray-500 hover:text-news-accent transition-colors"
+                        aria-label="Expand AI Tools menu"
+                      >
+                        <ChevronDown size={16} className={`transition-transform duration-300 ${mobileExpanded === 'ai-tools' ? 'rotate-180 text-news-accent' : ''}`} />
+                      </button>
+                    </div>
 
                     {/* AI Tools Sub-sections */}
                     {mobileExpanded === 'ai-tools' && (
@@ -868,18 +894,24 @@ const Navigation: React.FC<NavigationProps> = ({
 
                   {/* Best AI Tools Accordion */}
                   <div className="flex flex-col gap-1">
-                    <button 
-                      onClick={() => setMobileExpanded(mobileExpanded === 'best-ai-tools' ? null : 'best-ai-tools')}
-                      className={`flex items-center justify-between p-3 rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all text-left ${mobileExpanded === 'best-ai-tools' ? 'border-blue-500/40 bg-surface-hover shadow-[0_0_20px_rgba(59,130,246,0.1)]' : ''}`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <div className={`flex items-center rounded-xl bg-surface-card border border-border-subtle transition-all ${mobileExpanded === 'best-ai-tools' ? 'border-blue-500/40 bg-surface-hover shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'hover:border-news-accent/30'}`}>
+                      <button
+                        onClick={() => { router.push('/best-ai-tools'); setIsMobileMenuOpen(false); }}
+                        className="flex items-center gap-4 p-3 flex-1 text-left"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
                           <Star size={18} className="text-blue-400" />
                         </div>
                         <span className="text-sm font-bold text-white">Best AI Tools</span>
-                      </div>
-                      <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${mobileExpanded === 'best-ai-tools' ? 'rotate-180 text-blue-400' : ''}`} />
-                    </button>
+                      </button>
+                      <button
+                        onClick={() => setMobileExpanded(mobileExpanded === 'best-ai-tools' ? null : 'best-ai-tools')}
+                        className="px-3 py-3 border-l border-border-subtle text-gray-500 hover:text-blue-400 transition-colors"
+                        aria-label="Expand Best AI Tools menu"
+                      >
+                        <ChevronDown size={16} className={`transition-transform duration-300 ${mobileExpanded === 'best-ai-tools' ? 'rotate-180 text-blue-400' : ''}`} />
+                      </button>
+                    </div>
 
                     {/* Best AI Tools Sub-sections */}
                     {mobileExpanded === 'best-ai-tools' && (
@@ -927,25 +959,17 @@ const Navigation: React.FC<NavigationProps> = ({
                 </div>
               </div>
 
-              {/* Research Group */}
-              <div className="space-y-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Research</p>
-                <div className="grid gap-2">
-                  {SITE_CONFIG.SHOW_REVIEWS && (
-                    <button
-                      onClick={() => { onHubClick?.('reviews'); setIsMobileMenuOpen(false); }}
-                      className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
-                    >
-                      <span className="text-sm font-bold text-gray-300 group-hover:text-white">Reviews</span>
-                      <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
-                    </button>
-                  )}
+              {/* Comparisons — same style as AI Tools / Best AI Tools */}
+              <div className="grid gap-2">
+                <div className="flex items-center rounded-xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all">
                   <button
                     onClick={() => { onHubClick?.('comparisons'); setIsMobileMenuOpen(false); }}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-surface-hover transition-all text-left group"
+                    className="flex items-center gap-4 p-3 flex-1 text-left"
                   >
-                    <span className="text-sm font-bold text-gray-300 group-hover:text-white">Comparisons</span>
-                    <ChevronRight size={16} className="text-gray-600 group-hover:text-news-accent" />
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                      <Layers size={18} className="text-purple-400" />
+                    </div>
+                    <span className="text-sm font-bold text-white">Comparisons</span>
                   </button>
                 </div>
               </div>

@@ -139,7 +139,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         {WORKFLOW_CARDS.map((uc, i) => {
                             const IconComponent = uc.icon;
                             return (

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
     title: 'ToolCurrent | Software Discovery & Intelligence',
     description: 'Discover and compare the best AI software tools. Rankings, reviews, and comparisons to help you find the right tool for your workflow.',
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://toolcurrent.com'),
+    viewport: { width: 'device-width', initialScale: 1, maximumScale: 1 },
 };
 
 const organizationSchema = {

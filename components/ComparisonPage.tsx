@@ -146,7 +146,7 @@ const Sec: React.FC<{ label: string; title: string; children: React.ReactNode; c
 const ToolLogo: React.FC<{ tool: Tool; size?: number }> = ({ tool, size = 8 }) => (
     tool.logo
         ? <div className={`w-${size} h-${size} rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0`}>
-              <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
+              <img src={tool.logo} alt={tool.name} className={`w-full h-full object-contain ${size <= 5 ? 'p-0.5' : 'p-1.5'}`} loading="lazy" />
           </div>
         : null
 );
@@ -272,15 +272,22 @@ function buildBandData(tool: Tool): Record<PriceBand, PlanData[]> {
     const priceMap = parsePriceMap(tool);
     const result: Record<PriceBand, PlanData[]> = { free: [], entry: [], mid: [], premium: [], enterprise: [] };
     for (const [planName, { models, limits }] of Object.entries(planMap)) {
-        const lower = planName.toLowerCase();
-        const priceStr = priceMap[lower] || '';
+        // Strip parenthetical price suffix from plan name: "Go ($8/mo)" → "Go"
+        const cleanName = planName.replace(/\s*\([^)]+\)\s*$/, '').trim();
+        const lower = cleanName.toLowerCase();
+        // Look up price; if not in priceMap, extract from the plan name's own parenthetical
+        let priceStr = priceMap[lower] || priceMap[planName.toLowerCase()] || '';
+        if (!priceStr) {
+            const m = planName.match(/\(([^)]+)\)\s*$/);
+            if (m && /[\$\d\/]/.test(m[1])) priceStr = m[1];
+        }
         const isEnterprise =
             lower === 'enterprise' || lower.includes('enterprise') ||
             priceStr.toLowerCase().includes('custom') ||
             priceStr.toLowerCase().includes('not publicly');
         const priceNum = isEnterprise ? null : extractMonthlyPrice(priceStr);
-        const band = priceToBand(priceNum, planName);
-        result[band].push({ name: planName, price: priceStr, priceMonthly: priceNum, isEnterprise, models, limits });
+        const band = priceToBand(priceNum, cleanName);
+        result[band].push({ name: cleanName, price: priceStr, priceMonthly: priceNum, isEnterprise, models, limits });
     }
     // Sort each band highest price first so the primary (plans[0]) is the highest-featured
     for (const band of Object.keys(result) as PriceBand[]) {
@@ -290,7 +297,7 @@ function buildBandData(tool: Tool): Record<PriceBand, PlanData[]> {
 }
 
 const PlanComparisonTable: React.FC<{ tools: Tool[] }> = ({ tools }) => {
-    const [expandedBands, setExpandedBands] = useState<Set<PriceBand>>(new Set(['free', 'entry']));
+    const [expandedBands, setExpandedBands] = useState<Set<PriceBand>>(new Set(['free']));
     const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
 
     const bandDataPerTool = useMemo(() => tools.map(t => buildBandData(t)), [tools]);
@@ -448,7 +455,7 @@ const PlanComparisonTable: React.FC<{ tools: Tool[] }> = ({ tools }) => {
                             {tools.map(tool => (
                                 <th key={tool.slug} className="text-left px-4 py-3">
                                     <div className="flex items-center gap-2">
-                                        <ToolLogo tool={tool} size={5} />
+                                        <ToolLogo tool={tool} size={7} />
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-news-accent">{tool.name}</span>
                                     </div>
                                 </th>
@@ -708,6 +715,46 @@ const Comparison1v1: React.FC<{
                 </div>
             </Sec>
 
+            {/* ── Use Case Performance Boxes (contextual, 1v1) ───── */}
+            {activeUseCase && (
+                <Sec label="USE CASE" title={`How Each Tool Performs for ${activeUseCase}`}>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        {tools.map(tool => {
+                            const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = (tool as any).use_case_scores || [];
+                            const ucEntry = ucScoresArr.find(s => s.use_case.toLowerCase() === activeUseCase.toLowerCase());
+                            const ucBreakdown = (tool as any).use_case_breakdown as Record<string, string> | undefined;
+                            const rawKey = ucBreakdown ? Object.keys(ucBreakdown).find(k => k.toLowerCase() === activeUseCase.toLowerCase()) : undefined;
+                            const rawText = rawKey ? ucBreakdown![rawKey] : undefined;
+                            const displayScore: number | null = ucEntry?.score ?? (() => { const m = rawText?.match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
+                            const displayText = ucEntry?.description || (rawText ? rawText.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);
+                            const isWinner = tool.slug === winner.slug;
+                            return (
+                                <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
+                                    <div className="flex items-center justify-between gap-2 mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <ToolLogo tool={tool} size={8} />
+                                            <span className="font-bold text-white">{tool.name}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                                            <span className="text-[10px] text-news-muted/70">{activeUseCase} score</span>
+                                            <span className="text-sm font-bold text-news-accent">{displayScore != null ? `${displayScore}/10` : 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    {displayText ? (
+                                        <p className="text-sm text-news-text leading-relaxed">{displayText}</p>
+                                    ) : (
+                                        <p className="text-sm text-news-muted">
+                                            Detailed breakdown for {activeUseCase} not yet available —{' '}
+                                            <a href={`/tools/${tool.slug}`} className="text-news-accent hover:underline">view full tool profile →</a>
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Sec>
+            )}
+
             {/* ── Feature Comparison A vs B ──────────────────────── */}
             <Sec label="FEATURES" title="Feature Comparison">
                 <div className="overflow-x-auto rounded-xl border border-border-subtle">
@@ -720,7 +767,7 @@ const Comparison1v1: React.FC<{
                                     return (
                                         <th key={t.slug} className={`text-left px-5 py-3 font-bold ${isWinner ? 'text-news-accent border-t-2 border-news-accent/60' : 'text-white'}`}>
                                             <div className="flex items-center gap-1.5">
-                                                {t.logo && <img src={t.logo} alt={t.name} className="w-4 h-4 rounded object-contain" />}
+                                                <ToolLogo tool={t} size={5} />
                                                 {t.name}
                                                 {isWinner && <Trophy size={11} className="text-news-accent" />}
                                             </div>
@@ -770,45 +817,8 @@ const Comparison1v1: React.FC<{
                 </Sec>
             )}
 
-            {/* ── Use Case Section ──────────────────────────────── */}
-            {activeUseCase ? (
-                <Sec label="USE CASE" title={`How Each Tool Performs for ${activeUseCase}`}>
-                    <div className="grid md:grid-cols-2 gap-4">
-                        {tools.map(tool => {
-                            const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = (tool as any).use_case_scores || [];
-                            const ucEntry = ucScoresArr.find(s => s.use_case.toLowerCase() === activeUseCase.toLowerCase());
-                            const ucBreakdown = (tool as any).use_case_breakdown as Record<string, string> | undefined;
-                            const rawKey = ucBreakdown ? Object.keys(ucBreakdown).find(k => k.toLowerCase() === activeUseCase.toLowerCase()) : undefined;
-                            const rawText = rawKey ? ucBreakdown![rawKey] : undefined;
-                            const displayScore: number | null = ucEntry?.score ?? (() => { const m = rawText?.match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
-                            const displayText = ucEntry?.description || (rawText ? rawText.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);
-                            const isWinner = tool.slug === gen.quick_verdict.winner_slug;
-                            return (
-                                <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
-                                    <div className="flex items-center justify-between gap-2 mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <ToolLogo tool={tool} size={8} />
-                                            <span className="font-bold text-white">{tool.name}</span>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                                            <span className="text-[10px] text-news-muted/70">{activeUseCase} score</span>
-                                            <span className="text-sm font-bold text-news-accent">{displayScore != null ? `${displayScore}/10` : 'N/A'}</span>
-                                        </div>
-                                    </div>
-                                    {displayText ? (
-                                        <p className="text-sm text-news-text leading-relaxed">{displayText}</p>
-                                    ) : (
-                                        <p className="text-sm text-news-muted">
-                                            Detailed breakdown for {activeUseCase} not yet available —{' '}
-                                            <a href={`/tools/${tool.slug}`} className="text-news-accent hover:underline">view full tool profile →</a>
-                                        </p>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Sec>
-            ) : (
+            {/* ── Filter by Use Case (no active filter) ─────────── */}
+            {!activeUseCase && (
                 <Sec label="USE CASE" title="Filter by Use Case">
                     {availableUseCases && availableUseCases.length > 0 ? (
                         <>
@@ -976,7 +986,7 @@ const ComparisonMulti: React.FC<{
                 </div>
 
                 {/* Ranked tool cards */}
-                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     {sorted.map((tool, rank) => {
                         const scoreResult = activeUseCase ? getUCScoreResult(tool, activeUseCase) : null;
                         const score = scoreResult ? scoreResult.score : ((tool as any).rating_score ?? 0);
@@ -986,7 +996,7 @@ const ComparisonMulti: React.FC<{
                             <button key={tool.slug} onClick={() => onToolClick(tool.slug)}
                                 className={`relative text-left rounded-2xl p-5 transition-all group ${
                                     isWinner
-                                        ? 'bg-surface-card border border-news-accent/70 hover:border-news-accent'
+                                        ? 'col-span-2 md:col-span-1 bg-surface-card border border-news-accent/70 hover:border-news-accent'
                                         : 'bg-surface-card border border-border-subtle hover:border-news-accent/40'
                                 }`}>
                                 <div className="absolute -top-3 left-4 text-lg">{RANK_MEDALS[rank]}</div>
@@ -1024,8 +1034,8 @@ const ComparisonMulti: React.FC<{
                     })}
                 </div>
 
-                {/* Ranking summary */}
-                <div className="bg-surface-card border border-border-subtle rounded-xl p-4">
+                {/* Ranking summary — hidden on mobile (redundant with cards above) */}
+                <div className="hidden md:block bg-surface-card border border-border-subtle rounded-xl p-4">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-muted mb-3">Rankings</p>
                     <div className="space-y-3">
                         {sorted.map((tool, rank) => (
@@ -1045,6 +1055,46 @@ const ComparisonMulti: React.FC<{
                 </div>
             </Sec>
 
+            {/* ── Use Case Performance Boxes (contextual, multi) ── */}
+            {activeUseCase && (
+                <Sec label="USE CASE" title={`How Each Tool Performs for ${activeUseCase}`}>
+                    <div className="grid md:grid-cols-3 gap-4">
+                        {sorted.map(tool => {
+                            const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = (tool as any).use_case_scores || [];
+                            const ucEntry = ucScoresArr.find(s => s.use_case.toLowerCase() === activeUseCase.toLowerCase());
+                            const ucBreakdown = (tool as any).use_case_breakdown as Record<string, string> | undefined;
+                            const rawKey = ucBreakdown ? Object.keys(ucBreakdown).find(k => k.toLowerCase() === activeUseCase.toLowerCase()) : undefined;
+                            const rawText = rawKey ? ucBreakdown![rawKey] : undefined;
+                            const displayScore: number | null = ucEntry?.score ?? (() => { const m = rawText?.match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
+                            const displayText = ucEntry?.description || (rawText ? rawText.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);
+                            const isWinner = tool.slug === winner.slug;
+                            return (
+                                <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
+                                    <div className="flex items-center justify-between gap-2 mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <ToolLogo tool={tool} size={8} />
+                                            <span className="font-bold text-white">{tool.name}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                                            <span className="text-[10px] text-news-muted/70">{activeUseCase} score</span>
+                                            <span className="text-sm font-bold text-news-accent">{displayScore != null ? `${displayScore}/10` : 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    {displayText ? (
+                                        <p className="text-sm text-news-text leading-relaxed">{displayText}</p>
+                                    ) : (
+                                        <p className="text-sm text-news-muted">
+                                            Detailed breakdown for {activeUseCase} not yet available —{' '}
+                                            <a href={`/tools/${tool.slug}`} className="text-news-accent hover:underline">view full tool profile →</a>
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Sec>
+            )}
+
             {/* ── Feature Comparison (multi-tool) ───────────────── */}
             <Sec label="FEATURES" title="Feature Comparison">
                 <div className="overflow-x-auto rounded-xl border border-border-subtle">
@@ -1057,7 +1107,7 @@ const ComparisonMulti: React.FC<{
                                     return (
                                         <th key={t.slug} className={`text-left px-4 py-3 font-bold ${isWinner ? 'text-news-accent border-t-2 border-news-accent/60' : 'text-white'}`}>
                                             <div className="flex items-center gap-1.5">
-                                                {t.logo && <img src={t.logo} alt={t.name} className="w-4 h-4 rounded object-contain" />}
+                                                <ToolLogo tool={t} size={5} />
                                                 {t.name}
                                                 {isWinner && <Trophy size={11} className="text-news-accent" />}
                                             </div>
@@ -1118,7 +1168,7 @@ const ComparisonMulti: React.FC<{
                                     {sorted.map(t => (
                                         <th key={t.slug} className="text-center px-4 py-3 font-bold text-white">
                                             <div className="flex flex-col items-center gap-1">
-                                                {t.logo && <img src={t.logo} alt={t.name} className="w-5 h-5 rounded object-contain" />}
+                                                <ToolLogo tool={t} size={5} />
                                                 <span>{t.name}</span>
                                             </div>
                                         </th>

@@ -106,26 +106,37 @@ const ComparisonCard: React.FC<{ comparison: Comparison; onClick: () => void }> 
 const ToolListCard: React.FC<{ tool: Tool; href: string }> = ({ tool, href }) => (
     <a
         href={href}
-        className="group w-full text-left flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] hover:-translate-y-0.5 transition-all no-underline"
+        className="group w-full text-left flex flex-col md:flex-row md:items-center gap-2 md:gap-4 p-3 md:p-4 rounded-xl border border-border-subtle bg-surface-card shadow-elevation hover:bg-surface-hover hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] hover:-translate-y-0.5 transition-all no-underline"
     >
-        {tool.logo ? (
-            <img src={tool.logo} alt={tool.name} className="w-10 h-10 rounded-lg object-contain bg-white p-1 flex-shrink-0 shadow-inner" loading="lazy" />
-        ) : (
-            <div className="w-10 h-10 rounded-lg bg-surface-base shadow-inner flex items-center justify-center flex-shrink-0 text-base font-black text-news-muted">
-                {tool.name[0]}
-            </div>
-        )}
+        {/* Mobile: logo + rating side by side; desktop: logo only (rating moves to end) */}
+        <div className="flex items-center justify-between md:contents gap-2">
+            {tool.logo ? (
+                <img src={tool.logo} alt={tool.name} className="w-9 h-9 md:w-10 md:h-10 rounded-lg object-contain bg-white p-1 flex-shrink-0 shadow-inner" loading="lazy" />
+            ) : (
+                <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-surface-base shadow-inner flex items-center justify-center flex-shrink-0 text-base font-black text-news-muted">
+                    {tool.name[0]}
+                </div>
+            )}
+            {tool.rating_score && (
+                <div className="flex md:hidden items-center gap-1 flex-shrink-0 bg-surface-base py-0.5 px-1.5 rounded-full border border-border-subtle">
+                    <Star size={9} className="text-news-accent fill-news-accent" />
+                    <span className="text-[11px] font-bold text-white">{tool.rating_score}</span>
+                </div>
+            )}
+        </div>
         <div className="flex-grow min-w-0">
-            <h3 className="text-sm font-bold text-white truncate group-hover:text-news-accent transition-colors leading-snug">{tool.name}</h3>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold inline-block mt-0.5 ${tool.pricing_model === 'Free' || tool.pricing_model === 'Freemium'
-                ? 'bg-news-accent/10 border-news-accent/20 text-news-accent'
-                : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}
-            >
-                {tool.pricing_model}
-            </span>
+            <div className="flex items-start justify-between gap-2">
+                <h3 className="text-[11px] md:text-sm font-bold text-white line-clamp-2 md:truncate group-hover:text-news-accent transition-colors leading-snug flex-grow min-w-0">{tool.name}</h3>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold flex-shrink-0 mt-0.5 ${tool.pricing_model === 'Free' || tool.pricing_model === 'Freemium'
+                    ? 'bg-news-accent/10 border-news-accent/20 text-news-accent'
+                    : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}
+                >
+                    {tool.pricing_model}
+                </span>
+            </div>
         </div>
         {tool.rating_score && (
-            <div className="flex items-center gap-1 flex-shrink-0 bg-surface-base py-1 px-2 rounded-full border border-border-subtle">
+            <div className="hidden md:flex items-center gap-1 flex-shrink-0 bg-surface-base py-1 px-2 rounded-full border border-border-subtle">
                 <Star size={10} className="text-news-accent fill-news-accent" />
                 <span className="text-xs font-bold text-white">{tool.rating_score}</span>
             </div>
@@ -275,7 +286,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
         <div className="w-full text-news-text">
             {/* ── SECTION 1: Popular Best Software Rankings ─────────────────── */}
             {bestOf.length > 0 && (
-                <section id={Section.NEWS} className="py-20 bg-surface-base">
+                <section id={Section.NEWS} className="py-10 md:py-20 bg-surface-base">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Rankings"
@@ -299,7 +310,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
 
             {/* ── SECTION 2: Trending AI Tools ──────────────────────────────── */}
             {tools.length > 0 && (
-                <section className="py-20 bg-surface-alt border-y border-border-divider">
+                <section className="py-10 md:py-20 bg-surface-alt border-y border-border-divider">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Discovery"
@@ -317,7 +328,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
 
             {/* ── SECTION 3: Best Software Rankings ────────────────────────── */}
             {rankingCards.length > 0 && (
-                <section className="py-20 bg-surface-base border-b border-border-divider">
+                <section className="py-10 md:py-20 bg-surface-base border-b border-border-divider">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Curated Rankings"
@@ -353,7 +364,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
 
             {/* ── SECTION 4: Trending Comparisons ──────────────────────────── */}
             {comparisons.length > 0 && (
-                <section className="py-20 bg-surface-alt border-y border-border-divider">
+                <section className="py-10 md:py-20 bg-surface-alt border-y border-border-divider">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Tool vs Tool"
@@ -376,18 +387,16 @@ const Portfolio: React.FC<PortfolioProps> = ({
 
             {/* ── SECTION 5: New Tools ─────────────────────────────────────── */}
             {(newTools.length > 0 || tools.length > 0) && (
-                <section className="py-20 bg-surface-base">
+                <section className="py-10 md:py-20 bg-surface-base">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Recently Added"
                             title="New Tools"
                             viewAllHref="/ai-tools"
                         />
-                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-x-auto pb-6 md:pb-0 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0">
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {(newTools.length > 0 ? newTools : tools.slice(0, 6)).map(t => (
-                                <div key={t.id} className="min-w-[280px] md:min-w-0 snap-start">
-                                    <ToolListCard tool={t} href={`/tools/${t.slug}`} />
-                                </div>
+                                <ToolListCard key={t.id} tool={t} href={`/tools/${t.slug}`} />
                             ))}
                         </div>
                     </div>

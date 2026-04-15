@@ -31,25 +31,55 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/articles/route.js"
     ],
+    "/comparisons/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/comparisons/page.js"
+    ],
     "/best-ai-tools/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/best-ai-tools/page.js"
+    ],
+    "/ai-tools/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/ai-tools/page.js"
     ],
     "/best-ai-tools/for/[slug]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/best-ai-tools/for/[slug]/page.js"
     ],
+    "/tools/[slug]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/tools/[slug]/page.js"
+    ],
+    "/api/tools/[slug]/alternatives/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/tools/[slug]/alternatives/route.js"
+    ],
     "/best-ai-tools/[slug]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/best-ai-tools/[slug]/page.js"
     ],
-    "/ai-tools/page": [
+    "/tools/[slug]/alternatives/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/ai-tools/page.js"
+      "static/chunks/app/tools/[slug]/alternatives/page.js"
+    ],
+    "/compare/[slug]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/compare/[slug]/page.js"
+    ],
+    "/compare/[slug]/[uc]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/compare/[slug]/[uc]/page.js"
     ]
   }
 }

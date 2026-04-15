@@ -381,12 +381,16 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                 </a>
                             ))}
                             {/* secondary_tags are SEO-only — not rendered */}
-                            {(tool.category_primary || tool.category_tags.length > 0) && (
-                                <a href={`/best-ai-tools?category=${encodeURIComponent(tool.category_primary || tool.category_tags[0])}`}
-                                   className="text-xs px-2 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 hover:bg-news-accent/20 transition-colors font-medium">
-                                    Best {tool.category_primary || tool.category_tags[0]} Software →
-                                </a>
-                            )}
+                            {(tool.category_primary || tool.category_tags.length > 0) && (() => {
+                                const cat = tool.category_primary || tool.category_tags[0];
+                                const catSlug = cat.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                                return (
+                                    <a href={`/best-ai-tools/${catSlug}`}
+                                       className="text-xs px-2 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 hover:bg-news-accent/20 transition-colors font-medium">
+                                        Best {cat} Software →
+                                    </a>
+                                );
+                            })()}
                         </div>
                         <div className="flex flex-wrap gap-3">
                             {tool.affiliate_url && (
@@ -423,7 +427,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
                 {/* ── For-context banner ───────────────────────────────────── */}
                 {forContext && forContextLabel && (
-                    <div className="border-l-4 border-teal-500 bg-teal-500/[.03] rounded-r-xl px-4 py-3 mb-8 inline-flex flex-col gap-2">
+                    <div className="relative border-l-4 border-teal-500 bg-teal-500/[.03] rounded-r-xl px-4 py-3 mb-8 flex flex-col gap-2 pr-12">
                         <div className="flex items-center gap-4 flex-wrap">
                             <div className="flex items-center gap-2">
                                 {isWorkflowContext
@@ -443,16 +447,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     }
                                 </span>
                             </div>
-                            {onDismissContext && (
-                                <button
-                                    onClick={onDismissContext}
-                                    aria-label="Remove context"
-                                    title="View standard page"
-                                    className="ml-2 text-gray-600 hover:text-white transition-colors flex-shrink-0"
-                                >
-                                    <X size={16} />
-                                </button>
-                            )}
                         </div>
                         <a
                             href={isWorkflowContext ? `/best-ai-tools/for/${forContext}` : `/best-ai-tools/${forContext}`}
@@ -461,6 +455,17 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             <ChevronLeft size={12} />
                             Back to Best {forContextLabel} Tools
                         </a>
+                        {onDismissContext && (
+                            <button
+                                onClick={onDismissContext}
+                                aria-label="Remove context"
+                                title="View standard page"
+                                className="absolute bottom-3 right-3 md:bottom-auto md:top-1/2 md:-translate-y-1/2 w-6 h-6 md:w-8 md:h-8 rounded-full border border-teal-500/50 bg-teal-500/10 flex items-center justify-center text-teal-400 hover:bg-teal-500/25 hover:border-teal-400 transition-colors flex-shrink-0"
+                            >
+                                <X size={12} className="md:hidden" />
+                                <X size={16} className="hidden md:block" />
+                            </button>
+                        )}
                     </div>
                 )}
 

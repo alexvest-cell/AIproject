@@ -669,7 +669,7 @@ export const AIToolsHub: React.FC<{
                     onFocus={() => setShowSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                     placeholder="Search tools — e.g. writing, automation, CRM, free AI…"
-                    className={`w-full bg-surface-card border rounded-2xl pl-11 pr-10 py-3.5 text-sm text-white placeholder:text-news-muted focus:outline-none transition-all duration-500 ${searchFocusRing ? 'border-teal-400 ring-2 ring-teal-400/40 shadow-[0_0_12px_rgba(45,212,191,0.25)]' : 'border-border-subtle focus:border-news-accent'}`}
+                    className={`w-full bg-surface-card border rounded-2xl pl-11 pr-10 py-3.5 text-base md:text-sm text-white placeholder:text-news-muted focus:outline-none transition-all duration-500 ${searchFocusRing ? 'border-teal-400 ring-2 ring-teal-400/40 shadow-[0_0_12px_rgba(45,212,191,0.25)]' : 'border-border-subtle focus:border-news-accent'}`}
                 />
                 {search && (
                     <button onClick={() => { setSearch(''); setDebouncedSearch(''); onSearchChange?.(''); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-news-muted hover:text-white">
