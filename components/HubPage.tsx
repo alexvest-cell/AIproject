@@ -29,7 +29,7 @@ const HUB_META: Record<HubType, { label: string; description: string; titleTag: 
     },
     'best-ai-tools': {
         label: 'Best AI Tools',
-        description: 'Curated rankings and expert recommendations across AI tools and software — scored and compared so you can decide faster.',
+        description: 'Too many AI tools, too much noise. These rankings cut through it — every tool scored across six dimensions so you can compare like for like.',
         titleTag: 'Best AI Software & Tools: 2026 Rankings & Reviews',
         articleType: 'best-of'
     },
