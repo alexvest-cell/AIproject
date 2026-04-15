@@ -73,7 +73,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                     <h1 className="text-4xl md:text-6xl xl:text-7xl font-black tracking-tighter leading-[0.95] mb-6 text-white">
                         Find the Right{' '}
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-news-accent to-news-accentHover animate-pulse">
-                            Software
+                            Tool
                         </span>{' '}
                         for Your Workflow
                     </h1>

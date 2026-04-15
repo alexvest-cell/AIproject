@@ -534,9 +534,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                     <span className="text-sm font-medium text-white">{tier.plan}</span>
                                                     {isFree && <span className="text-[8px] font-bold uppercase tracking-widest text-news-accent border border-news-accent/30 px-1.5 py-0.5 rounded">FREE</span>}
                                                 </div>
-                                                <div className="flex items-center gap-3 flex-shrink-0">
-                                                    <span className="text-xs font-bold text-news-accent">{mobilePlanData.priceMap[key] || (isFree ? '$0' : '—')}</span>
-                                                    <ChevronDown size={14} className={`text-news-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                                <div className="flex items-center gap-2 flex-shrink-0 max-w-[55%] text-right">
+                                                    <span className="text-[10px] font-bold text-news-accent leading-tight">{mobilePlanData.priceMap[key] || (isFree ? '$0' : '—')}</span>
+                                                    <ChevronDown size={14} className={`text-news-muted transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
                                                 </div>
                                             </button>
                                             {isExpanded && (
@@ -757,8 +757,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             }
                             return (
                                 <section id="plans" className="scroll-mt-24">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Pricing</p>
-                                    <h2 className="text-xl font-bold text-white mb-4 border-b border-border-divider pb-2">Plans & Pricing</h2>
+                                    <p className="hidden md:block text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Pricing</p>
+                                    <h2 className="hidden md:block text-xl font-bold text-white mb-4 border-b border-border-divider pb-2">Plans & Pricing</h2>
 
                                     {/* Desktop table */}
                                     <div className="hidden md:block overflow-hidden rounded-xl border border-border-subtle">
