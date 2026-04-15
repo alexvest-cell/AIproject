@@ -116,16 +116,13 @@ const ToolListCard: React.FC<{ tool: Tool; href: string }> = ({ tool, href }) =>
             </div>
         )}
         <div className="flex-grow min-w-0">
-            <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white truncate group-hover:text-news-accent transition-colors">{tool.name}</h3>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold flex-shrink-0 ${tool.pricing_model === 'Free' || tool.pricing_model === 'Freemium'
-                    ? 'bg-news-accent/10 border-news-accent/20 text-news-accent'
-                    : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}
-                >
-                    {tool.pricing_model}
-                </span>
-            </div>
-            <p className="text-xs text-news-text truncate mt-0.5">{tool.short_description}</p>
+            <h3 className="text-sm font-bold text-white truncate group-hover:text-news-accent transition-colors leading-snug">{tool.name}</h3>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold inline-block mt-0.5 ${tool.pricing_model === 'Free' || tool.pricing_model === 'Freemium'
+                ? 'bg-news-accent/10 border-news-accent/20 text-news-accent'
+                : 'bg-blue-500/10 border-blue-500/20 text-blue-400'}`}
+            >
+                {tool.pricing_model}
+            </span>
         </div>
         {tool.rating_score && (
             <div className="flex items-center gap-1 flex-shrink-0 bg-surface-base py-1 px-2 rounded-full border border-border-subtle">
