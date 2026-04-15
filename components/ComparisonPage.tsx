@@ -132,6 +132,51 @@ function buildTableRows(
     );
 }
 
+// Mobile feature comparison — stacked rows, one tool per line
+const MobileFeatureList: React.FC<{ toolsArr: Tool[]; winnerSlug: string }> = ({ toolsArr, winnerSlug }) => {
+    const enumRows = [
+        { key: 'image_generation',   label: 'Image Generation' },
+        { key: 'memory_persistence', label: 'Memory Persistence' },
+        { key: 'computer_use',       label: 'Computer Use' },
+        { key: 'multimodal',         label: 'Multimodal' },
+        { key: 'open_source',        label: 'Open Source' },
+        { key: 'api_available',      label: 'API Available' },
+    ] as const;
+    const rows: { label: string; render: (t: Tool) => React.ReactNode }[] = [
+        { label: 'General Score',   render: t => <span className={`font-bold ${t.slug === winnerSlug ? 'text-news-accent' : 'text-white'}`}>{(t as any).rating_score ?? '—'}</span> },
+        { label: 'Pricing Model',   render: t => <span className="text-news-text">{t.pricing_model || '—'}</span> },
+        { label: 'Context Window',  render: t => <span className="text-news-text">{(t as any).context_window || 'N/A'}</span> },
+        { label: 'Free Tier',       render: t => { const v = (t as any).free_tier; return <span className="text-news-text text-xs leading-snug">{v && v.toLowerCase() !== 'none' ? v : '—'}</span>; } },
+        ...enumRows.map(({ key, label }) => ({
+            label,
+            render: (t: Tool) => <CapabilityIcon value={(t as any)[key] as string | undefined} bold={false} />,
+        })),
+        { label: 'Platforms',       render: t => <span className="text-news-text text-xs">{(t.supported_platforms || []).join(', ') || '—'}</span> },
+    ];
+    return (
+        <div className="md:hidden border border-border-subtle rounded-xl overflow-hidden divide-y divide-border-subtle">
+            {rows.map(row => (
+                <div key={row.label} className="bg-surface-base px-4 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-news-muted mb-2.5">{row.label}</p>
+                    <div className="space-y-2.5">
+                        {toolsArr.map(t => (
+                            <div key={t.slug} className="flex items-start gap-2">
+                                {/* Fixed-width left: logo + name */}
+                                <div className="flex items-center gap-1.5 w-24 flex-shrink-0 pt-0.5">
+                                    <ToolLogo tool={t} size={4} />
+                                    <span className="text-[11px] font-semibold text-white truncate">{t.name}</span>
+                                </div>
+                                {/* Value — can wrap freely */}
+                                <div className="flex-1 text-xs leading-snug">{row.render(t)}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
 // Two-line section header: small teal label + large white title (homepage pattern)
 const Sec: React.FC<{ label: string; title: string; children: React.ReactNode; className?: string }> = ({
     label, title, children, className = '',
@@ -605,7 +650,12 @@ const Comparison1v1: React.FC<{
     // Winner determined client-side: UC breakdown score (Option A) or rating_score (Option B fallback)
     const winner = determineWinner(tools, activeUseCase);
     const other = winner.slug === tA.slug ? tB : tA;
+    const isTie = toolDisplayScore(tA, activeUseCase) === toolDisplayScore(tB, activeUseCase)
+        && funcBreaker(tA) === funcBreaker(tB);
     const verdictSummary = (() => {
+        if (isTie) return activeUseCase
+            ? `${tA.name} and ${tB.name} are evenly matched for ${activeUseCase} — choose based on your workflow.`
+            : `${tA.name} and ${tB.name} are evenly matched overall — choose based on your specific needs.`;
         const s = gen.quick_verdict.summary || '';
         if (s.toLowerCase().startsWith(winner.name.toLowerCase())) return s;
         return activeUseCase
@@ -642,23 +692,37 @@ const Comparison1v1: React.FC<{
         <>
             {/* ── Quick Verdict ──────────────────────────────────── */}
             <Sec label="VERDICT" title="Quick Verdict">
-                {/* Winner callout — teal left border, no background fill */}
+                {/* Winner / Tie callout */}
                 <div className="border-l-4 border-news-accent bg-surface-card rounded-r-2xl px-6 py-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <ToolLogo tool={winner} size={12} />
+                    {isTie ? (
+                        <div className="flex -space-x-2 flex-shrink-0">
+                            <ToolLogo tool={tA} size={10} />
+                            <ToolLogo tool={tB} size={10} />
+                        </div>
+                    ) : (
+                        <ToolLogo tool={winner} size={12} />
+                    )}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                            <Trophy size={13} className="text-news-accent" />
-                            <span className="text-xs font-bold uppercase tracking-widest text-news-accent">Our Pick</span>
+                            {isTie
+                                ? <span className="text-xs font-bold uppercase tracking-widest text-news-accent">It's a Tie</span>
+                                : <><Trophy size={13} className="text-news-accent" /><span className="text-xs font-bold uppercase tracking-widest text-news-accent">Our Pick</span></>
+                            }
                         </div>
                         <p className="font-black text-xl mb-1">
-                            <span className="text-news-accent">{winner.name}</span>
+                            {isTie
+                                ? <span className="text-news-accent">{tA.name} vs {tB.name}</span>
+                                : <span className="text-news-accent">{winner.name}</span>
+                            }
                         </p>
                         <p className="text-news-muted text-sm leading-relaxed">{verdictSummary}</p>
                     </div>
-                    <button onClick={() => onToolClick(winner.slug)}
-                        className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-news-accent hover:bg-news-accentHover text-[#0B0F14] font-bold text-sm rounded-xl transition-colors">
-                        View Tool <ArrowRight size={13} />
-                    </button>
+                    {!isTie && (
+                        <button onClick={() => onToolClick(winner.slug)}
+                            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-news-accent hover:bg-news-accentHover text-[#0B0F14] font-bold text-sm rounded-xl transition-colors">
+                            View Tool <ArrowRight size={13} />
+                        </button>
+                    )}
                 </div>
 
                 {/* Tool cards */}
@@ -666,7 +730,7 @@ const Comparison1v1: React.FC<{
                     {tools.map(tool => {
                         const scoreResult = activeUseCase ? getUCScoreResult(tool, activeUseCase) : null;
                         const score = scoreResult ? scoreResult.score : ((tool as any).rating_score ?? 0);
-                        const isWinner = tool.slug === winner.slug;
+                        const isWinner = !isTie && tool.slug === winner.slug;
                         const cardText = getCardText(tool);
                         return (
                             <button key={tool.slug} onClick={() => onToolClick(tool.slug)}
@@ -727,7 +791,7 @@ const Comparison1v1: React.FC<{
                             const rawText = rawKey ? ucBreakdown![rawKey] : undefined;
                             const displayScore: number | null = ucEntry?.score ?? (() => { const m = rawText?.match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
                             const displayText = ucEntry?.description || (rawText ? rawText.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);
-                            const isWinner = tool.slug === winner.slug;
+                            const isWinner = !isTie && tool.slug === winner.slug;
                             return (
                                 <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
                                     <div className="flex items-center justify-between gap-2 mb-3">
@@ -757,7 +821,8 @@ const Comparison1v1: React.FC<{
 
             {/* ── Feature Comparison A vs B ──────────────────────── */}
             <Sec label="FEATURES" title="Feature Comparison">
-                <div className="overflow-x-auto rounded-xl border border-border-subtle">
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-border-subtle">
                     <table className="w-full text-sm min-w-[400px]">
                         <thead>
                             <tr className="bg-surface-card border-b border-border-subtle">
@@ -781,6 +846,8 @@ const Comparison1v1: React.FC<{
                         </tbody>
                     </table>
                 </div>
+                {/* Mobile stacked layout */}
+                <MobileFeatureList toolsArr={tools} winnerSlug={winner.slug} />
             </Sec>
 
             {/* ── Pricing Comparison A vs B ──────────────────────── */}
@@ -793,7 +860,7 @@ const Comparison1v1: React.FC<{
                     <div className="grid md:grid-cols-2 gap-4">
                         {tools.map(tool => {
                             const p = gen.pricing[tool.slug];
-                            const isWinner = tool.slug === gen.quick_verdict.winner_slug;
+                            const isWinner = !isTie && tool.slug === winner.slug;
                             return (
                                 <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent/50' : 'bg-surface-card border-border-subtle'}`}>
                                     <div className="flex items-center gap-2 mb-4">
@@ -887,7 +954,7 @@ const Comparison1v1: React.FC<{
                 <div className="grid md:grid-cols-2 gap-4">
                     {tools.map(tool => {
                         const reasons = gen.decision.choose[tool.slug] || [];
-                        const isWinner = tool.slug === gen.quick_verdict.winner_slug;
+                        const isWinner = !isTie && tool.slug === winner.slug;
                         return (
                             <div key={tool.slug} className={`rounded-xl p-5 border ${isWinner ? 'bg-surface-card border-news-accent' : 'bg-surface-card border-border-subtle'}`}>
                                 {isWinner && (
@@ -956,16 +1023,6 @@ const ComparisonMulti: React.FC<{
 
     const allUCs = [...new Set(tools.flatMap(t => gen.use_cases[t.slug] || []))];
 
-    const beginnerKws = ['beginner', 'simple', 'easy', 'basic', 'student', 'quick', 'no-code', 'personal'];
-    const advancedKws = ['enterprise', 'advanced', 'team', 'agency', 'professional', 'complex', 'scale', 'api', 'developer'];
-
-    const scoreFor = (tool: Tool, kws: string[]) => {
-        const bf = ((tool as any).best_for || []).join(' ').toLowerCase();
-        return kws.filter(k => bf.includes(k)).length;
-    };
-
-    const bestForBeginners = [...tools].sort((a, b) => scoreFor(b, beginnerKws) - scoreFor(a, beginnerKws))[0];
-    const bestForAdvanced  = [...tools].sort((a, b) => scoreFor(b, advancedKws)  - scoreFor(a, advancedKws))[0];
 
     // Change 1: guard against stale stored verdict naming the wrong winner
     const verdictSummary = (() => {
@@ -1097,7 +1154,8 @@ const ComparisonMulti: React.FC<{
 
             {/* ── Feature Comparison (multi-tool) ───────────────── */}
             <Sec label="FEATURES" title="Feature Comparison">
-                <div className="overflow-x-auto rounded-xl border border-border-subtle">
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-border-subtle">
                     <table className="w-full text-sm min-w-[500px]">
                         <thead>
                             <tr className="bg-surface-card border-b border-border-subtle">
@@ -1121,6 +1179,8 @@ const ComparisonMulti: React.FC<{
                         </tbody>
                     </table>
                 </div>
+                {/* Mobile stacked layout */}
+                <MobileFeatureList toolsArr={sorted} winnerSlug={winner.slug} />
             </Sec>
 
             {/* ── Pricing Comparison (multi-tool) ───────────────── */}
@@ -1160,7 +1220,8 @@ const ComparisonMulti: React.FC<{
             {/* ── Use Case Breakdown ─────────────────────────────── */}
             {allUCs.length > 0 && (
                 <Sec label="USE CASES" title="Use Case Breakdown">
-                    <div className="overflow-x-auto rounded-xl border border-border-subtle mb-4">
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto rounded-xl border border-border-subtle mb-4">
                         <table className="w-full text-xs min-w-[500px]">
                             <thead>
                                 <tr className="bg-surface-card border-b border-border-subtle">
@@ -1200,7 +1261,7 @@ const ComparisonMulti: React.FC<{
                                             <td className="px-4 py-3">
                                                 {bestForUC ? (
                                                     <div className="flex items-center gap-1.5">
-                                                        {bestForUC.logo && <img src={bestForUC.logo} alt={bestForUC.name} className="w-4 h-4 rounded object-contain" />}
+                                                        <ToolLogo tool={bestForUC} size={5} />
                                                         <span className="text-news-accent font-bold">{bestForUC.name}</span>
                                                     </div>
                                                 ) : (
@@ -1212,6 +1273,46 @@ const ComparisonMulti: React.FC<{
                                 })}
                             </tbody>
                         </table>
+                    </div>
+                    {/* Mobile: one card per use case */}
+                    <div className="md:hidden divide-y divide-border-subtle border border-border-subtle rounded-xl overflow-hidden">
+                        {allUCs.map((uc, i) => {
+                            const toolsWithUC = tools.filter(t => (gen.use_cases[t.slug] || []).includes(uc));
+                            const bestForUC = [...toolsWithUC].sort((a, b) =>
+                                toolDisplayScore(b, String(uc)) - toolDisplayScore(a, String(uc))
+                            )[0];
+                            return (
+                                <div key={i} className="bg-surface-base px-4 py-3.5">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <Target size={10} className="text-news-accent flex-shrink-0" />
+                                            <span className="text-xs font-bold text-white">{uc}</span>
+                                        </div>
+                                        {bestForUC && (
+                                            <div className="flex items-center gap-1.5">
+                                                <ToolLogo tool={bestForUC} size={4} />
+                                                <span className="text-[11px] text-news-accent font-bold">{bestForUC.name}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Tool support row — logo + name + icon, with more breathing room */}
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                                        {sorted.map(t => {
+                                            const has = (gen.use_cases[t.slug] || []).includes(uc);
+                                            return (
+                                                <div key={t.slug} className="flex items-center gap-1.5">
+                                                    <ToolLogo tool={t} size={4} />
+                                                    <span className="text-[11px] text-news-muted">{t.name}</span>
+                                                    {has
+                                                        ? <Check size={11} className="text-news-accent" />
+                                                        : <X size={11} className="text-news-muted/40" />}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </Sec>
             )}
@@ -1288,30 +1389,20 @@ const ComparisonMulti: React.FC<{
                     })}
                 </div>
 
-                {/* Best overall / beginners / advanced callouts */}
+                {/* Best Overall callout */}
                 <div className="grid md:grid-cols-3 gap-4">
-                    {[
-                        { label: 'Best Overall',        icon: Trophy, tool: winner,           accent: true  },
-                        { label: 'Best for Beginners',  icon: Star,   tool: bestForBeginners, accent: false },
-                        { label: 'Best for Advanced',   icon: Medal,  tool: bestForAdvanced,  accent: false },
-                    ].map(({ label, icon: Icon, tool, accent }) => (
-                        <button key={label} onClick={() => onToolClick(tool.slug)}
-                            className={`text-left rounded-xl p-4 border transition-all hover:brightness-110 ${
-                                accent
-                                    ? 'bg-surface-card border-news-accent'
-                                    : 'bg-surface-card border-border-subtle hover:border-news-accent/40'
-                            }`}>
-                            <div className="flex items-center gap-2 mb-3">
-                                <Icon size={13} className={accent ? 'text-news-accent' : 'text-news-muted'} />
-                                <span className={`text-xs font-bold uppercase tracking-widest ${accent ? 'text-news-accent' : 'text-news-muted'}`}>{label}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <ToolLogo tool={tool} size={8} />
-                                <span className="font-bold text-white">{tool.name}</span>
-                                <ArrowRight size={12} className="text-news-muted ml-auto" />
-                            </div>
-                        </button>
-                    ))}
+                    <button onClick={() => onToolClick(winner.slug)}
+                        className="text-left rounded-xl p-4 border transition-all hover:brightness-110 bg-surface-card border-news-accent">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Trophy size={13} className="text-news-accent" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-news-accent">Best Overall</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <ToolLogo tool={winner} size={8} />
+                            <span className="font-bold text-white">{winner.name}</span>
+                            <ArrowRight size={12} className="text-news-muted ml-auto" />
+                        </div>
+                    </button>
                 </div>
             </Sec>
         </>
