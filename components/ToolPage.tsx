@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Tool, Article, Stack } from '../types';
 import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon, ChevronDown, Users, Tag } from 'lucide-react';
 import { RelatedContent } from './RelatedContent';
+import { categoryNameToSlug } from '@/lib/utils/slugs';
 
 interface ToolPageProps {
     slug: string;
@@ -383,7 +384,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                             {/* secondary_tags are SEO-only — not rendered */}
                             {(tool.category_primary || tool.category_tags.length > 0) && (() => {
                                 const cat = tool.category_primary || tool.category_tags[0];
-                                const catSlug = cat.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                                const catSlug = categoryNameToSlug(cat);
                                 return (
                                     <a href={`/best-ai-tools/${catSlug}`}
                                        className="text-xs px-2 py-1 rounded-full bg-news-accent/10 text-news-accent border border-news-accent/30 hover:bg-news-accent/20 transition-colors font-medium">
