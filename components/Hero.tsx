@@ -64,7 +64,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
             <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-surface-base to-transparent pointer-events-none z-10" />
 
             {/* Accent glow */}
-            <div className="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/4 w-full h-[1000px] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(43,212,195,0.1) 0%, transparent 60%)' }} />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/4 w-full h-[1000px] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(43,212,195,0.1) 0%, transparent 60%)' }} />
 
             <div className="container mx-auto px-4 md:px-8 relative z-10">
 
