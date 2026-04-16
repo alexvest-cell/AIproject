@@ -12,6 +12,7 @@ export const CATEGORY_SLUG_TO_NAME: Record<string, string> = {
     'sales-crm':           'Sales & CRM',
     'customer-support':    'Customer Support',
     'data-analysis':       'Data Analysis',
+    'research':            'Research',
     'seo-tools':           'SEO Tools',
     'other':               'Other',
 };

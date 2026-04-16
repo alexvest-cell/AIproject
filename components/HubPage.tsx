@@ -164,6 +164,7 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType }> 
     'Sales & CRM':        { label: 'SALES & CRM',         icon: TrendingUp },
     'Customer Support':   { label: 'CUSTOMER SUPPORT',    icon: Headphones },
     'Data Analysis':      { label: 'DATA ANALYSIS',       icon: BarChart2 },
+    'Research':           { label: 'RESEARCH',            icon: Microscope },
     'SEO Tools':          { label: 'SEO TOOLS',           icon: Search },
     'Other':              { label: 'OTHER',               icon: LayoutGrid },
 };
@@ -1255,6 +1256,7 @@ export const BestSoftwareHub: React.FC<{
             'Design':             'AI design tools ranked by creative output and collaboration features.',
             'Customer Support':   'AI-powered support tools to resolve tickets faster at scale.',
             'Data Analysis':      'Data analysis tools that turn raw numbers into actionable insights.',
+            'Research':           'Academic search engines and literature review tools for researchers, students, and scientists.',
             'SEO Tools':          'SEO tools ranked by ranking lift, technical audit depth, and ease of use.',
         };
 

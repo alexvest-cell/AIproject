@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 import { Section, Article } from '../types';
-import { Menu, X, Search, Bell, ChevronRight, ChevronDown, PenLine, Code2, ImageIcon, Zap, Layers, Users, Megaphone, Briefcase, LayoutGrid, Star, Rocket, Sparkles, Flame, MousePointer2, Video, Mic, TrendingUp, Check } from 'lucide-react';
+import { Menu, X, Search, Bell, ChevronRight, ChevronDown, PenLine, Code2, ImageIcon, Zap, Layers, Users, Megaphone, Briefcase, LayoutGrid, Star, Rocket, Sparkles, Flame, MousePointer2, Video, Mic, TrendingUp, Check, Microscope } from 'lucide-react';
 
 interface NavigationProps {
   activeSection: Section;
@@ -58,6 +58,7 @@ const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
   'Sales & CRM': TrendingUp,
   'Customer Support': Users,
   'Data Analysis': LayoutGrid,
+  'Research': Microscope,
   'SEO Tools': Search,
   'Other': LayoutGrid,
 };

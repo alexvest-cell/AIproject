@@ -557,7 +557,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
 
     // ── Client-side parser (no server call needed) ──────────────────────────
     const clientParseToolInput = (rawText: string) => {
-        const CATEGORY_PRIMARY_OPTS = ['AI Chatbots','AI Writing','AI Image Generation','AI Video','AI Audio','Productivity','Automation','Design','Development','Marketing','Sales & CRM','Customer Support','Data Analysis','SEO Tools','Other'];
+        const CATEGORY_PRIMARY_OPTS = ['AI Chatbots','AI Writing','AI Image Generation','AI Video','AI Audio','Productivity','Automation','Design','Development','Marketing','Sales & CRM','Customer Support','Data Analysis','Research','SEO Tools','Other'];
         const USE_CASE_OPTS = ['Content Creation','Marketing','Research','Coding','Automation','Lead Generation','Customer Support','Data Analysis','Design','Education','Personal Productivity','Image Generation','Video Generation','Audio Generation','SEO','Sales'];
         const PLATFORM_OPTS = ['Web','iOS','Android','API','Desktop','Browser Extension'];
         const PRICING_MAP: Record<string, string> = { free:'Free', freemium:'Freemium', paid:'Paid', trial:'Trial', enterprise:'Enterprise', 'open source':'Open Source' };
@@ -3135,7 +3135,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                         <select value={toolForm.category_primary || ''} onChange={e => setToolForm((p: any) => ({ ...p, category_primary: e.target.value }))}
                                             className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-news-accent">
                                             <option value="">— Select —</option>
-                                            {['AI Chatbots','AI Writing','AI Image Generation','AI Video','AI Audio','Productivity','Automation','Design','Development','Marketing','Sales & CRM','Customer Support','Data Analysis','SEO Tools','Other'].map(c => <option key={c} value={c}>{c}</option>)}
+                                            {['AI Chatbots','AI Writing','AI Image Generation','AI Video','AI Audio','Productivity','Automation','Design','Development','Marketing','Sales & CRM','Customer Support','Data Analysis','Research','SEO Tools','Other'].map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     </div>
                                     <div>
