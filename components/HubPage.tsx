@@ -1413,7 +1413,7 @@ export const BestSoftwareHub: React.FC<{
                                             <div
                                                 key={tool.slug}
                                                 title={tool.name}
-                                                className="w-8 h-8 rounded-full bg-white border-2 border-surface-card flex items-center justify-center p-1 flex-shrink-0 overflow-hidden"
+                                                className="relative w-8 h-8 rounded-full bg-white border-2 border-surface-card flex items-center justify-center p-1 flex-shrink-0 overflow-hidden"
                                                 style={{ marginLeft: ti > 0 ? '-8px' : 0 }}
                                             >
                                                 {tool.logo
@@ -2422,7 +2422,7 @@ const ReviewsHub: React.FC<{
                                             unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')}
                                         />
                                         {tool?.logo && (
-                                            <div className="absolute top-2 left-2 relative w-9 h-9 rounded-xl bg-white border border-border-subtle shadow-elevation overflow-hidden">
+                                            <div className="absolute top-2 left-2 w-9 h-9 rounded-xl bg-white border border-border-subtle shadow-elevation overflow-hidden">
                                                 <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
                                             </div>
                                         )}
