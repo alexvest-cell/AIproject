@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'AI Tool Reviews (Coming Soon) | ToolCurrent',
     description: 'In-depth AI tool reviews are coming to ToolCurrent. Explore rankings and comparisons while you wait.',
     alternates: { canonical: 'https://toolcurrent.com/reviews' },
+    robots: { index: false, follow: false },
 };
 
 const FEATURES = [

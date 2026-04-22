@@ -4,6 +4,7 @@ import AppClient from '@/app/AppClient';
 export const metadata: Metadata = {
     title: 'AI Tool Stacks | ToolCurrent',
     description: 'Explore curated AI tool stacks for every workflow.',
+    robots: { index: false, follow: false },
 };
 
 export const revalidate = 3600;
