@@ -36,8 +36,8 @@ const config: Config = {
                 'elevation-hover': '0 0 0 1px rgba(255,255,255,0.06), 0 12px 32px rgba(0,0,0,0.45)',
             },
             fontFamily: {
-                sans: ['Inter', 'sans-serif'],
-                serif: ['Playfair Display', 'serif'],
+                sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+                serif: ['var(--font-playfair)', 'Georgia', 'serif'],
             },
             animation: {
                 'fade-in': 'fadeIn 0.6s ease-out forwards',

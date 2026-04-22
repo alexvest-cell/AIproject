@@ -12,7 +12,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         const { slug } = await params;
         const article = await Article.findOne({ slug }, 'title excerpt meta_description meta_title imageUrl').lean() as any;
         if (!article) return {};
-        const title = article.meta_title || article.title || '';
+        const rawTitle = article.meta_title || article.title || '';
+        const title = rawTitle.includes('ToolCurrent') ? rawTitle : `${rawTitle} | ToolCurrent`;
         const description = article.meta_description || article.excerpt || '';
         return {
             title,
