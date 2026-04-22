@@ -30,8 +30,9 @@ export default function Image() {
                         transform: 'translate(-50%, -50%)',
                         width: 600,
                         height: 300,
-                        borderRadius: '50%',
+                        borderRadius: 999,
                         background: 'radial-gradient(ellipse, rgba(20,184,166,0.18) 0%, transparent 70%)',
+                        display: 'flex',
                     }}
                 />
 
@@ -55,56 +56,76 @@ export default function Image() {
                             justifyContent: 'center',
                         }}
                     >
-                        <div style={{ color: '#fff', fontSize: 26, fontWeight: 900 }}>T</div>
+                        <span style={{ color: '#fff', fontSize: 26, fontWeight: 900 }}>T</span>
                     </div>
-                    <div style={{ color: '#ffffff', fontSize: 36, fontWeight: 800, letterSpacing: -1 }}>
+                    <span style={{ color: '#ffffff', fontSize: 36, fontWeight: 800, letterSpacing: -1 }}>
                         ToolCurrent
-                    </div>
+                    </span>
                 </div>
 
                 {/* Headline */}
                 <div
                     style={{
-                        color: '#ffffff',
-                        fontSize: 56,
-                        fontWeight: 800,
-                        textAlign: 'center',
-                        lineHeight: 1.15,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 4,
                         maxWidth: 900,
-                        letterSpacing: -1.5,
                     }}
                 >
-                    AI Tool Discovery
-                    <br />
-                    <span style={{ color: '#14b8a6' }}>&amp; Intelligence</span>
+                    <span
+                        style={{
+                            color: '#ffffff',
+                            fontSize: 56,
+                            fontWeight: 800,
+                            textAlign: 'center',
+                            lineHeight: 1.15,
+                            letterSpacing: -1.5,
+                        }}
+                    >
+                        AI Tool Discovery
+                    </span>
+                    <span
+                        style={{
+                            color: '#14b8a6',
+                            fontSize: 56,
+                            fontWeight: 800,
+                            textAlign: 'center',
+                            lineHeight: 1.15,
+                            letterSpacing: -1.5,
+                        }}
+                    >
+                        &amp; Intelligence
+                    </span>
                 </div>
 
                 {/* Tagline */}
-                <div
-                    style={{
-                        color: '#94a3b8',
-                        fontSize: 22,
-                        marginTop: 24,
-                        textAlign: 'center',
-                        maxWidth: 700,
-                    }}
-                >
-                    Rankings, comparisons, and reviews to help you find the right tool.
+                <div style={{ display: 'flex', marginTop: 24 }}>
+                    <span
+                        style={{
+                            color: '#94a3b8',
+                            fontSize: 22,
+                            textAlign: 'center',
+                            maxWidth: 700,
+                        }}
+                    >
+                        Rankings, comparisons, and reviews to help you find the right tool.
+                    </span>
                 </div>
 
                 {/* URL badge */}
                 <div
                     style={{
+                        display: 'flex',
                         marginTop: 44,
                         padding: '10px 24px',
                         borderRadius: 999,
                         border: '1px solid rgba(20,184,166,0.35)',
-                        color: '#5eead4',
-                        fontSize: 16,
-                        letterSpacing: 0.5,
                     }}
                 >
-                    toolcurrent.com
+                    <span style={{ color: '#5eead4', fontSize: 16, letterSpacing: 0.5 }}>
+                        toolcurrent.com
+                    </span>
                 </div>
             </div>
         ),
