@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Section, Article } from '../types';
 import { Menu, X, Search, Bell, ChevronRight, ChevronDown, PenLine, Code2, ImageIcon, Zap, Layers, Users, Megaphone, Briefcase, LayoutGrid, Star, Rocket, Sparkles, Flame, MousePointer2, Video, Mic, TrendingUp, Check, Microscope } from 'lucide-react';
@@ -237,8 +238,8 @@ const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect
                   >
                     {/* Icon or Logo */}
                     {item.logo ? (
-                      <div className="w-7 h-7 rounded-lg bg-white border border-border-subtle p-1 flex-shrink-0 flex items-center justify-center group-hover/item:border-news-accent/30 transition-colors shadow-inner">
-                        <img src={item.logo} alt={item.label} className="w-full h-full object-contain grayscale group-hover/item:grayscale-0 transition-all opacity-80 group-hover/item:opacity-100" />
+                      <div className="relative w-7 h-7 rounded-lg bg-white border border-border-subtle flex-shrink-0 group-hover/item:border-news-accent/30 transition-colors shadow-inner overflow-hidden">
+                        <Image src={item.logo} alt={item.label} fill style={{ objectFit: 'contain', padding: '4px' }} className="grayscale group-hover/item:grayscale-0 transition-all opacity-80 group-hover/item:opacity-100" unoptimized={item.logo?.startsWith('https://res.cloudinary.com')} />
                       </div>
                     ) : item.icon ? (
                       <div className="w-7 h-7 rounded-lg bg-surface-base/50 border border-border-subtle flex items-center justify-center flex-shrink-0 group-hover/item:border-news-accent/30 transition-colors">
@@ -659,7 +660,7 @@ const Navigation: React.FC<NavigationProps> = ({
               onClick={() => onCategorySelect('All')}
             >
               <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'h-7' : 'h-8'}`}>
-                <img src="/logo.png" alt="toolcurrent" className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300" />
+                <Image src="/logo.png" alt="toolcurrent" height={40} width={160} className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300" priority />
               </div>
             </div>
             <div className="flex items-center gap-5">
@@ -682,7 +683,7 @@ const Navigation: React.FC<NavigationProps> = ({
               onClick={() => onCategorySelect('All')}
             >
               <div className={`flex items-center transition-all duration-300 ${isScrolled ? 'h-8' : 'h-10'}`}>
-                <img src="/logo.png" alt="toolcurrent" className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300" />
+                <Image src="/logo.png" alt="toolcurrent" height={40} width={160} className="h-full w-auto object-contain transition-transform group-hover:scale-105 duration-300" priority />
               </div>
             </div>
             {/* Right: search */}
@@ -868,8 +869,8 @@ const Navigation: React.FC<NavigationProps> = ({
                                     >
                                       <div className="flex items-center gap-3 min-w-0">
                                         {item.logo ? (
-                                          <div className="w-6 h-6 rounded bg-white border border-border-subtle p-0.5 flex-shrink-0">
-                                            <img src={item.logo} alt={item.label} className="w-full h-full object-contain" />
+                                          <div className="relative w-6 h-6 rounded bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
+                                            <Image src={item.logo} alt={item.label} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={item.logo?.startsWith('https://res.cloudinary.com')} />
                                           </div>
                                         ) : item.icon ? (
                                           <item.icon size={14} className="text-gray-500 group-hover:text-news-accent flex-shrink-0" />

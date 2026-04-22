@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Comparison, Tool } from '../types';
 import { ArrowRight, Trophy, Check, X, TrendingUp, Target, Star, Zap, Medal, ChevronDown } from 'lucide-react';
 import { ArticleFAQ } from './article-layouts/SharedModules';
@@ -190,8 +191,8 @@ const Sec: React.FC<{ label: string; title: string; children: React.ReactNode; c
 
 const ToolLogo: React.FC<{ tool: Tool; size?: number }> = ({ tool, size = 8 }) => (
     tool.logo
-        ? <div className={`w-${size} h-${size} rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0`}>
-              <img src={tool.logo} alt={tool.name} className={`w-full h-full object-contain ${size <= 5 ? 'p-0.5' : 'p-1.5'}`} loading="lazy" />
+        ? <div className={`relative w-${size} h-${size} rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0`}>
+              <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: size <= 5 ? '2px' : '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
           </div>
         : null
 );

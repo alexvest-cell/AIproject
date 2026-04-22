@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { categorySlugToName } from '../lib/utils/slugs';
 import {
     ArrowLeft, Star, ArrowRight, BarChart2, Layers, Award,
@@ -328,9 +329,9 @@ const RankingPage: React.FC<RankingPageProps> = ({
 
                                 {/* Logo + rank badge */}
                                 <div className="relative flex-shrink-0">
-                                    <div className="w-16 h-16 rounded-2xl bg-white border border-border-subtle flex items-center justify-center p-2">
+                                    <div className="relative w-16 h-16 rounded-2xl bg-white border border-border-subtle flex items-center justify-center">
                                         {topPick.tool.logo
-                                            ? <img src={topPick.tool.logo} alt={topPick.tool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                            ? <Image src={topPick.tool.logo} alt={topPick.tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={topPick.tool.logo?.startsWith('https://res.cloudinary.com')} />
                                             : <Layers size={24} className="text-news-muted" />
                                         }
                                     </div>
@@ -430,9 +431,9 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                         </div>
 
                                         {/* Logo */}
-                                        <div className="w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center p-1.5 flex-shrink-0">
+                                        <div className="relative w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center flex-shrink-0">
                                             {ranked.tool.logo
-                                                ? <img src={ranked.tool.logo} alt={ranked.tool.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                                ? <Image src={ranked.tool.logo} alt={ranked.tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={ranked.tool.logo?.startsWith('https://res.cloudinary.com')} />
                                                 : <Layers size={14} className="text-news-muted" />
                                             }
                                         </div>
@@ -532,15 +533,15 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                     >
                                         <div className="flex items-center gap-3 mb-3">
                                             <div className="flex items-center -space-x-2">
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-border-subtle flex items-center justify-center p-1 z-10 relative">
+                                                <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle flex items-center justify-center z-10">
                                                     {a.logo
-                                                        ? <img src={a.logo} alt={a.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                                        ? <Image src={a.logo} alt={a.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={a.logo?.startsWith('https://res.cloudinary.com')} />
                                                         : <Layers size={11} className="text-news-muted" />
                                                     }
                                                 </div>
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-border-subtle flex items-center justify-center p-1">
+                                                <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle flex items-center justify-center">
                                                     {b.logo
-                                                        ? <img src={b.logo} alt={b.name} className="max-w-full max-h-full object-contain" loading="lazy" />
+                                                        ? <Image src={b.logo} alt={b.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={b.logo?.startsWith('https://res.cloudinary.com')} />
                                                         : <Layers size={11} className="text-news-muted" />
                                                     }
                                                 </div>

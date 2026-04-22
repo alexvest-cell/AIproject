@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
+import Image from 'next/image';
 import { Stack, Article } from '../types';
 import {
   Layers, ArrowRight, Play, Server, Command, Cpu, Layout,
@@ -93,11 +94,14 @@ const COMPLEXITY_COLORS = {
 const ToolLogoAvatar: React.FC<{ logo?: string | null; name: string }> = ({ logo, name }) => {
   if (logo) {
     return (
-      <img
+      <Image
         src={logo}
         alt={name}
         title={name}
-        className="w-6 h-6 rounded-full object-cover bg-white border border-border-subtle ring-1 ring-surface-card"
+        width={24}
+        height={24}
+        className="rounded-full object-cover bg-white border border-border-subtle ring-1 ring-surface-card"
+        unoptimized={logo?.startsWith('https://res.cloudinary.com')}
       />
     );
   }
@@ -134,11 +138,13 @@ const StackCard: React.FC<StackCardProps> = ({ stack, onStackClick, featured }) 
       {/* Image */}
       <div className="relative h-44 w-full bg-surface-alt overflow-hidden flex-shrink-0">
         {stack.hero_image ? (
-          <img
+          <Image
             src={stack.hero_image}
             alt={stack.name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            loading="lazy"
+            fill
+            style={{ objectFit: 'cover' }}
+            className="transition-transform duration-700 group-hover:scale-105"
+            unoptimized={stack.hero_image?.startsWith('https://res.cloudinary.com')}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-alt to-surface-hover">
@@ -486,7 +492,7 @@ const StackHubPage: React.FC<StackHubPageProps> = ({ onStackClick, articles = []
                   className="group text-left bg-surface-card border border-border-subtle hover:border-news-accent/40 rounded-xl overflow-hidden transition-all hover:-translate-y-0.5"
                 >
                   {article.imageUrl && (
-                    <img src={article.imageUrl} alt={article.title} className="w-full h-32 object-cover" loading="lazy" />
+                    <div className="relative w-full h-32 overflow-hidden"><Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')} /></div>
                   )}
                   <div className="p-4">
                     <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[9px] font-bold uppercase tracking-widest mb-2">
@@ -517,7 +523,7 @@ const StackHubPage: React.FC<StackHubPageProps> = ({ onStackClick, articles = []
                   className="group text-left bg-surface-card border border-border-subtle hover:border-purple-400/40 rounded-xl overflow-hidden transition-all hover:-translate-y-0.5"
                 >
                   {article.imageUrl && (
-                    <img src={article.imageUrl} alt={article.title} className="w-full h-32 object-cover" loading="lazy" />
+                    <div className="relative w-full h-32 overflow-hidden"><Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')} /></div>
                   )}
                   <div className="p-4">
                     <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold uppercase tracking-widest mb-2">

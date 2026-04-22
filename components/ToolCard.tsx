@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Image from 'next/image';
 import { Check, ExternalLink, ArrowRight, Zap } from 'lucide-react';
 import { Tool } from '../types';
 
@@ -17,7 +18,7 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, compact = false }) => {
         return (
             <div className="bg-zinc-900/50 backdrop-blur-sm border border-white/10 rounded-xl p-4 flex items-center gap-4 hover:border-news-accent hover:shadow-[0_0_15px_rgba(43,212,195,0.15)] transition-all group">
                 {tool.logo ? (
-                    <img src={tool.logo} alt={tool.name} className="w-12 h-12 rounded-lg object-contain bg-white p-1" loading="lazy" />
+                    <Image src={tool.logo} alt={tool.name} width={48} height={48} className="w-12 h-12 rounded-lg object-contain bg-white p-1" unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
                 ) : (
                     <div className="w-12 h-12 rounded-lg bg-zinc-800 flex items-center justify-center">
                         <Zap size={20} className="text-news-accent" />
@@ -54,7 +55,7 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, compact = false }) => {
                     {/* Logo & Pricing */}
                     <div className="flex flex-col items-center gap-4 w-full md:w-auto">
                         {tool.logo ? (
-                            <img src={tool.logo} alt={tool.name} className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-contain bg-white p-3 shadow-inner" loading="lazy" />
+                            <Image src={tool.logo} alt={tool.name} width={96} height={96} className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-contain bg-white p-3 shadow-inner" unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
                         ) : (
                             <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-zinc-800 flex items-center justify-center">
                                 <Zap size={40} className="text-news-accent" />

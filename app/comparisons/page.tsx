@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import ComparisonsHubPageClient from '@/components/ComparisonsHubPageClient';
+import { jsonLdScript } from '@/lib/jsonld';
 
 export const metadata: Metadata = {
     title: 'AI Tool Comparisons (2026) | ToolCurrent',
@@ -21,5 +22,22 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default function Page() {
-    return <ComparisonsHubPageClient />;
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://toolcurrent.com' },
+            { '@type': 'ListItem', position: 2, name: 'Comparisons', item: 'https://toolcurrent.com/comparisons' },
+        ],
+    };
+
+    return (
+        <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }}
+            />
+            <ComparisonsHubPageClient />
+        </>
+    );
 }

@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { Section, Article, Comparison, Tool } from '../types';
 import { ArrowRight, Filter, Star, ArrowLeftRight } from 'lucide-react';
 import AdUnit from './AdUnit';
@@ -82,13 +83,13 @@ const ComparisonCard: React.FC<{ comparison: Comparison; onClick: () => void }> 
         >
             <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center gap-2 flex-1 min-w-0 bg-surface-base/50 p-2 rounded-lg border border-border-subtle">
-                    {toolA?.logo && <img src={toolA.logo} alt={toolA.name} className="w-8 h-8 rounded-md object-contain flex-shrink-0" loading="lazy" />}
+                    {toolA?.logo && <Image src={toolA.logo} alt={toolA.name} width={32} height={32} className="rounded-md object-contain flex-shrink-0" unoptimized={toolA.logo?.startsWith('https://res.cloudinary.com')} />}
                     <span className="text-sm font-bold text-white truncate">{toolA?.name || comparison.tool_a_slug}</span>
                 </div>
                 <span className="text-[10px] font-black text-news-muted px-2 py-1 rounded-full bg-surface-base border border-border-divider shadow-sm flex-shrink-0">VS</span>
                 <div className="flex items-center gap-2 flex-1 min-w-0 justify-end bg-surface-base/50 p-2 rounded-lg border border-border-subtle">
                     <span className="text-sm font-bold text-white truncate text-right">{toolB?.name || comparison.tool_b_slug}</span>
-                    {toolB?.logo && <img src={toolB.logo} alt={toolB.name} className="w-8 h-8 rounded-md object-contain flex-shrink-0" loading="lazy" />}
+                    {toolB?.logo && <Image src={toolB.logo} alt={toolB.name} width={32} height={32} className="rounded-md object-contain flex-shrink-0" unoptimized={toolB.logo?.startsWith('https://res.cloudinary.com')} />}
                 </div>
             </div>
             {comparison.verdict && (
@@ -111,7 +112,7 @@ const ToolListCard: React.FC<{ tool: Tool; href: string }> = ({ tool, href }) =>
         {/* Mobile: logo + rating side by side; desktop: logo only (rating moves to end) */}
         <div className="flex items-center justify-between md:contents gap-2">
             {tool.logo ? (
-                <img src={tool.logo} alt={tool.name} className="w-9 h-9 md:w-10 md:h-10 rounded-lg object-contain bg-white p-1 flex-shrink-0 shadow-inner" loading="lazy" />
+                <Image src={tool.logo} alt={tool.name} width={40} height={40} className="w-9 h-9 md:w-10 md:h-10 rounded-lg object-contain bg-white p-1 flex-shrink-0 shadow-inner" unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
             ) : (
                 <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-surface-base shadow-inner flex items-center justify-center flex-shrink-0 text-base font-black text-news-muted">
                     {tool.name[0]}
@@ -256,8 +257,8 @@ const Portfolio: React.FC<PortfolioProps> = ({
                                 <button key={article.id} onClick={() => onArticleClick(article)}
                                     className="group text-left flex gap-3 p-4 border border-white/5 hover:border-white/15 hover:bg-white/5 rounded-xl transition-all"
                                 >
-                                    <div className="w-20 h-16 flex-shrink-0 overflow-hidden rounded-lg">
-                                        <img src={article.imageUrl} alt={article.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                    <div className="relative w-20 h-16 flex-shrink-0 overflow-hidden rounded-lg">
+                                        <Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-300" unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')} />
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-bold text-white leading-tight line-clamp-2 group-hover:text-gray-200 mb-1">{article.title}</h3>
@@ -350,7 +351,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
                                     <div className="flex items-center -space-x-2 mt-auto">
                                         {card.topTools.map((t, j) => (
                                             t.logo
-                                                ? <img key={j} src={t.logo} alt={t.name} className="w-7 h-7 rounded-full bg-white border-2 border-surface-card object-contain p-0.5 flex-shrink-0" loading="lazy" />
+                                                ? <Image key={j} src={t.logo} alt={t.name} width={28} height={28} className="rounded-full bg-white border-2 border-surface-card object-contain p-0.5 flex-shrink-0" unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
                                                 : <div key={j} className="w-7 h-7 rounded-full bg-surface-base border-2 border-surface-card flex items-center justify-center text-[9px] font-bold text-news-muted flex-shrink-0">{t.name[0]}</div>
                                         ))}
                                     </div>

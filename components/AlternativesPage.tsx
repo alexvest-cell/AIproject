@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Tool, Comparison, Article } from '../types';
 import { ChevronLeft, ExternalLink, ArrowRight, Star, Zap, Shuffle, BookOpen, BarChart2, Check } from 'lucide-react';
 
@@ -118,8 +119,8 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
         <div className="mb-10 pb-10 border-b border-border-divider">
           <div className="flex items-center gap-3 mb-4">
             {tool.logo && (
-              <div className="w-12 h-12 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
-                <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
+              <div className="relative w-12 h-12 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
+                <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
               </div>
             )}
             <div>
@@ -180,8 +181,8 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
 
                       {/* Logo */}
                       {alt.logo && (
-                        <div className="w-14 h-14 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
-                          <img src={alt.logo} alt={alt.name} className="w-full h-full object-contain p-2" loading="lazy" />
+                        <div className="relative w-14 h-14 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
+                          <Image src={alt.logo} alt={alt.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={alt.logo?.startsWith('https://res.cloudinary.com')} />
                         </div>
                       )}
 

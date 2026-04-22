@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Article, Tool, Comparison, Category, UseCase } from '../types';
 import { ArrowRight, Star, Zap, Filter, BookOpen, LayoutGrid, ChevronLeft, TrendingUp, Layers } from 'lucide-react';
 
@@ -27,9 +28,9 @@ const ToolCard: React.FC<{ tool: Tool; onClick: () => void; featured?: boolean }
     }`}
   >
     <div className="flex items-start gap-3">
-      <div className="w-11 h-11 rounded-xl bg-surface-alt border border-border-subtle flex-shrink-0 flex items-center justify-center overflow-hidden">
+      <div className="relative w-11 h-11 rounded-xl bg-surface-alt border border-border-subtle flex-shrink-0 flex items-center justify-center overflow-hidden">
         {tool.logo
-          ? <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
+          ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
           : <Zap size={18} className="text-news-accent" />
         }
       </div>
@@ -62,8 +63,8 @@ const ToolCard: React.FC<{ tool: Tool; onClick: () => void; featured?: boolean }
 const ArticleCard: React.FC<{ article: Article; onClick: () => void; variant?: 'ranking' | 'guide' }> = ({ article, onClick, variant = 'ranking' }) => (
   <button onClick={onClick} className="group text-left bg-surface-card border border-border-subtle rounded-2xl overflow-hidden hover:-translate-y-0.5 hover:border-border-divider transition-all">
     {article.imageUrl && (
-      <div className="h-28 overflow-hidden">
-        <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+      <div className="relative h-28 overflow-hidden">
+        <Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')} />
       </div>
     )}
     <div className="p-4">

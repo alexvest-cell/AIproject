@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { connectDB } from '@/lib/mongodb';
 import Tool from '@/lib/models/Tool';
 import AIToolsHubPageClient from '@/components/AIToolsHubPageClient';
+import { jsonLdScript } from '@/lib/jsonld';
 
 export const metadata: Metadata = {
     title: 'AI Tools Directory (2026) | ToolCurrent',
@@ -37,10 +38,25 @@ export default async function AIToolsPage({
             .map(([k, v]) => [k, Array.isArray(v) ? v[0] : (v as string)])
     ).toString();
 
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://toolcurrent.com' },
+            { '@type': 'ListItem', position: 2, name: 'AI Tools', item: 'https://toolcurrent.com/ai-tools' },
+        ],
+    };
+
     return (
-        <AIToolsHubPageClient
-            tools={JSON.parse(JSON.stringify(tools))}
-            initialQueryString={qs ? `?${qs}` : ''}
-        />
+        <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema) }}
+            />
+            <AIToolsHubPageClient
+                tools={JSON.parse(JSON.stringify(tools))}
+                initialQueryString={qs ? `?${qs}` : ''}
+            />
+        </>
     );
 }

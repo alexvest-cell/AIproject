@@ -25,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
         const [articles, tools, comparisons, stacks] = await Promise.all([
             Article.find({ status: 'published' }).select('slug updatedAt createdAt date').lean() as Promise<{ slug?: string; id?: string; updatedAt?: Date; createdAt?: Date; date?: string }[]>,
-            Tool.find({ status: 'Active' }).select('slug updatedAt category_primary workflow_tags').lean() as Promise<{ slug: string; updatedAt?: Date; category_primary?: string; workflow_tags?: string[] }[]>,
+            Tool.find({ status: 'Active' }).select('slug updatedAt category_primary workflow_tags competitors use_case_scores rating_score last_updated').sort({ rating_score: -1 }).lean() as Promise<{ slug: string; updatedAt?: Date; last_updated?: Date; category_primary?: string; workflow_tags?: string[]; competitors?: string[]; use_case_scores?: { use_case: string }[]; rating_score?: number }[]>,
             Comparison.find({ status: 'published' }).select('slug updatedAt').lean() as Promise<{ slug: string; updatedAt?: Date }[]>,
             Stack.find({ status: 'Published' }).select('slug updatedAt').lean() as Promise<{ slug: string; updatedAt?: Date }[]>,
         ]);
@@ -83,6 +83,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.7,
         }));
 
+        // Use-case comparison sub-pages (tools are already sorted by rating_score desc)
+        const ucComparisonSeen = new Set<string>();
+        const useCaseComparisonUrls: MetadataRoute.Sitemap = [];
+        const UC_CAP = 5000;
+
+        for (const tool of tools) {
+            if (useCaseComparisonUrls.length >= UC_CAP) break;
+            for (const competitorSlug of (tool.competitors || [])) {
+                if (useCaseComparisonUrls.length >= UC_CAP) break;
+                const useCases = (tool.use_case_scores || []).map(u => u.use_case).filter(Boolean);
+                for (const useCase of useCases) {
+                    if (useCaseComparisonUrls.length >= UC_CAP) break;
+                    const ucSlug = useCase.toLowerCase().replace(/\s+/g, '-');
+                    const key = `${tool.slug}-vs-${competitorSlug}/${ucSlug}`;
+                    const keyReverse = `${competitorSlug}-vs-${tool.slug}/${ucSlug}`;
+                    if (ucComparisonSeen.has(key) || ucComparisonSeen.has(keyReverse)) continue;
+                    ucComparisonSeen.add(key);
+                    useCaseComparisonUrls.push({
+                        url: `${BASE}/compare/${tool.slug}-vs-${competitorSlug}/${ucSlug}`,
+                        lastModified: tool.last_updated || tool.updatedAt,
+                        changeFrequency: 'weekly' as const,
+                        priority: 0.6,
+                    });
+                }
+            }
+        }
+
         return [
             ...staticPages,
             ...articlePages,
@@ -91,6 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             ...stackPages,
             ...categoryRankingPages,
             ...workflowRankingPages,
+            ...useCaseComparisonUrls,
         ];
     } catch {
         return staticPages;

@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Tool, Article, Stack } from '../types';
 import { ExternalLink, Check, X, ChevronLeft, Star, Zap, Globe, Smartphone, Layers, Calendar, ArrowRight, Maximize2, Image as ImageIcon, ChevronDown, Users, Tag } from 'lucide-react';
 import { RelatedContent } from './RelatedContent';
@@ -345,8 +346,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                 {/* Hero Header */}
                 <div className="flex flex-col md:flex-row gap-6 items-start mb-10 pb-10 border-b border-border-divider">
                     {tool.logo && (
-                        <div className="w-20 h-20 rounded-2xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden shadow-inner">
-                            <img src={tool.logo} alt={`${tool.name} logo`} className="w-full h-full object-contain p-2" loading="lazy" />
+                        <div className="relative w-20 h-20 rounded-2xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden shadow-inner">
+                            <Image src={tool.logo} alt={`${tool.name} logo`} fill style={{ objectFit: 'contain', padding: '8px' }} priority unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
                         </div>
                     )}
                     <div className="flex-grow">
@@ -695,8 +696,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                 <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                                     {(tool as any).screenshots.map((s: any, i: number) => (
                                         <div key={i} className="flex-shrink-0 w-4/5 sm:w-[400px] snap-start relative group cursor-pointer" onClick={() => window.open(s.url, '_blank')}>
-                                            <div className="aspect-video rounded-xl overflow-hidden bg-surface-card border border-border-subtle shadow-lg">
-                                                <img src={s.url} alt={s.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                            <div className="aspect-video relative rounded-xl overflow-hidden bg-surface-card border border-border-subtle shadow-lg">
+                                                <Image src={s.url} alt={s.caption || ''} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized />
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                     <Maximize2 className="text-white" size={24} />
                                                 </div>
@@ -972,7 +973,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                 return (
                                                     <a key={comp.id} href={`/compare/${tool.slug}-vs-${compSlug}`}
                                                         className="flex items-start gap-2.5 group py-3 first:pt-0 last:pb-0 hover:bg-surface-alt/40 -mx-1 px-1 rounded transition-colors cursor-pointer">
-                                                        {comp.logo && <div className="w-6 h-6 rounded bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5 mt-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                        {comp.logo && <div className="relative w-6 h-6 rounded bg-white flex-shrink-0 overflow-hidden mt-0.5"><Image src={comp.logo} alt="" fill style={{ objectFit: 'contain', padding: '2px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} /></div>}
                                                         <div className="min-w-0 flex-1">
                                                             <p className="text-xs font-semibold text-white group-hover:text-news-accent transition-colors">{comp.name}</p>
                                                             {diff && <p className="text-sm text-news-muted leading-relaxed mt-0.5">{diff}</p>}
@@ -992,7 +993,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                                 const note = (t.related_tool_note as any)?.[rel.id] || rel.short_description || null;
                                                 const inner = (
                                                     <div className="flex items-start gap-3 group">
-                                                        {rel.logo && <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center"><img src={rel.logo} alt="" className="w-full h-full object-contain p-1" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                        {rel.logo && <div className="relative w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden"><Image src={rel.logo} alt="" fill style={{ objectFit: 'contain', padding: '4px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} /></div>}
                                                         <div className="min-w-0">
                                                             <p className="text-sm font-semibold text-white group-hover:text-news-accent transition-colors">{rel.name}</p>
                                                             {note && <p className="text-[11px] text-news-muted leading-relaxed line-clamp-2 mt-0.5">{note}</p>}
@@ -1340,7 +1341,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         return (
                                             <a key={comp.id} href={`/compare/${tool.slug}-vs-${compSlug}`}
                                                 className="flex items-start gap-2.5 group py-3 first:pt-0 last:pb-0 hover:bg-surface-alt/40 -mx-1 px-1 rounded transition-colors cursor-pointer">
-                                                {comp.logo && <div className="w-6 h-6 rounded bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5 mt-0.5"><img src={comp.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} /></div>}
+                                                {comp.logo && <div className="relative w-6 h-6 rounded bg-white flex-shrink-0 overflow-hidden mt-0.5"><Image src={comp.logo} alt="" fill style={{ objectFit: 'contain', padding: '2px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} /></div>}
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-xs font-semibold text-white group-hover:text-news-accent transition-colors">{comp.name}</p>
                                                     {diff && <p className="text-sm text-news-muted leading-relaxed mt-0.5">{diff}</p>}
@@ -1362,8 +1363,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         <Link key={alt.slug} href={`/tools/${alt.slug}`}
                                             className="flex items-center gap-2 group py-2.5 first:pt-0 last:pb-0 hover:bg-surface-alt/40 -mx-1 px-1 rounded transition-colors">
                                             {alt.logo && (
-                                                <div className="w-5 h-5 rounded bg-white flex-shrink-0 overflow-hidden flex items-center justify-center p-0.5">
-                                                    <img src={alt.logo} alt="" className="w-full h-full object-contain" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                <div className="relative w-5 h-5 rounded bg-white flex-shrink-0 overflow-hidden">
+                                                    <Image src={alt.logo} alt="" fill style={{ objectFit: 'contain', padding: '2px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} />
                                                 </div>
                                             )}
                                             <span className="text-xs text-news-muted group-hover:text-white transition-colors truncate">{alt.name}</span>
@@ -1405,8 +1406,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         const inner = (
                                             <div className="flex items-start gap-3 group">
                                                 {rel.logo && (
-                                                    <div className="w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center">
-                                                        <img src={rel.logo} alt="" className="w-full h-full object-contain p-1" onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.parentElement!.style.display = 'none'; }} />
+                                                    <div className="relative w-8 h-8 rounded-lg bg-white flex-shrink-0 overflow-hidden">
+                                                        <Image src={rel.logo} alt="" fill style={{ objectFit: 'contain', padding: '4px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} />
                                                     </div>
                                                 )}
                                                 <div className="min-w-0">

@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Image from 'next/image';
 import { Article } from '../types';
 import { newsArticles } from '../data/content';
 import { CATEGORIES, mapTopicToCategory } from '../data/categories';
@@ -81,10 +82,13 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
 
                     {/* Shared Background Image */}
                     <div className="absolute inset-0 z-0">
-                        <img
+                        <Image
                             src={headerImage}
                             alt={category}
-                            className="w-full h-full object-cover opacity-50 blur-[2px] scale-105 transition-transform duration-[20s] ease-in-out group-hover/hero:scale-110"
+                            fill
+                            style={{ objectFit: 'cover' }}
+                            className="opacity-50 blur-[2px] scale-105 transition-transform duration-[20s] ease-in-out group-hover/hero:scale-110"
+                            unoptimized={headerImage?.startsWith('https://res.cloudinary.com')}
                         />
                         {/* Gradient Overlay for text readability */}
                         <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black via-black/70 to-black/40"></div>
@@ -111,10 +115,13 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                                 onClick={() => onArticleClick(heroArticle)}
                                 className="group relative aspect-[4/5] md:aspect-video lg:aspect-[2/1] w-full rounded-xl overflow-hidden cursor-pointer transition-all duration-300"
                             >
-                                <img
+                                <Image
                                     src={heroArticle.imageUrl}
                                     alt={heroArticle.title}
-                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    fill
+                                    style={{ objectFit: 'cover' }}
+                                    className="transition-transform duration-700 group-hover:scale-105"
+                                    unoptimized={heroArticle.imageUrl?.startsWith('https://res.cloudinary.com')}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90"></div>
 
@@ -208,10 +215,13 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                                         onClick={() => onArticleClick(article)}
                                     >
                                         <div className={`w-full overflow-hidden bg-zinc-900 ${imageHeight} ${index === 0 ? 'md:h-full' : ''} relative`}>
-                                            <img
+                                            <Image
                                                 src={article.imageUrl}
                                                 alt={article.title}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-90 group-hover:opacity-100"
+                                                fill
+                                                style={{ objectFit: 'cover' }}
+                                                className="transition-transform duration-500 group-hover:scale-105 opacity-90 group-hover:opacity-100"
+                                                unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')}
                                             />
                                             {index === 0 && (
                                                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black via-black/50 to-transparent opacity-80"></div>

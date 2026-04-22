@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use client';
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Article, Tool, Comparison, Stack } from '../../types';
 import * as toolsService from '../../services/toolsService';
 import ToolCard from '../ToolCard';
@@ -54,7 +55,7 @@ export const QuickComparisonTable = ({ toolSlugs }: { toolSlugs: string[] }) => 
                             {tools.map(t => (
                                 <th key={t.id} className="p-4 text-sm font-bold text-white text-center">
                                     <div className="flex flex-col items-center gap-2">
-                                        {t.logo && <img src={t.logo} className="w-8 h-8 object-contain" alt="" />}
+                                        {t.logo && <Image src={t.logo} width={32} height={32} className="object-contain" alt="" unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />}
                                         {t.name}
                                     </div>
                                 </th>
@@ -206,7 +207,9 @@ export const ToolSummaryCard = ({ slug }: { slug: string }) => {
             <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
                 {/* Logo */}
                 {tool.logo ? (
-                    <img src={tool.logo} alt={tool.name} className="w-20 h-20 rounded-2xl bg-white p-2 border border-border-divider shadow-inner object-contain flex-shrink-0" />
+                    <div className="relative w-20 h-20 rounded-2xl bg-white border border-border-divider shadow-inner flex-shrink-0 overflow-hidden">
+                        <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                    </div>
                 ) : (
                     <div className="w-20 h-20 rounded-2xl bg-surface-base flex items-center justify-center border border-border-divider text-3xl font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                 )}
@@ -321,7 +324,9 @@ export const TopAlternativesModule = ({ tool, alternatives }: { tool: Tool; alte
                     <a key={alt.id} href={`/tools/${alt.slug}`} className="group bg-surface-card border border-border-subtle rounded-2xl p-5 hover:border-news-accent/50 transition-all shadow-elevation flex flex-col h-full">
                         <div className="flex items-start justify-between mb-4">
                             {alt.logo ? (
-                                <img src={alt.logo} alt={alt.name} className="w-12 h-12 rounded-xl bg-white p-2 border border-border-divider object-contain" />
+                                <div className="relative w-12 h-12 rounded-xl bg-white border border-border-divider overflow-hidden">
+                                    <Image src={alt.logo} alt={alt.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={alt.logo?.startsWith('https://res.cloudinary.com')} />
+                                </div>
                             ) : (
                                 <div className="w-12 h-12 rounded-xl bg-surface-base flex items-center justify-center text-xl font-bold text-news-muted border border-border-divider">
                                     {alt.name[0]}
@@ -377,7 +382,7 @@ export const ProductScreenshotModule = ({ tool }: { tool: Tool }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {tool.screenshots.map((s, i) => (
                     <div key={i} className="group relative rounded-xl overflow-hidden border border-border-subtle bg-surface-base aspect-video cursor-zoom-in" onClick={() => setSelectedImg(s.url)}>
-                        <img src={s.url} alt={s.caption} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100" />
+                        <Image src={s.url} alt={s.caption} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100" unoptimized={s.url?.startsWith('https://res.cloudinary.com')} />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
                             <p className="text-white text-xs font-bold">{s.caption}</p>
                         </div>
@@ -392,7 +397,7 @@ export const ProductScreenshotModule = ({ tool }: { tool: Tool }) => {
             {selectedImg && (
                 <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-300" onClick={() => setSelectedImg(null)}>
                     <div className="relative max-w-6xl w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <img src={selectedImg} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" alt="Product Screenshot" />
+                        <Image src={selectedImg} fill style={{ objectFit: 'contain' }} className="rounded-lg shadow-2xl" alt="Product Screenshot" unoptimized />
                         <button 
                             className="absolute top-0 right-0 m-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
                             onClick={() => setSelectedImg(null)}
@@ -545,7 +550,7 @@ export const ToolSectionBlock: React.FC<{ slug: string; rank: number }> = ({ slu
             <div className="p-6 md:p-8 border-b border-border-divider flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
                 <div className="flex items-center gap-4 md:gap-6">
                     <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl border border-border-divider p-2 flex items-center justify-center shadow-inner relative">
-                        {tool.logo ? <img src={tool.logo} alt={tool.name} className="w-full h-full object-contain" /> : <span className="text-2xl font-bold text-news-muted">{tool.name[0]}</span>}
+                        {tool.logo ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} /> : <span className="text-2xl font-bold text-news-muted">{tool.name[0]}</span>}
                         <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-news-accent text-white flex items-center justify-center font-bold text-sm shadow-lg border-2 border-surface-card">
                             #{rank}
                         </div>
@@ -609,7 +614,9 @@ export const SideBySideHeader = ({ slugA, slugB }: { slugA: string; slugB: strin
     const ToolCard = ({ tool }: { tool: Tool }) => (
         <div className="flex-1 flex flex-col items-center text-center p-6 md:p-8 bg-surface-card rounded-2xl border border-border-subtle shadow-elevation">
             {tool.logo ? (
-                <img src={tool.logo} alt={tool.name} className="w-16 h-16 rounded-xl bg-white p-1.5 border border-border-divider object-contain mb-4" />
+                <div className="relative w-16 h-16 rounded-xl bg-white border border-border-divider overflow-hidden mb-4">
+                    <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                </div>
             ) : (
                 <div className="w-16 h-16 rounded-xl bg-surface-base flex items-center justify-center text-2xl font-black text-news-muted mb-4">{tool.name[0]}</div>
             )}
@@ -767,7 +774,9 @@ export const RelatedToolsModule: React.FC<{ toolSlugs: string[] }> = ({ toolSlug
                 {tools.map(tool => (
                     <div key={tool.id} className="bg-surface-card border border-border-subtle rounded-2xl p-5 hover:border-news-accent/30 transition-all group flex items-center gap-4">
                         {tool.logo ? (
-                            <img src={tool.logo} alt="" className="w-12 h-12 rounded-lg bg-white p-1.5 border border-border-divider object-contain" />
+                            <div className="relative w-12 h-12 rounded-lg bg-white border border-border-divider overflow-hidden">
+                                <Image src={tool.logo} alt="" fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                            </div>
                         ) : (
                             <div className="w-12 h-12 rounded-lg bg-surface-base flex items-center justify-center text-xl font-black text-news-muted">{tool.name[0]}</div>
                         )}
@@ -843,7 +852,9 @@ export const ToolsUsedSummary: React.FC<{ toolSlugs: string[] }> = ({ toolSlugs 
                 {tools.map(tool => (
                     <a key={tool.id} href={`/tools/${tool.slug}`} className="flex items-center gap-2 px-3 py-2 bg-surface-card border border-border-subtle rounded-xl hover:border-news-accent/50 transition-all group">
                         {tool.logo ? (
-                            <img src={tool.logo} alt="" className="w-5 h-5 rounded object-contain bg-white p-0.5" />
+                            <div className="relative w-5 h-5 rounded bg-white overflow-hidden">
+                                <Image src={tool.logo} alt="" fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                            </div>
                         ) : (
                             <div className="w-5 h-5 rounded bg-surface-base flex items-center justify-center text-[10px] font-black">{tool.name[0]}</div>
                         )}
