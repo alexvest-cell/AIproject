@@ -1,8 +1,7 @@
 /**
- * One-time migration: replace internal tool-XXXXXXXX IDs with real slugs
- * in the competitors and related_tools arrays.
- *
- * Run with:  node scripts/migrate-competitor-ids.mjs
+ * Migration: resolve tool-XXXXXXXX ID-based competitor values to slugs.
+ * Unresolvable IDs are REMOVED (not kept).
+ * Run with: node scripts/migrate-competitor-ids.mjs
  */
 
 import { createRequire } from 'module';
@@ -16,86 +15,106 @@ await mongoose.connect(MONGODB_URI);
 const db = mongoose.connection.db;
 const col = db.collection('tools');
 
-// Build id → slug map for every tool in the DB
-const allTools = await col.find({}, { projection: { id: 1, slug: 1 } }).toArray();
-const idToSlug = {};
+// Build id → {slug, name} map for every tool
+const allTools = await col.find({}, { projection: { id: 1, slug: 1, name: 1 } }).toArray();
+const idToInfo = new Map();
 for (const t of allTools) {
-    if (t.id) idToSlug[t.id] = t.slug;
+    if (t.id) idToInfo.set(t.id, { slug: t.slug, name: t.name });
 }
-console.log(`Built id→slug map for ${Object.keys(idToSlug).length} tools.\n`);
+console.log(`Total tools in DB: ${allTools.length}`);
+console.log(`ID→slug map size: ${idToInfo.size}\n`);
 
-const isInternalId = (v) => typeof v === 'string' && v.startsWith('tool-');
-
-function resolveArray(arr) {
-    if (!Array.isArray(arr)) return { resolved: arr, changed: false };
-    let changed = false;
-    const resolved = arr.map(v => {
-        if (isInternalId(v)) {
-            const slug = idToSlug[v];
-            if (slug) { changed = true; return slug; }
-            console.warn(`  ⚠ No slug found for id "${v}" — keeping as-is`);
-        }
-        return v;
-    });
-    return { resolved, changed };
-}
-
-let updatedCount = 0;
-
-// Process competitors
-const withIdCompetitors = await col.find(
+// Find all tools with at least one ID-based competitor
+const affected = await col.find(
     { competitors: { $elemMatch: { $regex: /^tool-/ } } },
-    { projection: { slug: 1, competitors: 1, related_tools: 1 } }
+    { projection: { slug: 1, name: 1, competitors: 1 } }
 ).toArray();
 
-for (const tool of withIdCompetitors) {
-    const { resolved: newCompetitors, changed: cChanged } = resolveArray(tool.competitors);
-    const { resolved: newRelated, changed: rChanged } = resolveArray(tool.related_tools);
+console.log(`Tools with ID-based competitors: ${affected.length}\n`);
 
-    if (cChanged || rChanged) {
-        const update = {};
-        if (cChanged) update.competitors = newCompetitors;
-        if (rChanged) update.related_tools = newRelated;
+let totalResolved = 0;
+let totalRemoved = 0;
+let totalUpdated = 0;
+const report = [];
 
-        await col.updateOne({ _id: tool._id }, { $set: update });
-        updatedCount++;
+for (const tool of affected) {
+    const oldCompetitors = [...(tool.competitors || [])];
+    const newCompetitors = [];
+    const changes = [];
 
-        if (cChanged) {
-            console.log(`✓ ${tool.slug}`);
-            console.log(`  competitors BEFORE: ${JSON.stringify(tool.competitors)}`);
-            console.log(`  competitors AFTER:  ${JSON.stringify(newCompetitors)}`);
+    for (const c of oldCompetitors) {
+        if (!c.startsWith('tool-')) {
+            newCompetitors.push(c); // already a valid slug — keep as-is
+            continue;
         }
-        if (rChanged) {
-            console.log(`  related_tools BEFORE: ${JSON.stringify(tool.related_tools)}`);
-            console.log(`  related_tools AFTER:  ${JSON.stringify(newRelated)}`);
+        const resolved = idToInfo.get(c);
+        if (resolved) {
+            newCompetitors.push(resolved.slug);
+            changes.push({ old: c, newVal: resolved.slug, action: 'resolved', resolvedName: resolved.name });
+            totalResolved++;
+        } else {
+            // Cannot resolve — remove from array
+            changes.push({ old: c, newVal: null, action: 'removed — tool not found' });
+            totalRemoved++;
+        }
+    }
+
+    // Deduplicate (slug may already be present alongside its ID twin)
+    const deduped = [...new Set(newCompetitors)];
+
+    if (JSON.stringify(oldCompetitors) !== JSON.stringify(deduped)) {
+        await col.updateOne({ _id: tool._id }, { $set: { competitors: deduped } });
+        totalUpdated++;
+        report.push({ toolName: tool.name, toolSlug: tool.slug, oldCompetitors, newCompetitors: deduped, changes });
+    }
+}
+
+// ── Full migration log ───────────────────────────────────────────────────────
+console.log('═'.repeat(72));
+console.log('MIGRATION LOG — ALL CHANGES');
+console.log('═'.repeat(72));
+for (const entry of report) {
+    console.log(`\nTool: ${entry.toolName} (${entry.toolSlug})`);
+    for (const c of entry.changes) {
+        if (c.action === 'resolved') {
+            console.log(`  ✓ resolved: ${c.old}  →  ${c.newVal} (${c.resolvedName})`);
+        } else {
+            console.log(`  ✗ ${c.old}  →  ${c.action}`);
         }
     }
 }
 
-// Process related_tools for tools that only have ID-based related_tools (not already caught above)
-const withIdRelated = await col.find(
-    {
-        related_tools: { $elemMatch: { $regex: /^tool-/ } },
-        competitors: { $not: { $elemMatch: { $regex: /^tool-/ } } },
-    },
-    { projection: { slug: 1, competitors: 1, related_tools: 1 } }
-).toArray();
-
-for (const tool of withIdRelated) {
-    const { resolved: newRelated, changed: rChanged } = resolveArray(tool.related_tools);
-    if (rChanged) {
-        await col.updateOne({ _id: tool._id }, { $set: { related_tools: newRelated } });
-        updatedCount++;
-        console.log(`✓ ${tool.slug} (related_tools only)`);
-        console.log(`  related_tools BEFORE: ${JSON.stringify(tool.related_tools)}`);
-        console.log(`  related_tools AFTER:  ${JSON.stringify(newRelated)}`);
-    }
+// ── Top 5 most affected ──────────────────────────────────────────────────────
+console.log('\n' + '═'.repeat(72));
+console.log('TOP 5 MOST AFFECTED TOOLS (before → after)');
+console.log('═'.repeat(72));
+const top5 = [...report].sort((a, b) => b.changes.length - a.changes.length).slice(0, 5);
+for (const entry of top5) {
+    console.log(`\n${entry.toolName} (${entry.toolSlug})`);
+    console.log(`  BEFORE: ${JSON.stringify(entry.oldCompetitors)}`);
+    console.log(`  AFTER:  ${JSON.stringify(entry.newCompetitors)}`);
 }
 
-console.log(`\n─── Migration complete: ${updatedCount} tools updated ───`);
+// ── Summary ───────────────────────────────────────────────────────────────────
+console.log('\n' + '═'.repeat(72));
+console.log('SUMMARY');
+console.log('═'.repeat(72));
+console.log(`Tools updated:           ${totalUpdated}`);
+console.log(`IDs resolved to slugs:   ${totalResolved}`);
+console.log(`IDs removed (not found): ${totalRemoved}`);
 
-// Verify cody-sourcegraph specifically
-const cody = await col.findOne({ slug: 'cody-sourcegraph' }, { projection: { slug: 1, competitors: 1, related_tools: 1 } });
-console.log('\nVerification — cody-sourcegraph:', JSON.stringify({ competitors: cody.competitors, related_tools: cody.related_tools }, null, 2));
+// ── Verification ─────────────────────────────────────────────────────────────
+const remaining = await col.countDocuments({ competitors: { $elemMatch: { $regex: /^tool-/ } } });
+console.log(`\nVerification — tools still with tool-* competitors: ${remaining}`);
+if (remaining === 0) {
+    console.log('✓ Zero ID-based competitor values remain.');
+} else {
+    console.log('✗ Some ID-based values still remain — investigate manually.');
+    const leftovers = await col.find(
+        { competitors: { $elemMatch: { $regex: /^tool-/ } } },
+        { projection: { slug: 1, competitors: 1 } }
+    ).toArray();
+    for (const t of leftovers) console.log(`  ${t.slug}: ${JSON.stringify(t.competitors)}`);
+}
 
 await mongoose.disconnect();

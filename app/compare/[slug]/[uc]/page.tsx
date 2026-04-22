@@ -86,6 +86,8 @@ export default async function CompareUcPage({ params }: Props) {
         const slugA = parts[0];
         const slugB = parts[1];
         const slugC = parts.length >= 3 ? parts[2] : null;
+        // Guard: ID-based slugs will never resolve to a tool — return clean 404
+        if (slugA.startsWith('tool-') || slugB.startsWith('tool-')) notFound();
 
         const [toolA, toolB, toolC] = await Promise.all([
             Tool.findOne({ slug: slugA, status: 'Active' }).lean(),

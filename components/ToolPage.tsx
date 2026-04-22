@@ -235,10 +235,11 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
     const useCaseBreakdown: Record<string, string> = (t.use_case_breakdown && typeof t.use_case_breakdown === 'object' && !Array.isArray(t.use_case_breakdown)) ? t.use_case_breakdown : {};
     const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = Array.isArray(t.use_case_scores) ? t.use_case_scores : [];
 
-    const competitorIds: string[] = Array.isArray(t.competitors) ? t.competitors : [];
-    const relatedToolIds: string[] = Array.isArray(t.related_tools) ? t.related_tools : [];
-    const competitorObjs = (initialCompetitors?.length) ? initialCompetitors : allTools.filter(at => competitorIds.includes(at.id));
-    const relatedToolObjs = (initialRelatedTools?.length) ? initialRelatedTools : allTools.filter(at => relatedToolIds.includes(at.id));
+    const isValidSlug = (c: string) => !c.startsWith('tool-') && !/^\d+$/.test(c);
+    const competitorIds: string[] = (Array.isArray(t.competitors) ? t.competitors : []).filter(isValidSlug);
+    const relatedToolIds: string[] = (Array.isArray(t.related_tools) ? t.related_tools : []).filter(isValidSlug);
+    const competitorObjs = (initialCompetitors?.length) ? initialCompetitors.filter((c: any) => isValidSlug(c.slug || '')) : allTools.filter(at => competitorIds.includes(at.slug));
+    const relatedToolObjs = (initialRelatedTools?.length) ? initialRelatedTools.filter((r: any) => isValidSlug(r.slug || '')) : allTools.filter(at => relatedToolIds.includes(at.slug));
 
     // Inline link injection: wraps competitor names in <a> tags within prose text
     const linkifyCompetitors = (text: string): React.ReactNode => {
@@ -968,7 +969,8 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                         <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3">Compares With</h3>
                                         <div className="divide-y divide-border-divider">
                                             {competitorObjs.map((comp: any) => {
-                                                const diff = (t.competitor_differentiator as any)?.[comp.id] || null;
+                                                const _cd = t.competitor_differentiator as any;
+                                                const diff = _cd?.[comp.id] || _cd?.[comp._id] || _cd?.[comp.name] || _cd?.[comp.name?.toLowerCase()] || null;
                                                 const compSlug = comp.slug || '';
                                                 return (
                                                     <a key={comp.id} href={`/compare/${tool.slug}-vs-${compSlug}`}

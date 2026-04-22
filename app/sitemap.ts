@@ -92,6 +92,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             if (useCaseComparisonUrls.length >= UC_CAP) break;
             for (const competitorSlug of (tool.competitors || [])) {
                 if (useCaseComparisonUrls.length >= UC_CAP) break;
+                // Safety net: skip any ID-based values not caught by migration
+                if (competitorSlug.startsWith('tool-') || /^\d+$/.test(competitorSlug)) continue;
                 const useCases = (tool.use_case_scores || []).map(u => u.use_case).filter(Boolean);
                 for (const useCase of useCases) {
                     if (useCaseComparisonUrls.length >= UC_CAP) break;
