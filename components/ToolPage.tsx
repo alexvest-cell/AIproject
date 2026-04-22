@@ -53,6 +53,8 @@ const CATEGORY_PRIMARY_VALUES = [
 const ALL_WORKFLOW_SLUGS = [
     'students', 'developers', 'marketers', 'content-creators', 'startups',
     'small-business', 'enterprise', 'researchers', 'designers', 'sales-teams',
+    'agencies', 'educators', 'freelancers', 'product-managers', 'data-scientists',
+    'musicians',
 ];
 
 function forSlugToLabel(slug: string): string {
@@ -243,8 +245,9 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
 
     // Inline link injection: wraps competitor names in <a> tags within prose text
     const linkifyCompetitors = (text: string): React.ReactNode => {
-        if (!text || !competitorObjs.length) return text;
-        const entries = competitorObjs.filter((c: any) => c.name && c.slug);
+        if (!text) return text;
+        const pool = allTools.length ? allTools : competitorObjs;
+        const entries = pool.filter((c: any) => c.name && c.slug && c.slug !== tool.slug);
         if (!entries.length) return text;
         const sorted = [...entries].sort((a: any, b: any) => b.name.length - a.name.length);
         const pattern = sorted.map((c: any) => c.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');

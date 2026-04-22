@@ -181,17 +181,17 @@ const RankingPage: React.FC<RankingPageProps> = ({
     const topPick = rankedTools[0] ?? null;
     const restTools = rankedTools.slice(1, 10);
 
-    // Also Compare: pairs from top 3 tools
+    // Also Compare: pairs from top 4 tools
     const comparePairs = useMemo(() => {
-        const top3 = rankedTools.slice(0, 3).map(r => r.tool);
-        if (top3.length < 2) return [];
+        const top4 = rankedTools.slice(0, 4).map(r => r.tool);
+        if (top4.length < 2) return [];
         const pairs: { a: Tool; b: Tool }[] = [];
-        for (let i = 0; i < top3.length; i++) {
-            for (let j = i + 1; j < top3.length; j++) {
-                pairs.push({ a: top3[i], b: top3[j] });
+        for (let i = 0; i < top4.length; i++) {
+            for (let j = i + 1; j < top4.length; j++) {
+                pairs.push({ a: top4[i], b: top4[j] });
             }
         }
-        return pairs.slice(0, 3);
+        return pairs.slice(0, 4);
     }, [rankedTools]);
 
     // Related Rankings: 3 other workflow/category pages with tools
@@ -522,7 +522,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
                         <p className="text-sm text-news-muted mb-5">
                             Head-to-head comparisons between the top-ranked tools.
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             {comparePairs.map(({ a, b }) => {
                                 const compSlug = `${a.slug}-vs-${b.slug}`;
                                 return (

@@ -168,7 +168,7 @@ const MobileFeatureList: React.FC<{ toolsArr: Tool[]; winnerSlug: string }> = ({
                                     <span className="text-[11px] font-semibold text-white truncate">{t.name}</span>
                                 </div>
                                 {/* Value — can wrap freely */}
-                                <div className="flex-1 text-xs leading-snug">{row.render(t)}</div>
+                                <div className="flex-1 text-xs leading-snug text-right">{row.render(t)}</div>
                             </div>
                         ))}
                     </div>
@@ -601,16 +601,20 @@ const PlanComparisonTable: React.FC<{ tools: Tool[] }> = ({ tools }) => {
 // DATA GAP NOTE: add "X.X/10" to breakdown text entries per use case to enable
 // genuine use-case-specific winner determination different from the overall ranking.
 
+// Normalize "Content Creation" and "content-creation" to the same canonical form
+const normalizeUC = (s: string) => s.toLowerCase().replace(/[-\s]+/g, '-');
+
 function getUCScoreResult(tool: Tool, useCase: string): { score: number; usedFallback: boolean } {
     if (!useCase) return { score: (tool as any).rating_score ?? 0, usedFallback: false };
+    const ucNorm = normalizeUC(useCase);
     // Check structured use_case_scores array first
     const ucScores: Array<{ use_case: string; score: number | null }> = (tool as any).use_case_scores || [];
-    const entry = ucScores.find(s => s.use_case.toLowerCase() === useCase.toLowerCase());
+    const entry = ucScores.find(s => normalizeUC(s.use_case) === ucNorm);
     if (entry && entry.score != null) return { score: Math.min(9.9, Math.max(1.0, entry.score)), usedFallback: false };
     // Fall back to use_case_breakdown text with embedded X/10
     const breakdown = (tool as any).use_case_breakdown as Record<string, string> | undefined;
     if (breakdown) {
-        const key = Object.keys(breakdown).find(k => k.toLowerCase() === useCase.toLowerCase());
+        const key = Object.keys(breakdown).find(k => normalizeUC(k) === ucNorm);
         if (key) {
             const m = (breakdown[key] || '').match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
             if (m) return { score: Math.min(9.9, Math.max(1.0, parseFloat(m[1]))), usedFallback: false };
@@ -671,10 +675,11 @@ const Comparison1v1: React.FC<{
         const ucBreakdown = (tool as any).use_case_breakdown;
         const pros: string[] = (tool as any).pros || [];
         if (activeUseCase) {
-            const ucEntry = ucScores.find(s => s.use_case.toLowerCase() === activeUseCase.toLowerCase());
+            const ucNorm = normalizeUC(activeUseCase);
+            const ucEntry = ucScores.find(s => normalizeUC(s.use_case) === ucNorm);
             if (ucEntry?.description) return ucEntry.description;
             if (ucBreakdown && typeof ucBreakdown === 'object' && !Array.isArray(ucBreakdown)) {
-                const key = Object.keys(ucBreakdown).find(k => k.toLowerCase() === activeUseCase.toLowerCase());
+                const key = Object.keys(ucBreakdown).find(k => normalizeUC(k) === ucNorm);
                 if (key && ucBreakdown[key]) return (ucBreakdown[key] as string).replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '');
             }
             if (typeof ucBreakdown === 'string' && ucBreakdown) {
@@ -786,9 +791,10 @@ const Comparison1v1: React.FC<{
                     <div className="grid md:grid-cols-2 gap-4">
                         {tools.map(tool => {
                             const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = (tool as any).use_case_scores || [];
-                            const ucEntry = ucScoresArr.find(s => s.use_case.toLowerCase() === activeUseCase.toLowerCase());
+                            const _ucNorm = normalizeUC(activeUseCase);
+                            const ucEntry = ucScoresArr.find(s => normalizeUC(s.use_case) === _ucNorm);
                             const ucBreakdown = (tool as any).use_case_breakdown as Record<string, string> | undefined;
-                            const rawKey = ucBreakdown ? Object.keys(ucBreakdown).find(k => k.toLowerCase() === activeUseCase.toLowerCase()) : undefined;
+                            const rawKey = ucBreakdown ? Object.keys(ucBreakdown).find(k => normalizeUC(k) === _ucNorm) : undefined;
                             const rawText = rawKey ? ucBreakdown![rawKey] : undefined;
                             const displayScore: number | null = ucEntry?.score ?? (() => { const m = rawText?.match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
                             const displayText = ucEntry?.description || (rawText ? rawText.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);
@@ -1004,10 +1010,11 @@ const ComparisonMulti: React.FC<{
         const ucBreakdown = (tool as any).use_case_breakdown;
         const pros: string[] = (tool as any).pros || [];
         if (activeUseCase) {
-            const ucEntry = ucScores.find(s => s.use_case.toLowerCase() === activeUseCase.toLowerCase());
+            const ucNorm = normalizeUC(activeUseCase);
+            const ucEntry = ucScores.find(s => normalizeUC(s.use_case) === ucNorm);
             if (ucEntry?.description) return ucEntry.description;
             if (ucBreakdown && typeof ucBreakdown === 'object' && !Array.isArray(ucBreakdown)) {
-                const key = Object.keys(ucBreakdown).find(k => k.toLowerCase() === activeUseCase.toLowerCase());
+                const key = Object.keys(ucBreakdown).find(k => normalizeUC(k) === ucNorm);
                 if (key && ucBreakdown[key]) return (ucBreakdown[key] as string).replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '');
             }
             if (typeof ucBreakdown === 'string' && ucBreakdown) {
@@ -1119,9 +1126,10 @@ const ComparisonMulti: React.FC<{
                     <div className="grid md:grid-cols-3 gap-4">
                         {sorted.map(tool => {
                             const ucScoresArr: Array<{ use_case: string; score: number | null; description: string }> = (tool as any).use_case_scores || [];
-                            const ucEntry = ucScoresArr.find(s => s.use_case.toLowerCase() === activeUseCase.toLowerCase());
+                            const _ucNorm = normalizeUC(activeUseCase);
+                            const ucEntry = ucScoresArr.find(s => normalizeUC(s.use_case) === _ucNorm);
                             const ucBreakdown = (tool as any).use_case_breakdown as Record<string, string> | undefined;
-                            const rawKey = ucBreakdown ? Object.keys(ucBreakdown).find(k => k.toLowerCase() === activeUseCase.toLowerCase()) : undefined;
+                            const rawKey = ucBreakdown ? Object.keys(ucBreakdown).find(k => normalizeUC(k) === _ucNorm) : undefined;
                             const rawText = rawKey ? ucBreakdown![rawKey] : undefined;
                             const displayScore: number | null = ucEntry?.score ?? (() => { const m = rawText?.match(/(\d+(?:\.\d+)?)\s*\/\s*10/); return m ? parseFloat(m[1]) : null; })();
                             const displayText = ucEntry?.description || (rawText ? rawText.replace(/^\d+(?:\.\d+)?\/10\s*[—–-]\s*/, '') : null);

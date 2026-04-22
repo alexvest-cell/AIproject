@@ -1369,7 +1369,7 @@ export const BestSoftwareHub: React.FC<{
         [...allTools]
             .filter(t => t.last_updated)
             .sort((a, b) => new Date(b.last_updated!).getTime() - new Date(a.last_updated!).getTime())
-            .slice(0, 4),
+            .slice(0, 6),
         [allTools]
     );
 
