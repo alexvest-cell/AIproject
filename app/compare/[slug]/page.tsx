@@ -35,10 +35,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         const { slug } = await params;
         const comparison = await ComparisonModel.findOne({ slug }).lean() as any;
         if (comparison) {
+            const title = comparison.meta_title || comparison.title;
+            const description = comparison.meta_description || `Head-to-head comparison: ${comparison.title}.`;
             return {
-                title: comparison.meta_title || comparison.title,
-                description: comparison.meta_description || `Head-to-head comparison: ${comparison.title}.`,
+                title,
+                description,
                 alternates: { canonical: `https://toolcurrent.com/compare/${slug}` },
+                openGraph: {
+                    title,
+                    description,
+                    url: `https://toolcurrent.com/compare/${slug}`,
+                    type: 'website',
+                },
+                twitter: { card: 'summary_large_image', title, description },
             };
         }
         const parts = slug.split('-vs-');
@@ -47,7 +56,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
                 Tool.findOne({ slug: parts[0] }).lean() as Promise<any>,
                 Tool.findOne({ slug: parts[parts.length - 1] }).lean() as Promise<any>,
             ]);
-            if (tA && tB) return { title: `${tA.name} vs ${tB.name} (2026)`, description: `Compare ${tA.name} and ${tB.name} — pricing, features, and who wins.` };
+            if (tA && tB) {
+                const title = `${tA.name} vs ${tB.name} (2026)`;
+                const description = `Compare ${tA.name} and ${tB.name} — pricing, features, and who wins.`;
+                return {
+                    title,
+                    description,
+                    alternates: { canonical: `https://toolcurrent.com/compare/${slug}` },
+                    openGraph: { title, description, url: `https://toolcurrent.com/compare/${slug}`, type: 'website' },
+                    twitter: { card: 'summary_large_image', title, description },
+                };
+            }
         }
         return {};
     } catch { return {}; }

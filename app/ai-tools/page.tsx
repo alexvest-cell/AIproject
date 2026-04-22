@@ -7,6 +7,17 @@ export const metadata: Metadata = {
     title: 'AI Tools Directory (2026) | ToolCurrent',
     description: 'Browse and compare hundreds of AI tools by category, pricing, and use case.',
     alternates: { canonical: 'https://toolcurrent.com/ai-tools' },
+    openGraph: {
+        title: 'AI Tools Directory (2026) | ToolCurrent',
+        description: 'Browse and compare hundreds of AI tools by category, pricing, and use case.',
+        url: 'https://toolcurrent.com/ai-tools',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'AI Tools Directory (2026) | ToolCurrent',
+        description: 'Browse and compare hundreds of AI tools by category, pricing, and use case.',
+    },
 };
 
 export const revalidate = 3600;

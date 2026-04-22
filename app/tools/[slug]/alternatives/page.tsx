@@ -23,10 +23,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         const { slug } = await params;
         const tool = await Tool.findOne({ slug }).lean() as any;
         if (!tool) return {};
+        const title = `Best ${tool.name} Alternatives (2026) — Ranked & Compared | ToolCurrent`;
+        const description = `The best alternatives to ${tool.name} in 2026. Compare features, pricing, and scores to find the right tool for your workflow.`;
         return {
-            title: `Best ${tool.name} Alternatives (2026) — Ranked & Compared | ToolCurrent`,
-            description: `The best alternatives to ${tool.name} in 2026. Compare features, pricing, and scores to find the right tool for your workflow.`,
+            title,
+            description,
             alternates: { canonical: `https://toolcurrent.com/tools/${slug}/alternatives` },
+            openGraph: {
+                title,
+                description,
+                url: `https://toolcurrent.com/tools/${slug}/alternatives`,
+                type: 'website',
+                images: tool.logo ? [{ url: tool.logo }] : undefined,
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title,
+                description,
+                images: tool.logo ? [tool.logo] : undefined,
+            },
         };
     } catch { return {}; }
 }

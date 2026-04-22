@@ -30,10 +30,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const label = categorySlugToName(slug);
     if (!label) return { title: 'Not Found' };
+    const title = `Best ${label} Tools (2026) | ToolCurrent`;
+    const description = `Top-ranked ${label} AI tools, scored by rating and features.`;
     return {
-        title: `Best ${label} Tools (2026) | ToolCurrent`,
-        description: `Top-ranked ${label} AI tools, scored by rating and features.`,
+        title,
+        description,
         alternates: { canonical: `https://toolcurrent.com/best-ai-tools/${slug}` },
+        openGraph: {
+            title,
+            description,
+            url: `https://toolcurrent.com/best-ai-tools/${slug}`,
+            type: 'website',
+        },
+        twitter: { card: 'summary_large_image', title, description },
     };
 }
 

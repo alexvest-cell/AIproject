@@ -26,10 +26,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         const comparison = await ComparisonModel.findOne({ slug }).lean() as any;
         const ucLabel = uc.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         if (comparison) {
+            const title = comparison.meta_title || `${comparison.title} for ${ucLabel}`;
+            const description = comparison.meta_description || `Compare ${comparison.title} for ${ucLabel}.`;
             return {
-                title: comparison.meta_title || `${comparison.title} for ${ucLabel}`,
-                description: comparison.meta_description || `Compare ${comparison.title} for ${ucLabel}.`,
+                title,
+                description,
                 alternates: { canonical: `https://toolcurrent.com/compare/${slug}` },
+                openGraph: { title, description, url: `https://toolcurrent.com/compare/${slug}`, type: 'website' },
+                twitter: { card: 'summary_large_image', title, description },
             };
         }
         // Synthetic: derive from tool slugs
@@ -39,11 +43,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 Tool.findOne({ slug: parts[0] }).lean() as Promise<any>,
                 Tool.findOne({ slug: parts[1] }).lean() as Promise<any>,
             ]);
-            if (tA && tB) return {
-                title: `${tA.name} vs ${tB.name} for ${ucLabel} (2026)`,
-                description: `Compare ${tA.name} and ${tB.name} for ${ucLabel} — features, pricing, and who wins.`,
-                alternates: { canonical: `https://toolcurrent.com/compare/${slug}` },
-            };
+            if (tA && tB) {
+                const title = `${tA.name} vs ${tB.name} for ${ucLabel} (2026)`;
+                const description = `Compare ${tA.name} and ${tB.name} for ${ucLabel} — features, pricing, and who wins.`;
+                return {
+                    title,
+                    description,
+                    alternates: { canonical: `https://toolcurrent.com/compare/${slug}` },
+                    openGraph: { title, description, url: `https://toolcurrent.com/compare/${slug}`, type: 'website' },
+                    twitter: { card: 'summary_large_image', title, description },
+                };
+            }
         }
         return {};
     } catch { return {}; }

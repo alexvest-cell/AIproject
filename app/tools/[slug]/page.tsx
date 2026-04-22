@@ -108,12 +108,38 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
                     title: `${tool.name} for ${forLabel} — Review & Pricing (2026) | ToolCurrent`,
                     description: desc,
                     alternates: { canonical: `https://toolcurrent.com/tools/${slug}` },
+                    openGraph: {
+                        title: `${tool.name} for ${forLabel} — Review & Pricing (2026) | ToolCurrent`,
+                        description: desc,
+                        url: `https://toolcurrent.com/tools/${slug}`,
+                        type: 'website',
+                        images: tool.logo ? [{ url: tool.logo }] : undefined,
+                    },
+                    twitter: {
+                        card: 'summary_large_image',
+                        title: `${tool.name} for ${forLabel} — Review & Pricing (2026) | ToolCurrent`,
+                        description: desc,
+                        images: tool.logo ? [tool.logo] : undefined,
+                    },
                 };
             } else {
                 return {
                     title: `${tool.name} — Best ${forLabel} Tool Review (2026) | ToolCurrent`,
                     description: tool.meta_description || tool.short_description || `Deep dive review of ${tool.name}.`,
                     alternates: { canonical: `https://toolcurrent.com/tools/${slug}` },
+                    openGraph: {
+                        title: `${tool.name} — Best ${forLabel} Tool Review (2026) | ToolCurrent`,
+                        description: tool.meta_description || tool.short_description || `Deep dive review of ${tool.name}.`,
+                        url: `https://toolcurrent.com/tools/${slug}`,
+                        type: 'website',
+                        images: tool.logo ? [{ url: tool.logo }] : undefined,
+                    },
+                    twitter: {
+                        card: 'summary_large_image',
+                        title: `${tool.name} — Best ${forLabel} Tool Review (2026) | ToolCurrent`,
+                        description: tool.meta_description || tool.short_description || `Deep dive review of ${tool.name}.`,
+                        images: tool.logo ? [tool.logo] : undefined,
+                    },
                 };
             }
         }
@@ -122,6 +148,19 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
             title: tool.meta_title || `${tool.name} Review, Pricing & Alternatives (2026)`,
             description: tool.meta_description || tool.short_description || `Deep dive review of ${tool.name}.`,
             alternates: { canonical: `https://toolcurrent.com/tools/${slug}` },
+            openGraph: {
+                title: tool.meta_title || `${tool.name} Review, Pricing & Alternatives (2026)`,
+                description: tool.meta_description || tool.short_description || `Deep dive review of ${tool.name}.`,
+                url: `https://toolcurrent.com/tools/${slug}`,
+                type: 'website',
+                images: tool.logo ? [{ url: tool.logo }] : undefined,
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title: tool.meta_title || `${tool.name} Review, Pricing & Alternatives (2026)`,
+                description: tool.meta_description || tool.short_description || `Deep dive review of ${tool.name}.`,
+                images: tool.logo ? [tool.logo] : undefined,
+            },
         };
     } catch { return {}; }
 }

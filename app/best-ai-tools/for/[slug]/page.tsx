@@ -29,10 +29,19 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const label = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const title = `Best AI Tools for ${label} (2026) | ToolCurrent`;
+    const description = `Top-ranked AI tools for ${label}. Scored and ranked by workflow performance.`;
     return {
-        title: `Best AI Tools for ${label} (2026) | ToolCurrent`,
-        description: `Top-ranked AI tools for ${label}. Scored and ranked by workflow performance.`,
+        title,
+        description,
         alternates: { canonical: `https://toolcurrent.com/best-ai-tools/for/${slug}` },
+        openGraph: {
+            title,
+            description,
+            url: `https://toolcurrent.com/best-ai-tools/for/${slug}`,
+            type: 'website',
+        },
+        twitter: { card: 'summary_large_image', title, description },
     };
 }
 
