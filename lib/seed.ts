@@ -1,7 +1,5 @@
-import Article from './models/Article';
 import Tool from './models/Tool';
 import Comparison from './models/Comparison';
-import Stack from './models/Stack';
 
 function generateSlug(text: string): string {
     return text.toString().toLowerCase().trim()
@@ -12,24 +10,9 @@ function generateSlug(text: string): string {
 export default async function seedDatabase() {
     try {
         // Lazy-load seed data (large files, don't import at module level)
-        const { seedArticles, seedTools, seedComparisons, seedStacks } = await import('./seed_data_toolcurrent.js');
+        const { seedTools, seedComparisons } = await import('./seed_data_toolcurrent.js');
 
-        // 1. Seed Articles
-        const count = await Article.countDocuments();
-        if (count === 0) {
-            console.log('Seeding database with ToolCurrent articles...');
-            const formattedSeed = seedArticles.map((a: Record<string, unknown>) => ({
-                ...a,
-                content: Array.isArray(a.content) ? a.content : [a.content],
-                slug: a.slug || generateSlug(a.title as string),
-                // Normalize 'use-case' → 'use_case' to match the enum
-                ...(a.article_type === 'use-case' ? { article_type: 'use_case' } : {}),
-            }));
-            await Article.insertMany(formattedSeed);
-            console.log('Article seeding complete.');
-        }
-
-        // 2. Seed Tools ($setOnInsert — never overwrites CMS edits)
+        // 1. Seed Tools ($setOnInsert — never overwrites CMS edits)
         let seededCount = 0;
         for (const tool of seedTools) {
             const result = await Tool.findOneAndUpdate(
@@ -64,18 +47,7 @@ export default async function seedDatabase() {
         );
         if (overrideMigrated.modifiedCount > 0) console.log(`Migration: marked ${overrideMigrated.modifiedCount} comparisons as is_override=true.`);
 
-        // 4. Seed Stacks ($setOnInsert — never overwrites CMS edits)
-        const stackCount = await Stack.countDocuments();
-        if (stackCount < seedStacks.length) {
-            for (const stack of seedStacks) {
-                await Stack.findOneAndUpdate(
-                    { slug: stack.slug },
-                    { $setOnInsert: stack },
-                    { upsert: true, new: true }
-                );
-            }
-            console.log('Stacks sync complete.');
-        }
+        // Stacks: not auto-seeded (managed via CMS)
     } catch (err) {
         console.error('Seeding error:', err);
     }
