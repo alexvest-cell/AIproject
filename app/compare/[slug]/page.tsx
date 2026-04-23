@@ -13,14 +13,14 @@ export const dynamicParams = true;
 
 export async function generateStaticParams() {
     await connectDB();
-    const tools = await Tool.find({ status: 'Active' }, 'slug competitors').lean();
-    const activeSlugs = new Set((tools as any[]).map(t => t.slug));
+    const activeTools = await Tool.find({ status: 'Active' }, 'slug competitors').lean();
+    const allToolSlugs = new Set((await Tool.find({}, 'slug').lean() as any[]).map(t => t.slug));
     const params: { slug: string }[] = [];
     const seen = new Set<string>();
-    for (const tool of tools as any[]) {
+    for (const tool of activeTools as any[]) {
         for (const competitor of tool.competitors || []) {
-            // Skip competitor slugs that don't resolve to an active tool — avoids dead compare URLs
-            if (!activeSlugs.has(competitor)) continue;
+            // Skip competitor slugs that don't resolve to any tool — avoids dead compare URLs
+            if (!allToolSlugs.has(competitor)) continue;
             const slug = `${tool.slug}-vs-${competitor}`;
             if (!seen.has(slug)) {
                 seen.add(slug);
@@ -102,9 +102,9 @@ export default async function ComparePage({ params, searchParams }: Props) {
         if (slugA.startsWith('tool-') || slugB.startsWith('tool-')) notFound();
         const slugC = parts.length >= 3 ? parts[2] : null;
         const [toolA, toolB, toolC] = await Promise.all([
-            Tool.findOne({ slug: slugA, status: 'Active' }).lean(),
-            Tool.findOne({ slug: slugB, status: 'Active' }).lean(),
-            slugC ? Tool.findOne({ slug: slugC, status: 'Active' }).lean() : Promise.resolve(null),
+            Tool.findOne({ slug: slugA }).lean(),
+            Tool.findOne({ slug: slugB }).lean(),
+            slugC ? Tool.findOne({ slug: slugC }).lean() : Promise.resolve(null),
         ]);
         if (!toolA || !toolB) notFound();
         tA = toolA as any;
@@ -144,7 +144,7 @@ export default async function ComparePage({ params, searchParams }: Props) {
     // Enrich each with tool_a / tool_b so the Also Compare cards can render logos
     const altPairSlugs = Array.from(new Set(rawAltComps.flatMap(c => [c.tool_a_slug, c.tool_b_slug].filter(Boolean))));
     const altPairTools = altPairSlugs.length > 0
-        ? await Tool.find({ slug: { $in: altPairSlugs }, status: 'Active' }, 'slug name logo').lean() as any[]
+        ? await Tool.find({ slug: { $in: altPairSlugs } }, 'slug name logo').lean() as any[]
         : [];
     const altToolBySlug = new Map<string, any>(altPairTools.map(t => [t.slug, t]));
     const alternativeComparisons = rawAltComps

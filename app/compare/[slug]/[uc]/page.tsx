@@ -90,9 +90,9 @@ export default async function CompareUcPage({ params }: Props) {
         if (slugA.startsWith('tool-') || slugB.startsWith('tool-')) notFound();
 
         const [toolA, toolB, toolC] = await Promise.all([
-            Tool.findOne({ slug: slugA, status: 'Active' }).lean(),
-            Tool.findOne({ slug: slugB, status: 'Active' }).lean(),
-            slugC ? Tool.findOne({ slug: slugC, status: 'Active' }).lean() : Promise.resolve(null),
+            Tool.findOne({ slug: slugA }).lean(),
+            Tool.findOne({ slug: slugB }).lean(),
+            slugC ? Tool.findOne({ slug: slugC }).lean() : Promise.resolve(null),
         ]);
 
         if (!toolA || !toolB) notFound();
@@ -151,7 +151,7 @@ export default async function CompareUcPage({ params }: Props) {
         }).limit(10).lean() as any[];
         const altPairSlugs = Array.from(new Set(rawAltComps.flatMap(c => [c.tool_a_slug, c.tool_b_slug].filter(Boolean))));
         const altPairTools = altPairSlugs.length > 0
-            ? await Tool.find({ slug: { $in: altPairSlugs }, status: 'Active' }, 'slug name logo').lean() as any[]
+            ? await Tool.find({ slug: { $in: altPairSlugs } }, 'slug name logo').lean() as any[]
             : [];
         const altToolBySlug = new Map<string, any>(altPairTools.map(t => [t.slug, t]));
         const alternativeComparisons = rawAltComps
