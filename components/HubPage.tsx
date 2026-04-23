@@ -1995,7 +1995,7 @@ export const ComparisonsHub: React.FC<{
                 <div className="container mx-auto px-4 md:px-8 pt-[140px] md:pt-[150px] pb-8 md:pb-10">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-2">ToolCurrent Comparisons</p>
                     <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight mb-4">Comparisons</h1>
-                    <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">Pick any two AI tools. See how they score across features, pricing, and use cases — then decide.</p>
+                    <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">Head-to-head or three-way AI tool comparisons — structured scores, feature breakdowns, and a clear verdict for every matchup.</p>
                 </div>
                 <div className="absolute bottom-0 inset-x-0 h-10 pointer-events-none"
                     style={{ background: 'linear-gradient(to bottom, transparent, #0B0F14)' }} />
@@ -2034,7 +2034,7 @@ export const ComparisonsHub: React.FC<{
 
                     {/* Supporting line */}
                     <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">
-                        Pick any two AI tools. See how they score across features, pricing, and use cases — then decide.
+                        Head-to-head or three-way AI tool comparisons — structured scores, feature breakdowns, and a clear verdict for every matchup.
                     </p>
 
                     {/* Crosslink banner */}
