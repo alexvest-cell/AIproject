@@ -14,11 +14,13 @@ export const dynamicParams = true;
 export async function generateStaticParams() {
     await connectDB();
     const tools = await Tool.find({ status: 'Active' }, 'slug competitors').lean();
+    const activeSlugs = new Set((tools as any[]).map(t => t.slug));
     const params: { slug: string }[] = [];
     const seen = new Set<string>();
     for (const tool of tools as any[]) {
         for (const competitor of tool.competitors || []) {
-            // competitors are real slugs after the ID migration
+            // Skip competitor slugs that don't resolve to an active tool — avoids dead compare URLs
+            if (!activeSlugs.has(competitor)) continue;
             const slug = `${tool.slug}-vs-${competitor}`;
             if (!seen.has(slug)) {
                 seen.add(slug);
@@ -89,7 +91,7 @@ export default async function ComparePage({ params, searchParams }: Props) {
             comparison.tool_c_slug ? Tool.findOne({ slug: comparison.tool_c_slug }).lean() : null,
         ]);
         tA = toolA; tB = toolB; tC = toolC ?? null;
-        initialData = { ...comparison, tool_a: toolA, tool_b: toolB, tool_c: toolC ?? undefined };
+        initialData = { ...comparison, tool_a: toolA, tool_b: toolB, tool_c: toolC ?? undefined } as any;
     } else {
         // No comparison doc — synthetic builder from tool slugs
         const parts = slug.split('-vs-');
@@ -126,6 +128,31 @@ export default async function ComparePage({ params, searchParams }: Props) {
     }
 
     if (!tA || !tB) notFound();
+
+    // ── Prefetch Also Compare — alternative comparisons involving these tools ─
+    const toolSlugs = [tA, tB, tC].filter(Boolean).map((t: any) => t.slug);
+    const rawAltComps = await ComparisonModel.find({
+        $or: [
+            { tool_a_slug: { $in: toolSlugs } },
+            { tool_b_slug: { $in: toolSlugs } },
+            { tool_c_slug: { $in: toolSlugs } },
+        ],
+        slug: { $ne: slug },
+        status: 'published',
+    }).limit(10).lean() as any[];
+
+    // Enrich each with tool_a / tool_b so the Also Compare cards can render logos
+    const altPairSlugs = Array.from(new Set(rawAltComps.flatMap(c => [c.tool_a_slug, c.tool_b_slug].filter(Boolean))));
+    const altPairTools = altPairSlugs.length > 0
+        ? await Tool.find({ slug: { $in: altPairSlugs }, status: 'Active' }, 'slug name logo').lean() as any[]
+        : [];
+    const altToolBySlug = new Map<string, any>(altPairTools.map(t => [t.slug, t]));
+    const alternativeComparisons = rawAltComps
+        .map(c => ({ ...c, tool_a: altToolBySlug.get(c.tool_a_slug) || null, tool_b: altToolBySlug.get(c.tool_b_slug) || null }))
+        .filter(c => c.tool_a && c.tool_b)
+        .slice(0, 4);
+
+    initialData = { ...initialData, alternativeComparisons };
 
     // ── JSON-LD Schemas ──────────────────────────────────────────────────────
     const useCaseDisplay = use_case

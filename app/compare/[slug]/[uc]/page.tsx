@@ -137,6 +137,30 @@ export default async function CompareUcPage({ params }: Props) {
 
     if (!tA || !tB) notFound();
 
+    // ── Prefetch Also Compare — alternative comparisons involving these tools ─
+    {
+        const toolSlugs = [tA, tB, tC].filter(Boolean).map((t: any) => t.slug);
+        const rawAltComps = await ComparisonModel.find({
+            $or: [
+                { tool_a_slug: { $in: toolSlugs } },
+                { tool_b_slug: { $in: toolSlugs } },
+                { tool_c_slug: { $in: toolSlugs } },
+            ],
+            slug: { $ne: slug },
+            status: 'published',
+        }).limit(10).lean() as any[];
+        const altPairSlugs = Array.from(new Set(rawAltComps.flatMap(c => [c.tool_a_slug, c.tool_b_slug].filter(Boolean))));
+        const altPairTools = altPairSlugs.length > 0
+            ? await Tool.find({ slug: { $in: altPairSlugs }, status: 'Active' }, 'slug name logo').lean() as any[]
+            : [];
+        const altToolBySlug = new Map<string, any>(altPairTools.map(t => [t.slug, t]));
+        const alternativeComparisons = rawAltComps
+            .map(c => ({ ...c, tool_a: altToolBySlug.get(c.tool_a_slug) || null, tool_b: altToolBySlug.get(c.tool_b_slug) || null }))
+            .filter(c => c.tool_a && c.tool_b)
+            .slice(0, 4);
+        initialData = { ...initialData, alternativeComparisons };
+    }
+
     // ── JSON-LD Schemas ──────────────────────────────────────────────────────
     const comparedTools = [tA, tB, tC].filter(Boolean);
     const compUrl = `https://toolcurrent.com/compare/${slug}/${uc}`;
