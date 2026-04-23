@@ -203,7 +203,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
             if (sortedCats[i]) {
                 const topTools = [...sortedCats[i].tools]
                     .sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0))
-                    .slice(0, 3);
+                    .slice(0, 10);
                 cards.push({
                     title: `Best ${sortedCats[i].cat} Tools 2026`,
                     url: `/best-ai-tools/${catSlug(sortedCats[i].cat)}`,
@@ -214,7 +214,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
             if (sortedWfs[i]) {
                 const topTools = [...sortedWfs[i].tools]
                     .sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0))
-                    .slice(0, 3);
+                    .slice(0, 10);
                 cards.push({
                     title: `Best Tools for ${sortedWfs[i].wf} 2026`,
                     url: `/best-ai-tools/for/${wfSlug(sortedWfs[i].wf)}`,
@@ -353,8 +353,8 @@ const Portfolio: React.FC<PortfolioProps> = ({
                                             <div
                                                 key={j}
                                                 title={t.name}
-                                                className="relative w-8 h-8 rounded-full bg-white border-2 border-surface-card flex-shrink-0 overflow-hidden"
-                                                style={{ marginLeft: j > 0 ? '-8px' : 0 }}
+                                                className="relative w-6 h-6 rounded-full bg-white border-2 border-surface-card flex-shrink-0 overflow-hidden"
+                                                style={{ marginLeft: j > 0 ? '-5px' : 0 }}
                                             >
                                                 {t.logo
                                                     ? <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
