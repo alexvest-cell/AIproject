@@ -461,9 +461,9 @@ const RankingPage: React.FC<RankingPageProps> = ({
 
                                         {/* Expanded content */}
                                         {isExpanded && (
-                                            <div className="px-4 pb-5 border-t border-border-subtle/50">
+                                            <div className="px-4 pb-5">
                                                 {(ranked.evidence || ranked.tool.short_description) && (
-                                                    <p className="text-sm text-news-muted leading-relaxed pt-4 mb-4">
+                                                    <p className="text-sm text-news-muted leading-relaxed mb-4">
                                                         {ranked.evidence || ranked.tool.short_description}
                                                     </p>
                                                 )}
