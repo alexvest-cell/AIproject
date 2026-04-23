@@ -515,6 +515,33 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                     </div>
                     )}
 
+                    {/* Our General Score */}
+                    {tool.rating_score > 0 && (
+                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our General Score</h3>
+                            <div className="flex items-center justify-center gap-1 text-news-accent mb-4">
+                                <Star size={18} fill="currentColor" />
+                                <span className="text-2xl font-black text-white">{tool.rating_score.toFixed(1)}</span>
+                                <span className="text-news-muted text-sm">/10</span>
+                            </div>
+                            {Object.keys(ratingBreakdown).length > 0 && (
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border-divider pt-4">
+                                    {Object.entries(ratingBreakdown).map(([dim, score]) => (
+                                        <div key={dim}>
+                                            <div className="flex justify-between text-[10px] text-news-muted mb-1">
+                                                <span className="font-bold uppercase tracking-widest">{dim}</span>
+                                                <span className="text-white font-bold">{score.toFixed(1)}</span>
+                                            </div>
+                                            <div className="w-full bg-surface-alt rounded-full h-1.5">
+                                                <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: `${(score / 10) * 100}%` }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Plans & Pricing accordion — mobile only, shown when Plans table exists */}
                     {mobilePlanData && (
                         <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-5">
@@ -561,33 +588,6 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                                     );
                                 })}
                             </div>
-                        </div>
-                    )}
-
-                    {/* Our Score */}
-                    {tool.rating_score > 0 && (
-                        <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
-                            <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our Score</h3>
-                            <div className="flex items-center justify-center gap-1 text-news-accent mb-4">
-                                <Star size={18} fill="currentColor" />
-                                <span className="text-2xl font-black text-white">{tool.rating_score.toFixed(1)}</span>
-                                <span className="text-news-muted text-sm">/10</span>
-                            </div>
-                            {Object.keys(ratingBreakdown).length > 0 && (
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border-divider pt-4">
-                                    {Object.entries(ratingBreakdown).map(([dim, score]) => (
-                                        <div key={dim}>
-                                            <div className="flex justify-between text-[10px] text-news-muted mb-1">
-                                                <span className="font-bold uppercase tracking-widest">{dim}</span>
-                                                <span className="text-white font-bold">{score.toFixed(1)}</span>
-                                            </div>
-                                            <div className="w-full bg-surface-alt rounded-full h-1.5">
-                                                <div className="bg-news-accent h-1.5 rounded-full transition-all" style={{ width: `${(score / 10) * 100}%` }} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     )}
 
@@ -1279,7 +1279,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                         {/* Rating */}
                         {tool.rating_score > 0 && (
                             <div className="bg-surface-card border border-border-subtle shadow-elevation rounded-2xl p-6">
-                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our Score</h3>
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-news-muted mb-3 text-center">Our General Score</h3>
                                 <div className="flex items-center justify-center gap-1 text-news-accent mb-4">
                                     <Star size={18} fill="currentColor" />
                                     <span className="text-2xl font-black text-white">{tool.rating_score.toFixed(1)}</span>
