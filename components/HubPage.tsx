@@ -30,7 +30,7 @@ const HUB_META: Record<HubType, { label: string; description: string; titleTag: 
     },
     'best-ai-tools': {
         label: 'Best AI Tools',
-        description: 'Too many AI tools, too much noise. These rankings cut through it — every tool scored across six dimensions so you can compare like for like.',
+        description: 'Independent AI tool rankings — scored by methodology, never by who paid.',
         titleTag: 'Best AI Software & Tools: 2026 Rankings & Reviews',
         articleType: 'best-of'
     },
@@ -70,9 +70,9 @@ const ITEMS_PER_PAGE = 12;
 
 // ─── Shared Components ────────────────────────────────────────────────────────
 
-export const HubHeader: React.FC<{ hub: HubType; onBack: () => void; titleOverride?: string }> = ({ hub, onBack, titleOverride }) => {
+export const HubHeader: React.FC<{ hub: HubType; onBack: () => void; titleOverride?: string; descriptionOverride?: string }> = ({ hub, onBack, titleOverride, descriptionOverride }) => {
     const meta = HUB_META[hub];
-    
+
     // SEO: Update document title
     useEffect(() => {
         document.title = `${titleOverride || meta.titleTag} | ToolCurrent`;
@@ -83,7 +83,7 @@ export const HubHeader: React.FC<{ hub: HubType; onBack: () => void; titleOverri
             <div className="container mx-auto px-4 md:px-8 pt-[140px] md:pt-[150px] pb-10 md:pb-12 text-center md:text-left">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-2">ToolCurrent Directory</p>
                 <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-4 text-white leading-tight">{titleOverride || meta.label}</h1>
-                <p className="text-news-text text-base md:text-lg max-w-2xl leading-relaxed mx-auto md:mx-0">{meta.description}</p>
+                <p className="text-news-text text-base md:text-lg max-w-2xl leading-relaxed mx-auto md:mx-0">{descriptionOverride ?? meta.description}</p>
                 {hub === 'reviews' && (
                     <p className="text-xs text-news-muted mt-5 max-w-xl border-l-2 border-border-divider pl-4 mx-auto md:mx-0">
                         Every ToolCurrent review is based on hands-on testing, feature analysis, pricing evaluation, and comparison with competing tools.
@@ -1995,7 +1995,7 @@ export const ComparisonsHub: React.FC<{
                 <div className="container mx-auto px-4 md:px-8 pt-[140px] md:pt-[150px] pb-8 md:pb-10">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-2">ToolCurrent Comparisons</p>
                     <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight mb-4">Comparisons</h1>
-                    <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">Compare any two AI tools instantly. See scores, features, and a clear verdict.</p>
+                    <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">Pick any two AI tools. See how they score across features, pricing, and use cases — then decide.</p>
                 </div>
                 <div className="absolute bottom-0 inset-x-0 h-10 pointer-events-none"
                     style={{ background: 'linear-gradient(to bottom, transparent, #0B0F14)' }} />
@@ -2034,13 +2034,13 @@ export const ComparisonsHub: React.FC<{
 
                     {/* Supporting line */}
                     <p className="text-lg md:text-xl text-news-muted mb-8 max-w-xl leading-relaxed">
-                        Compare any two AI tools instantly. See scores, features, and a clear verdict.
+                        Pick any two AI tools. See how they score across features, pricing, and use cases — then decide.
                     </p>
 
                     {/* Crosslink banner */}
-                    <a href="/best-ai-tools"
+                    <a href="/ai-tools"
                         className="inline-flex items-center gap-1.5 text-xs font-medium text-news-accent border border-news-accent/30 bg-news-accent/5 rounded-lg px-3 py-2 hover:bg-news-accent/10 transition-colors">
-                        Not sure which tools to compare? Browse Best Software to find your options
+                        Not sure which tools to compare? Browse AI Tools to find your options
                         <ArrowRight size={11} />
                     </a>
                 </div>

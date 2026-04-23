@@ -55,7 +55,7 @@ export default function AIToolsHubPageClient({ tools, initialQueryString }: Prop
     return (
         <div className="min-h-screen bg-surface-base text-news-text font-sans">
             <SiteNav />
-            <HubHeader hub="ai-tools" onBack={() => {}} />
+            <HubHeader hub="ai-tools" onBack={() => {}} descriptionOverride={`Browse ${tools.length} AI tools by category, use case, pricing, platform, and capability. Filter to exactly what you need — or let the workflow cards guide you.`} />
             <div className="container mx-auto px-4 md:px-8 py-10">
                 <Suspense fallback={null}>
                     <AIToolsHubInner tools={tools} initialQueryString={initialQueryString} />
