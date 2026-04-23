@@ -495,6 +495,15 @@ export const AIToolsHub: React.FC<{
         return () => clearTimeout(timer);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Scroll to tool list when arriving with an active filter (e.g. ?workflow=developers)
+    useEffect(() => {
+        if (!initialFilters.activeWorkflow && !initialFilters.search && !initialFilters.catFilter) return;
+        const timer = setTimeout(() => {
+            toolGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Reset pagination when filters change
     useEffect(() => { setVisibleCount(TOOLS_PER_PAGE); }, [debouncedSearch, pricingFilter, catFilter, useCaseFilter, sortBy, platformFilter, activeWorkflow, capFilters]);
 
