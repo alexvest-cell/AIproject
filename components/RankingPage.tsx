@@ -258,7 +258,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
 
     return (
         <div className="min-h-screen bg-news-bg">
-            <div className="max-w-4xl mx-auto px-4 py-10 space-y-12">
+            <div className="max-w-4xl mx-auto px-4 py-6 md:py-10 space-y-12">
 
                 {/* ── 1. Breadcrumb + Header ─────────────────────────────────── */}
                 <div>
@@ -426,7 +426,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                     >
                                         {/* Collapsed row */}
                                         <div
-                                            className="flex items-center gap-4 p-4 cursor-pointer group"
+                                            className="flex items-center gap-4 px-5 py-4 cursor-pointer group"
                                             onClick={() => toggleCard(ranked.tool.slug)}
                                         >
                                             <div className="w-7 h-7 rounded-full border border-border-subtle flex items-center justify-center flex-shrink-0">
@@ -461,7 +461,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
 
                                         {/* Expanded content */}
                                         {isExpanded && (
-                                            <div className="px-4 pb-5">
+                                            <div className="px-5 pb-6">
                                                 {(ranked.evidence || ranked.tool.short_description) && (
                                                     <p className="text-sm text-news-muted leading-relaxed mb-4">
                                                         {ranked.evidence || ranked.tool.short_description}

@@ -105,7 +105,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
 
   return (
     <div className="min-h-screen bg-surface-base text-news-text font-sans pt-16 md:pt-[112px]">
-      <div className="container mx-auto px-4 md:px-8 py-10 max-w-5xl">
+      <div className="container mx-auto px-4 md:px-8 py-6 md:py-10 max-w-5xl">
 
         {/* Back link */}
         <Link

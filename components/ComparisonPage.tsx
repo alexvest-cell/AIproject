@@ -1513,7 +1513,7 @@ const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, 
 
     return (
         <div className="min-h-screen bg-surface-base text-white font-sans pt-16 md:pt-[112px]">
-            <div className={`container mx-auto px-4 md:px-8 py-10 ${isMulti ? 'max-w-6xl' : 'max-w-4xl'}`}>
+            <div className={`container mx-auto px-4 md:px-8 py-6 md:py-10 ${isMulti ? 'max-w-6xl' : 'max-w-4xl'}`}>
 
                 {/* Invalid use case notice */}
                 {invalidUseCase && (

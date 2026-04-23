@@ -2003,7 +2003,7 @@ export const ComparisonsHub: React.FC<{
                 <div className="absolute bottom-0 inset-x-0 h-10 pointer-events-none"
                     style={{ background: 'linear-gradient(to bottom, transparent, #0B0F14)' }} />
             </section>
-            <div className="container mx-auto px-4 md:px-8 py-10">
+            <div className="container mx-auto px-4 md:px-8 py-6 md:py-10">
                 <div className="space-y-16">
                     <div>
                         <div className="flex items-end justify-between mb-6">
@@ -2054,7 +2054,7 @@ export const ComparisonsHub: React.FC<{
             </section>
 
             {/* ─── Main content ─────────────────────────────────────────────── */}
-            <div className="container mx-auto px-4 md:px-8 py-10">
+            <div className="container mx-auto px-4 md:px-8 py-6 md:py-10">
             <div className="space-y-16">
 
             {/* ── 1. Tool Selector ─────────────────────────────────────────── */}
@@ -3352,7 +3352,7 @@ const HubPage: React.FC<HubPageProps> = ({ hub: rawHub, articles, onArticleClick
             {hub !== 'comparisons' && <HubHeader hub={hub} onBack={onBack} titleOverride={dynamicLabel} />}
             {hub === 'comparisons'
                 ? renderContent()
-                : <div className="container mx-auto px-4 md:px-8 py-10">{renderContent()}</div>
+                : <div className="container mx-auto px-4 md:px-8 py-6 md:py-10">{renderContent()}</div>
             }
         </div>
     );

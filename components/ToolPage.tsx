@@ -345,7 +345,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
             `}</style>
             <JumpNav sections={sections} />
 
-            <div className="container mx-auto px-4 md:px-8 py-10 max-w-7xl">
+            <div className="container mx-auto px-4 md:px-8 py-6 md:py-10 max-w-7xl">
 
                 {/* Hero Header */}
                 <div className="flex flex-col md:flex-row gap-6 items-start mb-10 pb-10 border-b border-border-divider">
