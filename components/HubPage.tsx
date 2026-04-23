@@ -1304,25 +1304,25 @@ export const BestSoftwareHub: React.FC<{
         // 1. Most populated category
         if (sortedCats.length > 0) {
             const { cat, count, tools } = sortedCats[0];
-            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
             cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-ai-tools/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
         }
         // 2. Highest avg-score workflow (min 3 tools with scores)
         if (sortedWfs.length > 0) {
             const { tag, count, tools, avgScore } = sortedWfs[0];
-            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
             cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-ai-tools/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
         }
         // 3. Second most populated category
         if (sortedCats.length > 1) {
             const { cat, count, tools } = sortedCats[1];
-            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
             cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-ai-tools/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
         }
         // 4. Second highest scoring workflow
         if (sortedWfs.length > 1) {
             const { tag, count, tools, avgScore } = sortedWfs[1];
-            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
             cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-ai-tools/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
         }
         // 5. Best Free AI Tools
@@ -1331,10 +1331,10 @@ export const BestSoftwareHub: React.FC<{
         freeTools.forEach(t => { if (t.category_primary) freeCatFreq[t.category_primary] = (freeCatFreq[t.category_primary] || 0) + 1; });
         const topFreeCat = Object.entries(freeCatFreq).sort((a, b) => b[1] - a[1])[0];
         const freeCatSlug = topFreeCat ? catSlug(topFreeCat[0]) : 'ai-chatbots';
-        const topFreeTools = [...freeTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+        const topFreeTools = [...freeTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
         cards.push({ title: 'Best Free AI Tools 2026', url: `/best-ai-tools/${freeCatSlug}`, description: 'Free and freemium AI tools that deliver real value without a paid plan.', count: freeTools.length, topTools: topFreeTools });
         // 6. Top Rated Tools
-        const topRatedTools = [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 3);
+        const topRatedTools = [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
         const topCatSlug = sortedCats.length > 0 ? catSlug(sortedCats[0].cat) : 'ai-chatbots';
         cards.push({ title: 'Top Rated Tools 2026', url: `/best-ai-tools/${topCatSlug}`, description: 'The highest-rated AI tools across all categories, scored by features, pricing, and performance.', count: allTools.length, topTools: topRatedTools });
 
@@ -1425,8 +1425,8 @@ export const BestSoftwareHub: React.FC<{
                                             <div
                                                 key={tool.slug}
                                                 title={tool.name}
-                                                className="relative w-8 h-8 rounded-full bg-white border-2 border-surface-card flex items-center justify-center p-1 flex-shrink-0 overflow-hidden"
-                                                style={{ marginLeft: ti > 0 ? '-8px' : 0 }}
+                                                className="relative w-7 h-7 rounded-full bg-white border-2 border-surface-card flex items-center justify-center p-1 flex-shrink-0 overflow-hidden"
+                                                style={{ marginLeft: ti > 0 ? '-6px' : 0 }}
                                             >
                                                 {tool.logo
                                                     ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
