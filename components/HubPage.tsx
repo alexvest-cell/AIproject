@@ -1325,18 +1325,18 @@ export const BestSoftwareHub: React.FC<{
             const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
             cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-ai-tools/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
         }
-        // 5. Best Free AI Tools
-        const freeTools = allTools.filter(t => t.pricing_model === 'Free' || t.pricing_model === 'Freemium');
-        const freeCatFreq: Record<string, number> = {};
-        freeTools.forEach(t => { if (t.category_primary) freeCatFreq[t.category_primary] = (freeCatFreq[t.category_primary] || 0) + 1; });
-        const topFreeCat = Object.entries(freeCatFreq).sort((a, b) => b[1] - a[1])[0];
-        const freeCatSlug = topFreeCat ? catSlug(topFreeCat[0]) : 'ai-chatbots';
-        const topFreeTools = [...freeTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
-        cards.push({ title: 'Best Free AI Tools 2026', url: `/best-ai-tools/${freeCatSlug}`, description: 'Free and freemium AI tools that deliver real value without a paid plan.', count: freeTools.length, topTools: topFreeTools });
-        // 6. Top Rated Tools
-        const topRatedTools = [...allTools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
-        const topCatSlug = sortedCats.length > 0 ? catSlug(sortedCats[0].cat) : 'ai-chatbots';
-        cards.push({ title: 'Top Rated Tools 2026', url: `/best-ai-tools/${topCatSlug}`, description: 'The highest-rated AI tools across all categories, scored by features, pricing, and performance.', count: allTools.length, topTools: topRatedTools });
+        // 5. Third most populated category
+        if (sortedCats.length > 2) {
+            const { cat, count, tools } = sortedCats[2];
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
+            cards.push({ title: `Best ${cat} Tools 2026`, url: `/best-ai-tools/${catSlug(cat)}`, description: catDescs[cat] || `Top ${cat} tools ranked by features, pricing, and performance.`, count, topTools });
+        }
+        // 6. Third highest scoring workflow
+        if (sortedWfs.length > 2) {
+            const { tag, count, tools, avgScore } = sortedWfs[2];
+            const topTools = [...tools].sort((a, b) => (b.rating_score || 0) - (a.rating_score || 0)).slice(0, 6);
+            cards.push({ title: `Best Tools for ${tag} 2026`, url: `/best-ai-tools/for/${wfSlug(tag)}`, description: `Top-rated tools built for ${tag.toLowerCase()} workflows, ranked by overall score.`, count, topTools, avgScore: avgScore ?? undefined });
+        }
 
         return cards.slice(0, 6);
     }, [allTools]);
