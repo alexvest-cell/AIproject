@@ -125,7 +125,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                 </div>
 
                 {/* ── Explore by workflow */}
-                <div className="mb-0 pb-16">
+                <div className="mb-0 pb-0">
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">Discovery</p>
