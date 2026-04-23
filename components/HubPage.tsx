@@ -497,7 +497,10 @@ export const AIToolsHub: React.FC<{
 
     // Scroll to tool list when arriving with an active filter (e.g. ?workflow=developers)
     useEffect(() => {
-        if (!initialFilters.activeWorkflow && !initialFilters.search && !initialFilters.catFilter) return;
+        const hasFilter = !!initialFilters.activeWorkflow || !!initialFilters.search ||
+            (!!initialFilters.catFilter && initialFilters.catFilter !== 'All') ||
+            (!!initialFilters.pricingFilter && initialFilters.pricingFilter !== 'All');
+        if (!hasFilter) return;
         const timer = setTimeout(() => {
             toolGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 300);
