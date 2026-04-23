@@ -49,7 +49,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
     }, []);
 
     return (
-        <section className="relative w-full bg-surface-base text-white pt-36 md:pt-40 pb-0 overflow-x-hidden">
+        <section className="relative w-full bg-surface-base text-white pt-36 md:pt-40 pb-0">
 
             {/* Background grid pattern */}
             <div
