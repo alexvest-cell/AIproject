@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { categorySlugToName } from '../lib/utils/slugs';
 import {
     ArrowLeft, Star, ArrowRight, BarChart2, Layers, Award,
-    TrendingUp, ChevronRight, Info,
+    TrendingUp, ChevronRight, Info, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { Tool } from '../types';
 
@@ -179,7 +179,15 @@ const RankingPage: React.FC<RankingPageProps> = ({
     }, [allTools, type, label]);
 
     const topPick = rankedTools[0] ?? null;
-    const restTools = rankedTools.slice(1, 10);
+    const [visibleCount, setVisibleCount] = useState(9);
+    const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+    const toggleCard = (slug: string) => setExpandedCards(prev => {
+        const next = new Set(prev);
+        next.has(slug) ? next.delete(slug) : next.add(slug);
+        return next;
+    });
+    const visibleTools = rankedTools.slice(1, 1 + visibleCount);
+    const hasMore = rankedTools.length > 1 + visibleCount;
 
     // Also Compare: pairs from top 4 tools
     const comparePairs = useMemo(() => {
@@ -325,11 +333,10 @@ const RankingPage: React.FC<RankingPageProps> = ({
                             <Award size={14} /> Top Pick
                         </h2>
                         <div className="rounded-2xl border-2 border-teal-500/40 bg-teal-500/5 p-6 sm:p-8">
-                            <div className="flex items-start gap-5 flex-wrap sm:flex-nowrap">
-
-                                {/* Logo + rank badge */}
+                            {/* Logo + name/score row */}
+                            <div className="flex items-start gap-5 mb-5">
                                 <div className="relative flex-shrink-0">
-                                    <div className="relative w-16 h-16 rounded-2xl bg-white border border-border-subtle flex items-center justify-center">
+                                    <div className="relative w-16 h-16 rounded-2xl bg-white border border-border-subtle overflow-hidden">
                                         {topPick.tool.logo
                                             ? <Image src={topPick.tool.logo} alt={topPick.tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={topPick.tool.logo?.startsWith('https://res.cloudinary.com')} />
                                             : <Layers size={24} className="text-news-muted" />
@@ -339,8 +346,6 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                         <span className="text-[9px] font-black text-white">1</span>
                                     </div>
                                 </div>
-
-                                {/* Info */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start gap-3 flex-wrap mb-2">
                                         <h3 className="text-xl font-black text-white leading-tight">{topPick.tool.name}</h3>
@@ -357,10 +362,8 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* Score */}
                                     {topPick.score !== null && (
-                                        <div className="flex items-center gap-1.5 mb-3">
+                                        <div className="flex items-center gap-1.5">
                                             <Star size={14} className="text-teal-400" fill="currentColor" />
                                             <span className="text-lg font-black text-white">{topPick.score}</span>
                                             <span className="text-xs text-news-muted">/10</span>
@@ -369,110 +372,141 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                             </span>
                                         </div>
                                     )}
-
-                                    {/* Evidence / description */}
-                                    {(topPick.evidence || topPick.tool.short_description) && (
-                                        <p className="text-sm text-news-muted leading-relaxed mb-4">
-                                            {topPick.evidence || topPick.tool.short_description}
-                                        </p>
-                                    )}
-
-                                    {/* Rating breakdown bar strip */}
-                                    {topPick.tool.rating_breakdown && Object.keys(topPick.tool.rating_breakdown).length > 0 && (
-                                        <div className="mb-5 max-w-xs">
-                                            <RatingBarStrip breakdown={topPick.tool.rating_breakdown} />
-                                        </div>
-                                    )}
-
-                                    {/* CTAs */}
-                                    <div className="flex items-center gap-3 flex-wrap">
-                                        <button
-                                            onClick={() => onToolClick(topPick.tool.slug, slug)}
-                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs font-black hover:bg-teal-500/20 transition-colors"
-                                        >
-                                            View Profile <ArrowRight size={12} />
-                                        </button>
-                                        {(topPick.tool.affiliate_url || topPick.tool.website_url) && (
-                                            <a
-                                                href={topPick.tool.affiliate_url || topPick.tool.website_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer nofollow"
-                                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-news-muted text-xs font-black hover:bg-white/10 transition-colors"
-                                            >
-                                                Visit Site <ArrowRight size={12} />
-                                            </a>
-                                        )}
-                                    </div>
                                 </div>
+                            </div>
+
+                            {/* Full-width: evidence, bars, CTAs */}
+                            {(topPick.evidence || topPick.tool.short_description) && (
+                                <p className="text-sm text-news-muted leading-relaxed mb-4">
+                                    {topPick.evidence || topPick.tool.short_description}
+                                </p>
+                            )}
+                            {topPick.tool.rating_breakdown && Object.keys(topPick.tool.rating_breakdown).length > 0 && (
+                                <div className="mb-5">
+                                    <RatingBarStrip breakdown={topPick.tool.rating_breakdown} />
+                                </div>
+                            )}
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <button
+                                    onClick={() => onToolClick(topPick.tool.slug, slug)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 text-xs font-black hover:bg-teal-500/20 transition-colors"
+                                >
+                                    View Profile <ArrowRight size={12} />
+                                </button>
+                                {(topPick.tool.affiliate_url || topPick.tool.website_url) && (
+                                    <a
+                                        href={topPick.tool.affiliate_url || topPick.tool.website_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer nofollow"
+                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-news-muted text-xs font-black hover:bg-white/10 transition-colors"
+                                    >
+                                        Visit Site <ArrowRight size={12} />
+                                    </a>
+                                )}
                             </div>
                         </div>
                     </section>
                 )}
 
-                {/* ── 3. Ranked List (#2–10) ─────────────────────────────────── */}
-                {restTools.length > 0 && (
+                {/* ── 3. Ranked List (#2+) ──────────────────────────────────── */}
+                {visibleTools.length > 0 && (
                     <section>
                         <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2">
                             <TrendingUp size={20} className="text-news-accent" />
                             {type === 'workflow' ? `All Tools for ${label}` : `All ${label} Tools`}
                         </h2>
                         <div className="space-y-3">
-                            {restTools.map((ranked, i) => {
+                            {visibleTools.map((ranked, i) => {
                                 const position = i + 2;
+                                const isExpanded = expandedCards.has(ranked.tool.slug);
                                 return (
                                     <div
                                         key={ranked.tool.slug}
-                                        className="flex items-center gap-4 p-4 rounded-2xl bg-surface-card border border-border-subtle hover:border-news-accent/30 hover:bg-surface-hover transition-all group cursor-pointer"
-                                        onClick={() => onToolClick(ranked.tool.slug, slug)}
+                                        className="rounded-2xl bg-surface-card border border-border-subtle hover:border-news-accent/30 transition-all"
                                     >
-                                        {/* Position */}
-                                        <div className="w-7 h-7 rounded-full border border-border-subtle flex items-center justify-center flex-shrink-0">
-                                            <span className="text-[11px] font-black text-news-muted">{position}</span>
-                                        </div>
-
-                                        {/* Logo */}
-                                        <div className="relative w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center flex-shrink-0">
-                                            {ranked.tool.logo
-                                                ? <Image src={ranked.tool.logo} alt={ranked.tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={ranked.tool.logo?.startsWith('https://res.cloudinary.com')} />
-                                                : <Layers size={14} className="text-news-muted" />
-                                            }
-                                        </div>
-
-                                        {/* Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="text-sm font-black text-white group-hover:text-news-accent transition-colors leading-tight truncate">
+                                        {/* Collapsed row */}
+                                        <div
+                                            className="flex items-center gap-4 p-4 cursor-pointer group"
+                                            onClick={() => toggleCard(ranked.tool.slug)}
+                                        >
+                                            <div className="w-7 h-7 rounded-full border border-border-subtle flex items-center justify-center flex-shrink-0">
+                                                <span className="text-[11px] font-black text-news-muted">{position}</span>
+                                            </div>
+                                            <div className="relative w-10 h-10 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
+                                                {ranked.tool.logo
+                                                    ? <Image src={ranked.tool.logo} alt={ranked.tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={ranked.tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    : <Layers size={14} className="text-news-muted" />
+                                                }
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-sm font-black text-white group-hover:text-news-accent transition-colors leading-tight truncate block">
                                                     {ranked.tool.name}
                                                 </span>
                                                 {ranked.tool.category_primary && (
-                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-news-accent/10 border border-news-accent/20 text-news-accent font-bold uppercase tracking-widest hidden sm:inline-block">
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-news-accent/10 border border-news-accent/20 text-news-accent font-bold uppercase tracking-widest hidden sm:inline-block mt-0.5">
                                                         {ranked.tool.category_primary}
                                                     </span>
                                                 )}
                                             </div>
-                                            {(ranked.evidence || ranked.tool.short_description) && (
-                                                <p className="text-[11px] text-news-muted leading-relaxed mt-0.5 line-clamp-1 hidden sm:block">
-                                                    {ranked.evidence || ranked.tool.short_description}
-                                                </p>
+                                            {ranked.score !== null && (
+                                                <div className="flex items-center gap-1 flex-shrink-0">
+                                                    <Star size={10} className="text-news-accent" fill="currentColor" />
+                                                    <span className="text-sm font-black text-white">{ranked.score}</span>
+                                                </div>
                                             )}
+                                            <div className="flex-shrink-0 text-news-muted group-hover:text-news-accent transition-colors">
+                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                            </div>
                                         </div>
 
-                                        {/* Score */}
-                                        {ranked.score !== null && (
-                                            <div className="flex items-center gap-1 flex-shrink-0">
-                                                <Star size={10} className="text-news-accent" fill="currentColor" />
-                                                <span className="text-sm font-black text-white">{ranked.score}</span>
+                                        {/* Expanded content */}
+                                        {isExpanded && (
+                                            <div className="px-4 pb-5 border-t border-border-subtle/50">
+                                                {(ranked.evidence || ranked.tool.short_description) && (
+                                                    <p className="text-sm text-news-muted leading-relaxed pt-4 mb-4">
+                                                        {ranked.evidence || ranked.tool.short_description}
+                                                    </p>
+                                                )}
+                                                {ranked.tool.rating_breakdown && Object.keys(ranked.tool.rating_breakdown).length > 0 && (
+                                                    <div className="mb-4">
+                                                        <RatingBarStrip breakdown={ranked.tool.rating_breakdown} />
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-3 flex-wrap">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onToolClick(ranked.tool.slug, slug); }}
+                                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-news-accent/10 border border-news-accent/30 text-news-accent text-xs font-black hover:bg-news-accent/20 transition-colors"
+                                                    >
+                                                        View Profile <ArrowRight size={12} />
+                                                    </button>
+                                                    {(ranked.tool.affiliate_url || ranked.tool.website_url) && (
+                                                        <a
+                                                            href={(ranked.tool.affiliate_url || ranked.tool.website_url) as string}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer nofollow"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-news-muted text-xs font-black hover:bg-white/10 transition-colors"
+                                                        >
+                                                            Visit Site <ArrowRight size={12} />
+                                                        </a>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
-
-                                        {/* View link */}
-                                        <span className="text-[10px] font-black text-news-accent flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            View <ArrowRight size={10} />
-                                        </span>
                                     </div>
                                 );
                             })}
                         </div>
+
+                        {/* Load more */}
+                        {hasMore && (
+                            <button
+                                onClick={() => setVisibleCount(c => c + 10)}
+                                className="w-full mt-4 py-3 rounded-2xl border border-border-subtle bg-surface-card hover:border-news-accent/40 hover:bg-surface-hover text-sm font-black text-news-muted hover:text-white transition-all flex items-center justify-center gap-2"
+                            >
+                                Load 10 more <ChevronDown size={14} />
+                            </button>
+                        )}
                     </section>
                 )}
 
