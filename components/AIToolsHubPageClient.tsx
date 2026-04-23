@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SiteNav from './SiteNav';
 import SiteFooter from './SiteFooter';
-import { AIToolsHub } from './HubPage';
+import { AIToolsHub, HubHeader } from './HubPage';
 import type { Tool } from '../types';
 
 interface Props { tools: Tool[]; initialQueryString?: string }
@@ -55,12 +55,11 @@ export default function AIToolsHubPageClient({ tools, initialQueryString }: Prop
     return (
         <div className="min-h-screen bg-surface-base text-news-text font-sans">
             <SiteNav />
-            <div className="pt-16 md:pt-[112px]">
-                <div className="container mx-auto px-4 md:px-8 py-10">
-                    <Suspense fallback={null}>
-                        <AIToolsHubInner tools={tools} initialQueryString={initialQueryString} />
-                    </Suspense>
-                </div>
+            <HubHeader hub="ai-tools" onBack={() => {}} />
+            <div className="container mx-auto px-4 md:px-8 py-10">
+                <Suspense fallback={null}>
+                    <AIToolsHubInner tools={tools} initialQueryString={initialQueryString} />
+                </Suspense>
             </div>
             <SiteFooter />
         </div>

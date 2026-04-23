@@ -70,7 +70,7 @@ const ITEMS_PER_PAGE = 12;
 
 // ─── Shared Components ────────────────────────────────────────────────────────
 
-const HubHeader: React.FC<{ hub: HubType; onBack: () => void; titleOverride?: string }> = ({ hub, onBack, titleOverride }) => {
+export const HubHeader: React.FC<{ hub: HubType; onBack: () => void; titleOverride?: string }> = ({ hub, onBack, titleOverride }) => {
     const meta = HUB_META[hub];
     
     // SEO: Update document title
