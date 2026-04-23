@@ -173,22 +173,18 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
                     key={alt.slug}
                     className={`bg-surface-card border rounded-2xl p-5 md:p-6 transition-all group ${discontinued ? 'border-border-subtle opacity-70' : 'border-border-subtle hover:border-news-accent/30'}`}
                   >
-                    <div className="flex items-start gap-4">
-                      {/* Rank badge */}
+                    {/* Top row: rank + logo + name/badges */}
+                    <div className="flex items-start gap-4 mb-3">
                       <div className="hidden sm:flex w-8 h-8 rounded-full bg-surface-alt border border-border-subtle text-xs font-black text-news-muted items-center justify-center flex-shrink-0 mt-1">
                         {idx + 1}
                       </div>
-
-                      {/* Logo */}
                       {alt.logo && (
                         <div className="relative w-14 h-14 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
                           <Image src={alt.logo} alt={alt.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={alt.logo?.startsWith('https://res.cloudinary.com')} />
                         </div>
                       )}
-
-                      {/* Info */}
-                      <div className="flex-grow min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <div className="flex-grow min-w-0 pt-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-white font-black text-lg group-hover:text-news-accent transition-colors">{alt.name}</h3>
                           {discontinued && (
                             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-surface-alt text-news-muted border border-border-subtle">
@@ -204,44 +200,42 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
                             </span>
                           )}
                         </div>
-                        <p className="text-news-text text-sm leading-relaxed line-clamp-2 mb-3">{alt.short_description}</p>
-
-                        {/* Key features */}
-                        {alt.key_features && alt.key_features.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {alt.key_features.slice(0, 3).map((f: string, fi: number) => (
-                              <span key={fi} className="flex items-center gap-1 text-[10px] text-news-accent/80">
-                                <Check size={9} /> {f}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <button
-                            onClick={() => onToolClick(alt.slug)}
-                            className="text-xs font-bold bg-news-accent/10 hover:bg-news-accent text-news-accent hover:text-white px-3 py-1.5 rounded-lg transition-all"
-                          >
-                            View Tool
-                          </button>
-                          {(alt as any).affiliate_url && !discontinued && (
-                            <a
-                              href={(alt as any).affiliate_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs font-bold bg-surface-alt hover:bg-surface-hover text-white px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border border-border-subtle"
-                            >
-                              Try Free <ExternalLink size={10} />
-                            </a>
-                          )}
-                          {(alt as any).rating_score > 0 && (
-                            <span className="flex items-center gap-1 text-xs text-news-accent font-bold ml-auto">
-                              <Star size={11} fill="currentColor" /> {(alt as any).rating_score.toFixed(1)}
-                            </span>
-                          )}
-                        </div>
                       </div>
+                    </div>
+
+                    {/* Full-width: description, key features, actions */}
+                    <p className="text-news-text text-sm leading-relaxed line-clamp-2 mb-3">{alt.short_description}</p>
+                    {alt.key_features && alt.key_features.length > 0 && (
+                      <div className="space-y-1 mb-3">
+                        {alt.key_features.slice(0, 3).map((f: string, fi: number) => (
+                          <span key={fi} className="flex items-start gap-1.5 text-xs text-news-accent/80">
+                            <Check size={11} className="flex-shrink-0 mt-0.5" /> {f}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => onToolClick(alt.slug)}
+                        className="text-xs font-bold bg-news-accent/10 hover:bg-news-accent text-news-accent hover:text-white px-3 py-1.5 rounded-lg transition-all"
+                      >
+                        View Tool
+                      </button>
+                      {(alt as any).affiliate_url && !discontinued && (
+                        <a
+                          href={(alt as any).affiliate_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold bg-surface-alt hover:bg-surface-hover text-white px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 border border-border-subtle"
+                        >
+                          Try Free <ExternalLink size={10} />
+                        </a>
+                      )}
+                      {(alt as any).rating_score > 0 && (
+                        <span className="flex items-center gap-1 text-xs text-news-accent font-bold ml-auto">
+                          <Star size={11} fill="currentColor" /> {(alt as any).rating_score.toFixed(1)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
