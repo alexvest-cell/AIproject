@@ -168,7 +168,7 @@ const MobileFeatureList: React.FC<{ toolsArr: Tool[]; winnerSlug: string }> = ({
                                     <span className="text-[11px] font-semibold text-white truncate">{t.name}</span>
                                 </div>
                                 {/* Value — can wrap freely */}
-                                <div className="flex-1 text-xs leading-snug text-right">{row.render(t)}</div>
+                                <div className="flex-1 text-xs leading-snug flex justify-end items-center">{row.render(t)}</div>
                             </div>
                         ))}
                     </div>
