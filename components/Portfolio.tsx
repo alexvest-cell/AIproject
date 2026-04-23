@@ -348,11 +348,19 @@ const Portfolio: React.FC<PortfolioProps> = ({
                                     <span className="text-[9px] font-bold uppercase tracking-widest text-news-accent">Best Of</span>
                                     <h3 className="text-sm font-bold text-white group-hover:text-news-accent transition-colors leading-snug line-clamp-2">{card.title}</h3>
                                     <span className="text-[10px] text-news-muted">{card.count} tools ranked</span>
-                                    <div className="flex items-center -space-x-2 mt-auto">
+                                    <div className="flex items-center mt-auto">
                                         {card.topTools.map((t, j) => (
-                                            t.logo
-                                                ? <Image key={j} src={t.logo} alt={t.name} width={28} height={28} className="rounded-full bg-white border-2 border-surface-card object-contain p-0.5 flex-shrink-0" unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
-                                                : <div key={j} className="w-7 h-7 rounded-full bg-surface-base border-2 border-surface-card flex items-center justify-center text-[9px] font-bold text-news-muted flex-shrink-0">{t.name[0]}</div>
+                                            <div
+                                                key={j}
+                                                title={t.name}
+                                                className="relative w-8 h-8 rounded-full bg-white border-2 border-surface-card flex-shrink-0 overflow-hidden"
+                                                style={{ marginLeft: j > 0 ? '-8px' : 0 }}
+                                            >
+                                                {t.logo
+                                                    ? <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    : <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-news-muted">{t.name[0]}</span>
+                                                }
+                                            </div>
                                         ))}
                                     </div>
                                     <span className="text-[10px] font-bold text-news-accent group-hover:underline">View Rankings →</span>
