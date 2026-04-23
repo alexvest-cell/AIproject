@@ -1613,12 +1613,54 @@ const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, 
                     </section>
                 )}
 
+                {/* Also Compare — alternative pair cards */}
+                {data.alternativeComparisons && data.alternativeComparisons.length > 0 && (
+                    <section className="mt-10 border-t border-border-divider pt-10">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">ALSO COMPARE</p>
+                        <h2 className="text-xl md:text-2xl font-black tracking-tight text-white mb-5">Also Compare</h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {data.alternativeComparisons.slice(0, 4).map((comp: any) => {
+                                const toolA = comp.tool_a || { name: (comp.tool_a_slug || '').replace(/-/g, ' '), logo: null };
+                                const toolB = comp.tool_b || { name: (comp.tool_b_slug || '').replace(/-/g, ' '), logo: null };
+                                return (
+                                    <a
+                                        key={comp.slug}
+                                        href={`/compare/${comp.slug}`}
+                                        className="group p-4 rounded-2xl bg-surface-card border border-border-subtle hover:border-blue-500/30 hover:bg-blue-500/5 transition-all no-underline"
+                                    >
+                                        <div className="flex items-center -space-x-2 mb-3">
+                                            <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle z-10 overflow-hidden flex-shrink-0">
+                                                {toolA.logo
+                                                    ? <Image src={toolA.logo} alt={toolA.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={toolA.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    : <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-news-muted">{toolA.name[0]}</span>
+                                                }
+                                            </div>
+                                            <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle overflow-hidden flex-shrink-0">
+                                                {toolB.logo
+                                                    ? <Image src={toolB.logo} alt={toolB.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={toolB.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    : <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-news-muted">{toolB.name[0]}</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <p className="text-xs font-black text-white group-hover:text-blue-400 transition-colors leading-snug">
+                                            {toolA.name} vs {toolB.name}
+                                        </p>
+                                        <p className="text-[10px] text-news-muted mt-1.5 flex items-center gap-1 group-hover:text-white transition-colors">
+                                            Compare <ArrowRight size={9} className="group-hover:translate-x-0.5 transition-transform" />
+                                        </p>
+                                    </a>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
+
                 {/* Compared Tools — large cards (Change 5) */}
                 {tools.length > 0 && (
                     <section className="mt-10 border-t border-border-divider pt-10 mb-12">
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-news-accent mb-1">EXPLORE TOOLS</p>
                         <h2 className="text-xl md:text-2xl font-black tracking-tight text-white mb-5">Compared Tools</h2>
-                        <div className="grid md:grid-cols-3 gap-5">
+                        <div className={`grid gap-5 ${tools.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
                             {tools.map(tool => (
                                 <button key={tool.slug} onClick={() => onToolClick(tool.slug)}
                                     className="text-left bg-surface-card border border-border-subtle hover:border-news-accent/50 rounded-2xl p-5 transition-all group flex flex-col">
