@@ -22,6 +22,8 @@ export default async function seedDatabase() {
                 ...a,
                 content: Array.isArray(a.content) ? a.content : [a.content],
                 slug: a.slug || generateSlug(a.title as string),
+                // Normalize 'use-case' → 'use_case' to match the enum
+                ...(a.article_type === 'use-case' ? { article_type: 'use_case' } : {}),
             }));
             await Article.insertMany(formattedSeed);
             console.log('Article seeding complete.');
