@@ -311,7 +311,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
 
             {/* ── SECTION 2: Trending AI Tools ──────────────────────────────── */}
             {tools.length > 0 && (
-                <section className="py-10 md:py-20 bg-surface-alt border-y border-border-divider">
+                <section className="py-10 md:py-20 bg-surface-base">
                     <div className="container mx-auto px-4 md:px-8">
                         <SectionHeader
                             label="Discovery"
