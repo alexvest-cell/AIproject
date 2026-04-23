@@ -1310,11 +1310,13 @@ const ComparisonMulti: React.FC<{
                                             const has = (gen.use_cases[t.slug] || []).includes(uc);
                                             return (
                                                 <div key={t.slug} className="flex items-center gap-1.5">
-                                                    <ToolLogo tool={t} size={4} />
+                                                    <div className={`rounded-lg ring-2 ${has ? 'ring-emerald-500/60' : 'ring-red-500/50'}`}>
+                                                        <ToolLogo tool={t} size={4} />
+                                                    </div>
                                                     <span className="text-[11px] text-news-muted">{t.name}</span>
                                                     {has
                                                         ? <Check size={11} className="text-news-accent" />
-                                                        : <X size={11} className="text-news-muted/40" />}
+                                                        : <X size={11} className="text-red-400" />}
                                                 </div>
                                             );
                                         })}
