@@ -29,6 +29,12 @@ function revalidateToolPages(tool: any) {
     }
 }
 
+// Card-level projection — opt in via ?fields=light. Matches the fields used
+// by callers that only render tool cards / counts (Hero, Navigation). Includes
+// capability flags and supported_platforms so card badges and capability
+// filters keep working.
+const LIGHT_PROJECTION = 'name slug logo category_primary pricing_model starting_price rating_score short_description use_case_tags workflow_tags image_generation multimodal memory_persistence computer_use api_available open_source browser_extension competitors supported_platforms last_updated';
+
 export async function GET(request: Request) {
     try {
         await connectDB();
@@ -40,6 +46,7 @@ export async function GET(request: Request) {
         const search = searchParams.get('search');
         const sort = searchParams.get('sort');
         const limit = searchParams.get('limit');
+        const fields = searchParams.get('fields');
 
         const query: Record<string, unknown> = {};
         if (status) query.status = status;
@@ -58,6 +65,7 @@ export async function GET(request: Request) {
         const limitNum = limit ? Math.min(parseInt(limit), 100) : 0;
         const toolsQuery = Tool.find(query).sort(sortOrder as Record<string, 1 | -1>);
         if (limitNum > 0) toolsQuery.limit(limitNum);
+        if (fields === 'light') toolsQuery.select(LIGHT_PROJECTION);
         const tools = await toolsQuery.lean();
         return NextResponse.json(tools);
     } catch (error) {

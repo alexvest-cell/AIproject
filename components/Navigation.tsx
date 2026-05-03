@@ -346,7 +346,7 @@ const Navigation: React.FC<NavigationProps> = ({
   // Dynamic AI tools menu data
   const [navTools, setNavTools] = useState<any[]>([]);
   useEffect(() => {
-    fetch('/api/tools').then(r => r.json()).then(d => setNavTools(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch('/api/tools?fields=light').then(r => r.json()).then(d => setNavTools(Array.isArray(d) ? d : [])).catch(() => {});
   }, []);
 
   const aiToolsColumns = React.useMemo((): MegaMenuColumn[] => {

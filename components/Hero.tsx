@@ -36,7 +36,7 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
             .catch(() => {});
 
         Promise.all([
-            fetch('/api/tools').then(r => r.ok ? r.json() : []),
+            fetch('/api/tools?fields=light').then(r => r.ok ? r.json() : []),
             fetch('/api/comparisons').then(r => r.ok ? r.json() : []),
             fetch('/api/articles').then(r => r.ok ? r.json() : []),
         ]).then(([tools, comparisons, articles]) => {
