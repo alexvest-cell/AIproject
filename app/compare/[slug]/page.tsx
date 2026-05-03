@@ -8,7 +8,7 @@ import { jsonLdScript } from '@/lib/jsonld';
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ use_case?: string }> };
 
-export const revalidate = 3600;
+export const revalidate = 7200;
 export const dynamicParams = true;
 
 export async function generateStaticParams() {

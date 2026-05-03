@@ -6,12 +6,17 @@ import Article from '@/lib/models/Article';
 
 type Params = { params: Promise<{ slug: string }> };
 
+// Fields the alternatives page renders or that downstream queries depend on.
+// See components/AlternativesPage.tsx (render), isDiscontinued (full_description),
+// and the three-tier query (competitors / category_primary / use_case_tags).
+const ALT_PROJECTION = 'name slug logo short_description full_description pricing_model ai_enabled key_features affiliate_url rating_score category_primary use_case_tags competitors';
+
 export async function GET(request: Request, { params }: Params) {
     try {
         await connectDB();
         const { slug } = await params;
 
-        const tool = await Tool.findOne({ slug }).lean() as Record<string, unknown> | null;
+        const tool = await Tool.findOne({ slug }).select(ALT_PROJECTION).lean() as Record<string, unknown> | null;
         if (!tool) return NextResponse.json({ error: 'Tool not found' }, { status: 404 });
 
         const MAX = 12;
@@ -23,7 +28,7 @@ export async function GET(request: Request, { params }: Params) {
             explicitCompetitors = await Tool.find({
                 slug: { $in: competitorSlugs },
                 status: 'Active',
-            }).sort({ rating_score: -1 }).lean() as Record<string, unknown>[];
+            }).sort({ rating_score: -1 }).select(ALT_PROJECTION).lean() as Record<string, unknown>[];
         }
 
         const explicitSlugs = explicitCompetitors.map((t: any) => t.slug as string);
@@ -36,7 +41,7 @@ export async function GET(request: Request, { params }: Params) {
                 category_primary: tool.category_primary,
                 status: 'Active',
                 slug: { $ne: slug, $nin: explicitSlugs },
-            }).sort({ rating_score: -1 }).limit(remainingAfterExplicit).lean() as Record<string, unknown>[];
+            }).sort({ rating_score: -1 }).limit(remainingAfterExplicit).select(ALT_PROJECTION).lean() as Record<string, unknown>[];
         }
 
         // ── Step 3: Tertiary use-case fallback (only when total < 3) ────────────
@@ -49,7 +54,7 @@ export async function GET(request: Request, { params }: Params) {
                 use_case_tags: { $in: (tool.use_case_tags as string[]) || [] },
                 status: 'Active',
                 slug: { $ne: slug, $nin: usedSlugs },
-            }).sort({ rating_score: -1 }).limit(remainingAfterCategory).lean() as Record<string, unknown>[];
+            }).sort({ rating_score: -1 }).limit(remainingAfterCategory).select(ALT_PROJECTION).lean() as Record<string, unknown>[];
         }
 
         // ── Step 4: Combine with source indicator ────────────────────────────────

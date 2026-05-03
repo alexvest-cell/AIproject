@@ -53,6 +53,11 @@ function isDiscontinued(t: any): boolean {
     return d.includes('discontinued') || d.includes('shut down') || d.includes('no longer available');
 }
 
+// Mirror of ALT_PROJECTION in app/api/tools/[slug]/alternatives/route.ts —
+// keep these in sync. Covers all fields rendered by AlternativesPage plus the
+// fields downstream queries / isDiscontinued depend on.
+const ALT_PROJECTION = 'name slug logo short_description full_description pricing_model ai_enabled key_features affiliate_url rating_score category_primary use_case_tags competitors';
+
 async function fetchAlternatives(tool: any, slug: string): Promise<any[]> {
     const MAX = 12;
     const competitorSlugs = ((tool.competitors as string[]) || []).filter((s: string) => s !== slug);
@@ -63,7 +68,7 @@ async function fetchAlternatives(tool: any, slug: string): Promise<any[]> {
         explicitCompetitors = await Tool.find({
             slug: { $in: competitorSlugs },
             status: 'Active',
-        }).sort({ rating_score: -1 }).lean();
+        }).sort({ rating_score: -1 }).select(ALT_PROJECTION).lean();
     }
     const explicitSlugs = explicitCompetitors.map((t: any) => t.slug as string);
 
@@ -75,7 +80,7 @@ async function fetchAlternatives(tool: any, slug: string): Promise<any[]> {
             category_primary: tool.category_primary,
             status: 'Active',
             slug: { $ne: slug, $nin: explicitSlugs },
-        }).sort({ rating_score: -1 }).limit(remainingAfterExplicit).lean();
+        }).sort({ rating_score: -1 }).limit(remainingAfterExplicit).select(ALT_PROJECTION).lean();
     }
 
     // Step 3 — use-case tertiary fallback (only when total < 3)
@@ -87,7 +92,7 @@ async function fetchAlternatives(tool: any, slug: string): Promise<any[]> {
             use_case_tags: { $in: (tool.use_case_tags as string[]) || [] },
             status: 'Active',
             slug: { $ne: slug, $nin: usedSlugs },
-        }).sort({ rating_score: -1 }).limit(MAX - combined.length).lean();
+        }).sort({ rating_score: -1 }).limit(MAX - combined.length).select(ALT_PROJECTION).lean();
     }
 
     const raw = [
@@ -109,7 +114,7 @@ export default async function AlternativesPage({ params }: Props) {
     const { slug } = await params;
     await connectDB();
 
-    const tool = await Tool.findOne({ slug }).lean() as any;
+    const tool = await Tool.findOne({ slug }).select(ALT_PROJECTION).lean() as any;
     if (!tool) notFound();
 
     const [alternatives, comparisons, relatedArticles] = await Promise.all([
