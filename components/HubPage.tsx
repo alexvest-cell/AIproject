@@ -863,7 +863,7 @@ export const AIToolsHub: React.FC<{
                                     className="group flex items-center gap-3 px-4 py-3.5 bg-surface-card border border-border-subtle rounded-2xl hover:border-news-accent/40 hover:bg-surface-hover transition-all"
                                 >
                                     {tool.logo
-                                        ? <div className="relative w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} /></div>
+                                        ? <div className="relative w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized /></div>
                                         : <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-sm font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                                     }
                                     <div className="text-left min-w-0 flex-1">
@@ -893,7 +893,7 @@ export const AIToolsHub: React.FC<{
                                 className="group flex items-center gap-3 p-4 bg-surface-card border border-border-subtle rounded-xl hover:border-news-accent/30 hover:bg-surface-hover transition-all text-left"
                             >
                                 {tool.logo
-                                    ? <div className="relative w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} /></div>
+                                    ? <div className="relative w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized /></div>
                                     : <div className="w-9 h-9 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-base font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                                 }
                                 <div className="flex-1 min-w-0">
@@ -1056,7 +1056,7 @@ export const AIToolsHub: React.FC<{
                                     {/* Logo + Name */}
                                     <button onClick={() => onToolClick(tool.slug)} className="flex items-center gap-3 mb-3 text-left w-full">
                                         {tool.logo
-                                            ? <div className="relative w-10 h-10 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} /></div>
+                                            ? <div className="relative w-10 h-10 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0"><Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized /></div>
                                             : <div className="w-10 h-10 rounded-xl bg-surface-base border border-border-subtle flex items-center justify-center text-base font-black text-news-muted flex-shrink-0">{tool.name[0]}</div>
                                         }
                                         <div className="min-w-0 flex-1">
@@ -1429,7 +1429,7 @@ export const BestSoftwareHub: React.FC<{
                                                 style={{ marginLeft: ti > 0 ? '-6px' : 0 }}
                                             >
                                                 {tool.logo
-                                                    ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
                                                     : <Layers size={12} className="text-news-muted" />
                                                 }
                                             </div>
@@ -1511,7 +1511,7 @@ export const BestSoftwareHub: React.FC<{
                                                 <div className="flex items-center gap-1.5">
                                                     {topTool.logo && (
                                                         <div className="relative w-4 h-4 rounded bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
-                                                            <Image src={topTool.logo} alt={topTool.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={topTool.logo?.startsWith('https://res.cloudinary.com')} />
+                                                            <Image src={topTool.logo} alt={topTool.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized />
                                                         </div>
                                                     )}
                                                     <span className="text-[10px] font-bold text-news-text truncate">{topTool.name}</span>
@@ -1550,7 +1550,7 @@ export const BestSoftwareHub: React.FC<{
                                     <div className="flex flex-col items-center gap-1.5">
                                         <div className="relative w-12 h-12 rounded-2xl bg-white border border-border-subtle flex items-center justify-center flex-shrink-0">
                                             {tool.logo
-                                                ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                                ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized />
                                                 : <Layers size={18} className="text-news-muted" />
                                             }
                                         </div>
@@ -1834,7 +1834,7 @@ const PairCard: React.FC<{ pair: GenPair; onClick: () => void }> = ({ pair, onCl
                 <div className={`flex-1 flex flex-col items-center gap-2 px-2 pt-2 pb-2.5 rounded-xl transition-colors duration-200 ${aWins ? 'bg-news-accent/5' : ''}`}>
                     <div className="relative w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
                         {toolA.logo
-                            ? <Image src={toolA.logo} alt={toolA.name} fill style={{ objectFit: 'contain', padding: '4px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} unoptimized={toolA.logo?.startsWith('https://res.cloudinary.com')} />
+                            ? <Image src={toolA.logo} alt={toolA.name} fill style={{ objectFit: 'contain', padding: '4px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} unoptimized />
                             : <span className="text-sm font-black text-surface-base">{toolA.name[0]}</span>
                         }
                     </div>
@@ -1865,7 +1865,7 @@ const PairCard: React.FC<{ pair: GenPair; onClick: () => void }> = ({ pair, onCl
                 <div className={`flex-1 flex flex-col items-center gap-2 px-2 pt-2 pb-2.5 rounded-xl transition-colors duration-200 ${bWins ? 'bg-news-accent/5' : ''}`}>
                     <div className="relative w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0">
                         {toolB.logo
-                            ? <Image src={toolB.logo} alt={toolB.name} fill style={{ objectFit: 'contain', padding: '4px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} unoptimized={toolB.logo?.startsWith('https://res.cloudinary.com')} />
+                            ? <Image src={toolB.logo} alt={toolB.name} fill style={{ objectFit: 'contain', padding: '4px' }} onError={(e: React.SyntheticEvent<HTMLImageElement>) => { (e.currentTarget as HTMLElement).parentElement!.style.display = 'none'; }} unoptimized />
                             : <span className="text-sm font-black text-surface-base">{toolB.name[0]}</span>
                         }
                     </div>
@@ -2348,7 +2348,7 @@ const ReviewsHub: React.FC<{
                             >
                                 {tool.logo ? (
                                     <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle overflow-hidden flex-shrink-0">
-                                        <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                        <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized />
                                     </div>
                                 ) : (
                                     <div className="w-8 h-8 rounded-lg bg-surface-base border border-border-subtle flex items-center justify-center text-xs font-black text-news-muted flex-shrink-0">
@@ -2431,11 +2431,11 @@ const ReviewsHub: React.FC<{
                                             fill
                                             style={{ objectFit: 'cover' }}
                                             className="group-hover:scale-[1.03] transition-transform duration-500"
-                                            unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')}
+                                            unoptimized
                                         />
                                         {tool?.logo && (
                                             <div className="absolute top-2 left-2 w-9 h-9 rounded-xl bg-white border border-border-subtle shadow-elevation overflow-hidden">
-                                                <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                                <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
                                             </div>
                                         )}
                                     </button>
@@ -2447,7 +2447,7 @@ const ReviewsHub: React.FC<{
                                     <div className="flex items-center gap-2.5 mb-3">
                                         {!article.imageUrl && tool?.logo && (
                                             <div className="relative w-9 h-9 rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0">
-                                                <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                                <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0">
@@ -2487,7 +2487,7 @@ const ReviewsHub: React.FC<{
                                                             className="text-[10px] font-medium text-news-accent hover:text-white border border-border-subtle hover:border-news-accent/50 rounded-full px-2.5 py-1 bg-surface-base transition-colors flex items-center gap-1"
                                                         >
                                                             {otherTool?.logo && (
-                                                                <div className="relative w-3.5 h-3.5 rounded-sm bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><Image src={otherTool.logo} alt={otherTool.name} fill style={{ objectFit: 'contain' }} unoptimized={otherTool.logo?.startsWith('https://res.cloudinary.com')} /></div>
+                                                                <div className="relative w-3.5 h-3.5 rounded-sm bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><Image src={otherTool.logo} alt={otherTool.name} fill style={{ objectFit: 'contain' }} unoptimized /></div>
                                                             )}
                                                             {otherTool?.name || otherSlug}
                                                             <ArrowRight size={9} />
@@ -2627,7 +2627,7 @@ const UseCasesHubInner: React.FC<{
                             >
                                 {a.imageUrl && (
                                     <div className="relative w-full h-28 overflow-hidden">
-                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized={a.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized />
                                     </div>
                                 )}
                                 <div className="p-3">
@@ -2650,7 +2650,7 @@ const UseCasesHubInner: React.FC<{
                     >
                         {featuredWorkflow.imageUrl && (
                             <div className="relative lg:w-2/5 h-52 lg:h-auto overflow-hidden flex-shrink-0">
-                                <Image src={featuredWorkflow.imageUrl} alt={featuredWorkflow.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized={featuredWorkflow.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                                <Image src={featuredWorkflow.imageUrl} alt={featuredWorkflow.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized />
                             </div>
                         )}
                         <div className="p-6 flex flex-col justify-center flex-1">
@@ -2664,7 +2664,7 @@ const UseCasesHubInner: React.FC<{
                                         const t = toolMap[slug];
                                         return t ? (
                                             <div key={slug} className="flex items-center gap-1 bg-surface-base border border-border-subtle rounded-lg px-2 py-1">
-                                                {t.logo && <div className="relative w-4 h-4 rounded bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} /></div>}
+                                                {t.logo && <div className="relative w-4 h-4 rounded bg-white overflow-hidden flex-shrink-0 flex items-center justify-center"><Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized /></div>}
                                                 <span className="text-[9px] font-bold text-news-muted">{t.name}</span>
                                             </div>
                                         ) : (
@@ -2738,7 +2738,7 @@ const UseCasesHubInner: React.FC<{
                             >
                                 {a.imageUrl && (
                                     <div className="relative w-full h-40 overflow-hidden flex-shrink-0">
-                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized={a.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized />
                                     </div>
                                 )}
                                 <div className="p-4 flex flex-col flex-1">
@@ -2751,7 +2751,7 @@ const UseCasesHubInner: React.FC<{
                                                 const t = toolMap[slug];
                                                 return t?.logo ? (
                                                     <div key={slug} title={t.name} className="relative w-5 h-5 rounded bg-white border border-border-subtle overflow-hidden flex-shrink-0">
-                                                        <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
+                                                        <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized />
                                                     </div>
                                                 ) : (
                                                     <span key={slug} className="text-[8px] px-1.5 py-0.5 bg-surface-base border border-border-subtle rounded text-news-muted">{slug}</span>
@@ -2931,7 +2931,7 @@ const GuidesHubInner: React.FC<{
                             >
                                 {a.imageUrl && (
                                     <div className="relative w-full h-28 overflow-hidden">
-                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized={a.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized />
                                     </div>
                                 )}
                                 <div className="p-3">
@@ -3002,7 +3002,7 @@ const GuidesHubInner: React.FC<{
                             >
                                 {a.imageUrl && (
                                     <div className="relative w-full h-40 overflow-hidden flex-shrink-0">
-                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized={a.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                                        <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized />
                                     </div>
                                 )}
                                 <div className="p-4 flex flex-col flex-1">
@@ -3016,7 +3016,7 @@ const GuidesHubInner: React.FC<{
                                                 const t = toolMap[slug];
                                                 return t?.logo ? (
                                                     <div key={slug} title={t.name} className="relative w-5 h-5 rounded bg-white border border-border-subtle overflow-hidden flex-shrink-0">
-                                                        <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
+                                                        <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized />
                                                     </div>
                                                 ) : (
                                                     <span key={slug} className="text-[8px] px-1.5 py-0.5 bg-surface-base border border-border-subtle rounded text-news-muted">{slug}</span>
@@ -3097,7 +3097,7 @@ const NewsHubInner: React.FC<{
                         onClick={() => onArticleClick(featured)}
                         className="group w-full relative aspect-[21/9] rounded-3xl overflow-hidden border border-border-divider shadow-elevation-hover hover:border-news-accent transition-all"
                     >
-                        <Image src={featured.imageUrl} alt={featured.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-101 transition-transform duration-700" unoptimized={featured.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                        <Image src={featured.imageUrl} alt={featured.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-101 transition-transform duration-700" unoptimized />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                         <div className="absolute bottom-0 left-0 p-8 md:p-12 text-left max-w-3xl">
                             <span className="inline-block px-3 py-1 rounded-full bg-news-accent text-black text-[10px] font-black uppercase tracking-widest mb-4">Must Read</span>
@@ -3138,7 +3138,7 @@ const NewsHubInner: React.FC<{
                                 className="group w-full text-left flex gap-6 p-4 rounded-2xl bg-surface-card border border-border-subtle hover:bg-surface-hover hover:border-news-accent transition-all shadow-elevation"
                             >
                                 <div className="relative w-48 h-32 flex-shrink-0 rounded-xl overflow-hidden border border-border-subtle">
-                                    <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all" unoptimized={a.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                                    <Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} className="opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all" unoptimized />
                                 </div>
                                 <div className="flex-grow py-1">
                                     <div className="flex items-center gap-3 mb-2 text-[10px] font-bold uppercase tracking-widest">
@@ -3235,7 +3235,7 @@ const ArticleGridHub: React.FC<{
                     <button key={article.id} onClick={() => onArticleClick(article)} className="group text-left bg-surface-card border border-border-subtle shadow-elevation hover:shadow-elevation-hover hover:bg-surface-hover hover:-translate-y-0.5 rounded-2xl p-4 transition-all flex flex-col">
                         {article.imageUrl && (
                             <div className="w-full aspect-video bg-surface-base rounded-xl overflow-hidden mb-4 border border-border-subtle relative before:absolute before:inset-0 before:bg-black/0 group-hover:before:bg-black/10 transition-all z-0">
-                                <Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')} />
+                                <Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-[1.03] transition-transform duration-500" unoptimized />
                             </div>
                         )}
                         <div className="flex items-center gap-2 mb-2">

@@ -120,7 +120,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
           <div className="flex items-center gap-3 mb-4">
             {tool.logo && (
               <div className="relative w-12 h-12 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
-                <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized />
               </div>
             )}
             <div>
@@ -180,7 +180,7 @@ const AlternativesPage: React.FC<AlternativesPageProps> = ({
                       </div>
                       {alt.logo && (
                         <div className="relative w-14 h-14 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
-                          <Image src={alt.logo} alt={alt.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={alt.logo?.startsWith('https://res.cloudinary.com')} />
+                          <Image src={alt.logo} alt={alt.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized />
                         </div>
                       )}
                       <div className="flex-grow min-w-0 pt-1">

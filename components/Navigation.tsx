@@ -107,12 +107,12 @@ const MEGA_MENUS: Record<string, MegaMenuColumn[]> = {
     {
       heading: 'Featured Tools',
       items: [
-        { label: 'ChatGPT',     href: '/tools/chatgpt', logo: 'https://cdn.worldvectorlogo.com/logos/chatgpt-icon.svg' },
+        { label: 'ChatGPT',     href: '/tools/chatgpt', logo: 'https://res.cloudinary.com/drwpqcvea/image/upload/v1776070448/toolcurrent/assets/uqa530t0qdy0wolnl98q.webp' },
         { label: 'Notion',      href: '/tools/notion', logo: 'https://cdn.worldvectorlogo.com/logos/notion-2.svg' },
-        { label: 'Zapier',      href: '/tools/zapier', logo: 'https://cdn.worldvectorlogo.com/logos/zapier-2.svg' },
-        { label: 'Claude',      href: '/tools/claude', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Claude_AI_logo.svg/1024px-Claude_AI_logo.svg.png' },
-        { label: 'Midjourney',  href: '/tools/midjourney', logo: 'https://cdn.worldvectorlogo.com/logos/midjourney-logo.svg' },
-        { label: 'Grammarly',   href: '/tools/grammarly', logo: 'https://cdn.worldvectorlogo.com/logos/grammarly-1.svg' },
+        { label: 'Zapier',      href: '/tools/zapier', logo: 'https://res.cloudinary.com/drwpqcvea/image/upload/v1776069775/toolcurrent/assets/x7runufpoon6qdlctw0d.jpg' },
+        { label: 'Claude',      href: '/tools/claude', logo: 'https://res.cloudinary.com/drwpqcvea/image/upload/v1776070582/toolcurrent/assets/z1yby966jsqnr34u6vcf.svg' },
+        { label: 'Midjourney',  href: '/tools/midjourney', logo: 'https://res.cloudinary.com/drwpqcvea/image/upload/v1775766064/toolcurrent/assets/tnwuitblezh7gvpwxmja.png' },
+        { label: 'Grammarly',   href: '/tools/grammarly', logo: 'https://res.cloudinary.com/drwpqcvea/image/upload/v1776073466/toolcurrent/assets/bwslyk8cjokrn3hdr9sb.png' },
         { label: 'Linear',      href: '/tools/linear', logo: 'https://cdn.worldvectorlogo.com/logos/linear-1.svg' },
       ],
     },
@@ -239,7 +239,7 @@ const MegaMenuPanel: React.FC<MegaMenuPanelProps> = ({ slug, columns, anchorRect
                     {/* Icon or Logo */}
                     {item.logo ? (
                       <div className="relative w-7 h-7 rounded-lg bg-white border border-border-subtle flex-shrink-0 group-hover/item:border-news-accent/30 transition-colors shadow-inner overflow-hidden">
-                        <Image src={item.logo} alt={item.label} fill style={{ objectFit: 'contain', padding: '4px' }} className="grayscale group-hover/item:grayscale-0 transition-all opacity-80 group-hover/item:opacity-100" unoptimized={item.logo?.startsWith('https://res.cloudinary.com')} />
+                        <Image src={item.logo} alt={item.label} fill style={{ objectFit: 'contain', padding: '4px' }} className="grayscale group-hover/item:grayscale-0 transition-all opacity-80 group-hover/item:opacity-100" unoptimized />
                       </div>
                     ) : item.icon ? (
                       <div className="w-7 h-7 rounded-lg bg-surface-base/50 border border-border-subtle flex items-center justify-center flex-shrink-0 group-hover/item:border-news-accent/30 transition-colors">
@@ -870,7 +870,7 @@ const Navigation: React.FC<NavigationProps> = ({
                                       <div className="flex items-center gap-3 min-w-0">
                                         {item.logo ? (
                                           <div className="relative w-6 h-6 rounded bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
-                                            <Image src={item.logo} alt={item.label} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized={item.logo?.startsWith('https://res.cloudinary.com')} />
+                                            <Image src={item.logo} alt={item.label} fill style={{ objectFit: 'contain', padding: '2px' }} unoptimized />
                                           </div>
                                         ) : item.icon ? (
                                           <item.icon size={14} className="text-gray-500 group-hover:text-news-accent flex-shrink-0" />

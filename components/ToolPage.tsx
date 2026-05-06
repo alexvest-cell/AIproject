@@ -351,7 +351,7 @@ const ToolPage: React.FC<ToolPageProps> = ({ slug, onBack, onArticleClick, onCom
                 <div className="flex flex-col md:flex-row gap-6 items-start mb-10 pb-10 border-b border-border-divider">
                     {tool.logo && (
                         <div className="relative w-20 h-20 rounded-2xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden shadow-inner">
-                            <Image src={tool.logo} alt={`${tool.name} logo`} fill style={{ objectFit: 'contain', padding: '8px' }} priority unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+                            <Image src={tool.logo} alt={`${tool.name} logo`} fill style={{ objectFit: 'contain', padding: '8px' }} priority unoptimized />
                         </div>
                     )}
                     <div className="flex-grow">

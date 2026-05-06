@@ -192,7 +192,7 @@ const Sec: React.FC<{ label: string; title: string; children: React.ReactNode; c
 const ToolLogo: React.FC<{ tool: Tool; size?: number }> = ({ tool, size = 8 }) => (
     tool.logo
         ? <div className={`relative w-${size} h-${size} rounded-xl bg-white border border-border-subtle overflow-hidden flex-shrink-0`}>
-              <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: size <= 5 ? '2px' : '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+              <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: size <= 5 ? '2px' : '6px' }} unoptimized />
           </div>
         : null
 );
@@ -1631,13 +1631,13 @@ const ComparisonPage: React.FC<ComparisonPageProps> = ({ slug, useCase, onBack, 
                                         <div className="flex items-center -space-x-2 mb-3">
                                             <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle z-10 overflow-hidden flex-shrink-0">
                                                 {toolA.logo
-                                                    ? <Image src={toolA.logo} alt={toolA.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={toolA.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    ? <Image src={toolA.logo} alt={toolA.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
                                                     : <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-news-muted">{toolA.name[0]}</span>
                                                 }
                                             </div>
                                             <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle overflow-hidden flex-shrink-0">
                                                 {toolB.logo
-                                                    ? <Image src={toolB.logo} alt={toolB.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={toolB.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    ? <Image src={toolB.logo} alt={toolB.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
                                                     : <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-news-muted">{toolB.name[0]}</span>
                                                 }
                                             </div>

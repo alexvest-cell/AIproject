@@ -30,7 +30,7 @@ const ToolCard: React.FC<{ tool: Tool; onClick: () => void; featured?: boolean }
     <div className="flex items-start gap-3">
       <div className="relative w-11 h-11 rounded-xl bg-surface-alt border border-border-subtle flex-shrink-0 flex items-center justify-center overflow-hidden">
         {tool.logo
-          ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} />
+          ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized />
           : <Zap size={18} className="text-news-accent" />
         }
       </div>
@@ -64,7 +64,7 @@ const ArticleCard: React.FC<{ article: Article; onClick: () => void; variant?: '
   <button onClick={onClick} className="group text-left bg-surface-card border border-border-subtle rounded-2xl overflow-hidden hover:-translate-y-0.5 hover:border-border-divider transition-all">
     {article.imageUrl && (
       <div className="relative h-28 overflow-hidden">
-        <Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')} />
+        <Image src={article.imageUrl} alt={article.title} fill style={{ objectFit: 'cover' }} className="group-hover:scale-105 transition-transform duration-500" unoptimized />
       </div>
     )}
     <div className="p-4">

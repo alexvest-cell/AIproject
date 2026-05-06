@@ -18,7 +18,7 @@ export const RelatedContent: React.FC<RelatedContentProps> = ({ type, title, ite
         <a key={tool.id} href={`/tools/${tool.slug}`} className="flex-shrink-0 w-64 snap-start p-4 bg-surface-card hover:bg-surface-hover border border-border-subtle rounded-xl transition-all group hover:-translate-y-0.5 flex flex-col justify-between">
             <div className="flex items-center gap-4 mb-3">
                 <div className="relative w-12 h-12 rounded-lg bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
-                    {tool.logo ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={tool.logo?.startsWith('https://res.cloudinary.com')} /> : <Zap size={20} className="text-news-accent" />}
+                    {tool.logo ? <Image src={tool.logo} alt={tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized /> : <Zap size={20} className="text-news-accent" />}
                 </div>
                 <div>
                     <h3 className="text-sm font-bold text-white group-hover:text-news-accent truncate">{tool.name}</h3>
@@ -43,11 +43,11 @@ export const RelatedContent: React.FC<RelatedContentProps> = ({ type, title, ite
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center">
                             <div className="relative w-10 h-10 rounded-lg bg-white border border-border-subtle z-10 overflow-hidden">
-                                {toolA.logo ? <Image src={toolA.logo} alt={toolA.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={toolA.logo?.startsWith('https://res.cloudinary.com')} /> : <LayoutGrid size={16} className="text-news-muted" />}
+                                {toolA.logo ? <Image src={toolA.logo} alt={toolA.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized /> : <LayoutGrid size={16} className="text-news-muted" />}
                             </div>
                             <div className="w-8 h-8 rounded-full bg-surface-hover border border-border-subtle flex items-center justify-center z-20 -mx-2 text-[9px] font-black text-white italic">VS</div>
                             <div className="relative w-10 h-10 rounded-lg bg-white border border-border-subtle z-10 overflow-hidden">
-                                {toolB.logo ? <Image src={toolB.logo} alt={toolB.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={toolB.logo?.startsWith('https://res.cloudinary.com')} /> : <LayoutGrid size={16} className="text-news-muted" />}
+                                {toolB.logo ? <Image src={toolB.logo} alt={toolB.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized /> : <LayoutGrid size={16} className="text-news-muted" />}
                             </div>
                         </div>
                     </div>

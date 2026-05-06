@@ -17,14 +17,7 @@ const nextConfig: NextConfig = {
         ];
     },
     images: {
-        remotePatterns: [
-            { protocol: 'https', hostname: 'res.cloudinary.com' },
-            { protocol: 'https', hostname: 'logo.clearbit.com' },
-            { protocol: 'https', hostname: 'cdn.worldvectorlogo.com' },
-            { protocol: 'https', hostname: '*.githubusercontent.com' },
-            { protocol: 'https', hostname: '*.googleusercontent.com' },
-            { protocol: 'https', hostname: '**' },
-        ],
+        unoptimized: true,
     },
     experimental: {
         serverActions: {

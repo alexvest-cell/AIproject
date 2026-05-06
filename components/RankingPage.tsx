@@ -338,7 +338,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                 <div className="relative flex-shrink-0">
                                     <div className="relative w-16 h-16 rounded-2xl bg-white border border-border-subtle overflow-hidden">
                                         {topPick.tool.logo
-                                            ? <Image src={topPick.tool.logo} alt={topPick.tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={topPick.tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                            ? <Image src={topPick.tool.logo} alt={topPick.tool.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized />
                                             : <Layers size={24} className="text-news-muted" />
                                         }
                                     </div>
@@ -434,7 +434,7 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                             </div>
                                             <div className="relative w-10 h-10 rounded-xl bg-white border border-border-subtle flex-shrink-0 overflow-hidden">
                                                 {ranked.tool.logo
-                                                    ? <Image src={ranked.tool.logo} alt={ranked.tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={ranked.tool.logo?.startsWith('https://res.cloudinary.com')} />
+                                                    ? <Image src={ranked.tool.logo} alt={ranked.tool.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized />
                                                     : <Layers size={14} className="text-news-muted" />
                                                 }
                                             </div>
@@ -569,13 +569,13 @@ const RankingPage: React.FC<RankingPageProps> = ({
                                             <div className="flex items-center -space-x-2">
                                                 <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle flex items-center justify-center z-10">
                                                     {a.logo
-                                                        ? <Image src={a.logo} alt={a.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={a.logo?.startsWith('https://res.cloudinary.com')} />
+                                                        ? <Image src={a.logo} alt={a.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
                                                         : <Layers size={11} className="text-news-muted" />
                                                     }
                                                 </div>
                                                 <div className="relative w-8 h-8 rounded-lg bg-white border border-border-subtle flex items-center justify-center">
                                                     {b.logo
-                                                        ? <Image src={b.logo} alt={b.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized={b.logo?.startsWith('https://res.cloudinary.com')} />
+                                                        ? <Image src={b.logo} alt={b.name} fill style={{ objectFit: 'contain', padding: '4px' }} unoptimized />
                                                         : <Layers size={11} className="text-news-muted" />
                                                     }
                                                 </div>

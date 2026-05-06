@@ -88,7 +88,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                             fill
                             style={{ objectFit: 'cover' }}
                             className="opacity-50 blur-[2px] scale-105 transition-transform duration-[20s] ease-in-out group-hover/hero:scale-110"
-                            unoptimized={headerImage?.startsWith('https://res.cloudinary.com')}
+                            unoptimized
                         />
                         {/* Gradient Overlay for text readability */}
                         <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black via-black/70 to-black/40"></div>
@@ -121,7 +121,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                                     fill
                                     style={{ objectFit: 'cover' }}
                                     className="transition-transform duration-700 group-hover:scale-105"
-                                    unoptimized={heroArticle.imageUrl?.startsWith('https://res.cloudinary.com')}
+                                    unoptimized
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90"></div>
 
@@ -221,7 +221,7 @@ const CategoryFeed: React.FC<CategoryFeedProps> = ({ category, articles, onArtic
                                                 fill
                                                 style={{ objectFit: 'cover' }}
                                                 className="transition-transform duration-500 group-hover:scale-105 opacity-90 group-hover:opacity-100"
-                                                unoptimized={article.imageUrl?.startsWith('https://res.cloudinary.com')}
+                                                unoptimized
                                             />
                                             {index === 0 && (
                                                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black via-black/50 to-transparent opacity-80"></div>

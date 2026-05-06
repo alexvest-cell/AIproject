@@ -190,7 +190,7 @@ const StackPage: React.FC<StackPageProps> = ({
       <div className="relative overflow-hidden bg-surface-card border-b border-border-divider">
         {stack.hero_image && (
           <div className="absolute inset-0 opacity-20 hidden md:block">
-            <Image src={stack.hero_image} alt="" fill style={{ objectFit: 'cover' }} unoptimized={stack.hero_image?.startsWith('https://res.cloudinary.com')} />
+            <Image src={stack.hero_image} alt="" fill style={{ objectFit: 'cover' }} unoptimized />
             <div className="absolute inset-0 bg-gradient-to-r from-surface-card via-surface-card/80 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-surface-card via-transparent to-transparent" />
           </div>
@@ -243,7 +243,7 @@ const StackPage: React.FC<StackPageProps> = ({
                   onClick={() => onToolClick(t.slug)}
                   className="flex items-center gap-2 bg-surface-base hover:bg-surface-hover border border-border-subtle px-3 py-1.5 rounded-lg transition-colors group"
                 >
-                  {t.logo && <Image src={t.logo} alt="" width={16} height={16} className="object-contain" unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />}
+                  {t.logo && <Image src={t.logo} alt="" width={16} height={16} className="object-contain" unoptimized />}
                   <span className="text-xs font-bold text-white group-hover:text-news-accent">{t.name}</span>
                 </button>
                 {idx < tools.length - 1 && <ChevronRight size={12} className="text-border-subtle flex-shrink-0" />}
@@ -312,7 +312,7 @@ const StackPage: React.FC<StackPageProps> = ({
                       >
                         <div className="relative w-10 h-10 rounded-xl bg-white border border-border-subtle flex items-center justify-center p-1.5 flex-shrink-0">
                           {t.logo
-                            ? <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
+                            ? <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '6px' }} unoptimized />
                             : <Layers size={18} className="text-news-muted" />
                           }
                         </div>
@@ -356,7 +356,7 @@ const StackPage: React.FC<StackPageProps> = ({
                           <div className="flex items-center gap-1.5">
                             {stepTools.map(t => (
                               <div key={t.slug} className="flex items-center gap-1 px-2 py-0.5 rounded bg-surface-alt border border-border-subtle">
-                                {t.logo && <Image src={t.logo} alt="" width={12} height={12} className="object-contain" unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />}
+                                {t.logo && <Image src={t.logo} alt="" width={12} height={12} className="object-contain" unoptimized />}
                                 <span className="text-[10px] font-bold text-news-text">{t.name}</span>
                               </div>
                             ))}
@@ -411,7 +411,7 @@ const StackPage: React.FC<StackPageProps> = ({
                 return (
                   <div key={t.slug} className="flex items-center justify-between px-4 py-3 rounded-xl bg-surface-card border border-border-subtle">
                     <div className="flex items-center gap-3">
-                      {t.logo && <Image src={t.logo} alt="" width={20} height={20} className="object-contain" unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />}
+                      {t.logo && <Image src={t.logo} alt="" width={20} height={20} className="object-contain" unoptimized />}
                       <span className="text-sm font-bold text-white">{t.name}</span>
                     </div>
                     <div className="flex items-center gap-3">
@@ -472,7 +472,7 @@ const StackPage: React.FC<StackPageProps> = ({
                     {/* Logo */}
                     <div className="relative w-14 h-14 rounded-xl bg-white border border-border-subtle flex-shrink-0 flex items-center justify-center p-2">
                       {t.logo
-                        ? <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized={t.logo?.startsWith('https://res.cloudinary.com')} />
+                        ? <Image src={t.logo} alt={t.name} fill style={{ objectFit: 'contain', padding: '8px' }} unoptimized />
                         : <Layers size={20} className="text-news-muted" />
                       }
                     </div>
@@ -531,7 +531,7 @@ const StackPage: React.FC<StackPageProps> = ({
                             onClick={() => onToolClick(alt.slug)}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-alt border border-border-subtle hover:border-news-accent/40 text-xs font-bold text-news-muted hover:text-white transition-colors"
                           >
-                            {alt.logo && <Image src={alt.logo} alt="" width={14} height={14} className="object-contain" unoptimized={alt.logo?.startsWith('https://res.cloudinary.com')} />}
+                            {alt.logo && <Image src={alt.logo} alt="" width={14} height={14} className="object-contain" unoptimized />}
                             {alt.name}
                           </button>
                         ))}
@@ -582,7 +582,7 @@ const StackPage: React.FC<StackPageProps> = ({
                 >
                   {s.hero_image && (
                     <div className="relative w-full h-28 overflow-hidden">
-                      <Image src={s.hero_image} alt={s.name} fill style={{ objectFit: 'cover' }} unoptimized={s.hero_image?.startsWith('https://res.cloudinary.com')} />
+                      <Image src={s.hero_image} alt={s.name} fill style={{ objectFit: 'cover' }} unoptimized />
                     </div>
                   )}
                   <div className="p-4">
@@ -640,7 +640,7 @@ const StackPage: React.FC<StackPageProps> = ({
                   onClick={() => onArticleClick(a)}
                   className="group text-left bg-surface-card border border-border-subtle hover:border-news-accent/40 rounded-xl overflow-hidden transition-all hover:-translate-y-0.5"
                 >
-                  {a.imageUrl && <div className="relative w-full h-28 overflow-hidden"><Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} unoptimized={a.imageUrl?.startsWith('https://res.cloudinary.com')} /></div>}
+                  {a.imageUrl && <div className="relative w-full h-28 overflow-hidden"><Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} unoptimized /></div>}
                   <div className="p-4">
                     <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-[9px] font-bold uppercase tracking-widest mb-2">
                       <BarChart2 size={9} /> Ranking
@@ -664,7 +664,7 @@ const StackPage: React.FC<StackPageProps> = ({
                   onClick={() => onArticleClick(a)}
                   className="group text-left bg-surface-card border border-border-subtle hover:border-purple-400/40 rounded-xl overflow-hidden transition-all hover:-translate-y-0.5"
                 >
-                  {a.imageUrl && <div className="relative w-full h-28 overflow-hidden"><Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} unoptimized={a.imageUrl?.startsWith('https://res.cloudinary.com')} /></div>}
+                  {a.imageUrl && <div className="relative w-full h-28 overflow-hidden"><Image src={a.imageUrl} alt={a.title} fill style={{ objectFit: 'cover' }} unoptimized /></div>}
                   <div className="p-4">
                     <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold uppercase tracking-widest mb-2">
                       <BookOpen size={9} /> Guide

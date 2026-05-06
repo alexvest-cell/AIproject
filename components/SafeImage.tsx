@@ -56,7 +56,7 @@ export function SafeImage({
             priority={priority}
             style={style}
             onError={() => setError(true)}
-            unoptimized={src.startsWith('https://res.cloudinary.com')}
+            unoptimized
         />
     );
 }
