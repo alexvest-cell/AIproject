@@ -14,6 +14,14 @@ export const CATEGORY_SLUG_TO_NAME: Record<string, string> = {
     'data-analysis':       'Data Analysis',
     'research':            'Research',
     'seo-tools':           'SEO Tools',
+    'presentations':       'Presentations',
+    'social-media':        'Social Media',
+    'email':               'Email',
+    'legal':               'Legal',
+    'finance':             'Finance',
+    'hr-recruiting':       'HR & Recruiting',
+    'education':           'Education',
+    'healthcare':          'Healthcare',
     'other':               'Other',
 };
 

@@ -131,7 +131,7 @@ export interface Tool {
   category_tags: string[];
   secondary_tags?: string[];
   use_case_tags: string[];
-  category_primary?: 'AI Chatbots' | 'AI Writing' | 'AI Image Generation' | 'AI Video' | 'AI Audio' | 'Productivity' | 'Automation' | 'Design' | 'Development' | 'Marketing' | 'Sales & CRM' | 'Customer Support' | 'Data Analysis' | 'SEO Tools' | 'Other';
+  category_primary?: 'AI Chatbots' | 'AI Writing' | 'AI Image Generation' | 'AI Video' | 'AI Audio' | 'Productivity' | 'Automation' | 'Design' | 'Development' | 'Marketing' | 'Sales & CRM' | 'Customer Support' | 'Data Analysis' | 'Research' | 'SEO Tools' | 'Presentations' | 'Social Media' | 'Email' | 'Legal' | 'Finance' | 'HR & Recruiting' | 'Education' | 'Healthcare' | 'Other';
   pricing_model: 'Free' | 'Freemium' | 'Paid' | 'Enterprise' | 'Trial' | 'Open Source';
   data_confidence?: 'verified' | 'inferred' | 'ai_generated';
   related_tools?: string[];

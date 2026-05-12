@@ -17,7 +17,9 @@ const toolSchema = new mongoose.Schema({
         type: String,
         enum: ['AI Chatbots', 'AI Writing', 'AI Image Generation', 'AI Video', 'AI Audio',
                'Productivity', 'Automation', 'Design', 'Development', 'Marketing',
-               'Sales & CRM', 'Customer Support', 'Data Analysis', 'Research', 'SEO Tools', 'Other'],
+               'Sales & CRM', 'Customer Support', 'Data Analysis', 'Research', 'SEO Tools',
+               'Presentations', 'Social Media', 'Email', 'Legal', 'Finance',
+               'HR & Recruiting', 'Education', 'Healthcare', 'Other'],
     },
 
     pricing_model: {
