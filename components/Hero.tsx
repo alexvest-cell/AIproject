@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ChevronRight, Scale, List, GraduationCap, Rocket, Terminal, Megaphone, Palette, Building2, Building, Layers, Microscope } from 'lucide-react';
+import { ArrowRight, ChevronRight, Sparkles, GraduationCap, Rocket, Terminal, Megaphone, Palette, Building2, Building, Layers, Microscope } from 'lucide-react';
 import { Stack } from '../types';
 
 interface HeroProps {
@@ -78,26 +78,26 @@ const Hero: React.FC<HeroProps> = ({ onHubClick, onStackClick }) => {
                         for Your Workflow
                     </h1>
                     <p className="text-lg md:text-xl text-[#AEB6C2] leading-relaxed max-w-2xl mx-auto">
-                        Navigate the fast-moving ecosystem of modern software tools. ToolCurrent helps you discover, compare, and evaluate platforms with structured rankings, deep reviews, and head-to-head comparisons.
+                        Answer a few quick questions and get personalised AI tool recommendations for your role, budget, and workflow.
                     </p>
                     <p className="text-sm text-news-accent font-bold mt-4 tracking-wide">
                         Independent research — never pay-to-rank.
                     </p>
                 </div>
 
-                {/* ── Primary CTAs */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+                {/* ── Primary CTA — Quiz */}
+                <div className="flex flex-col items-center justify-center gap-3 mb-12 max-w-sm sm:max-w-none mx-auto">
                     <Link
-                        href="/best-ai-tools"
+                        href="/find-my-tool"
                         className="flex items-center gap-2 bg-news-accent text-[#0B0F14] font-black px-8 py-4 rounded-xl text-sm uppercase tracking-widest hover:bg-news-accentHover transition-all transform hover:scale-[1.02] shadow-lg shadow-news-accent/20 w-full sm:w-auto justify-center"
                     >
-                        <List size={18} /> Browse Best AI Tools
+                        <Sparkles size={18} /> Find my tools <ArrowRight size={16} />
                     </Link>
                     <Link
                         href="/ai-tools"
-                        className="flex items-center gap-2 bg-transparent border-2 border-news-accent text-news-accent font-black px-8 py-4 rounded-xl text-sm uppercase tracking-widest hover:bg-news-accent hover:text-[#0B0F14] transition-all transform hover:scale-[1.02] w-full sm:w-auto justify-center"
+                        className="text-xs text-news-muted hover:text-white transition-colors underline underline-offset-2 mt-1"
                     >
-                        <Scale size={18} /> Explore AI Tools
+                        Prefer to browse? → Explore all tools
                     </Link>
                 </div>
 
