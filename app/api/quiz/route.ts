@@ -183,7 +183,7 @@ function priorityBonus(priority: string, breakdown: Record<string, number> | und
         }
         return null;
     };
-    if (priority === 'easytouse') { const v = get('usability'); return v !== null && v >= 8.0; }
+    if (priority === 'easytouse') { const v = get('usability'); return v !== null && v >= 7.5; }
     if (priority === 'powerful') { const v = get('functionality'); return v !== null && v >= 8.5; }
     if (priority === 'affordable') { const v = get('value'); return v !== null && v >= 8.0; }
     if (priority === 'integrations') { const v = get('integrations'); return v !== null && v >= 7.5; }
